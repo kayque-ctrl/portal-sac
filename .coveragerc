@@ -1,0 +1,11 @@
+[run]
+source = ocorrencias,contas
+omit =
+    */migrations/*
+    */popular_demo.py
+
+[report]
+# Piso da cobertura: só sobe. Aumente quando a cobertura real subir.
+fail_under = 99
+show_missing = true
+skip_covered = true

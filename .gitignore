@@ -9,3 +9,6 @@ staticfiles/
 CHANGELOG.md
 specs/
 .claude/
+.pytest_cache/
+.coverage
+htmlcov/

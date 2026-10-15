@@ -46,6 +46,10 @@ def test_dependencias_de_producao_estao_no_requirements():
 def test_script_do_supabase_cria_schema_privado_e_bucket_privado():
     sql = (RAIZ / "deploy" / "supabase.sql").read_text(encoding="utf-8")
     assert "create schema if not exists django authorization django_app" in sql
+    # Postgres 16+ no Supabase: o admin precisa ser membro do django_app para criar o schema.
+    assert sql.index("grant django_app to current_user") < sql.index("create schema")
+    assert sql.index("revoke all on schema django") < sql.index("revoke django_app from current_user")
+    assert "if not exists (select 1 from pg_roles where rolname = 'django_app')" in sql
     assert "alter role django_app set search_path = django" in sql
     assert "revoke all on schema django from public, anon, authenticated" in sql
     assert "values ('anexos-django', 'anexos-django', false)" in sql

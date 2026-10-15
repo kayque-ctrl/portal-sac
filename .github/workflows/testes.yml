@@ -50,16 +50,29 @@ jobs:
             requirements.txt
             requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - name: Usuário e schema como no Supabase
+      - name: Ambiente como no Supabase (admin sem superusuário, storage.buckets)
         run: |
           psql -v ON_ERROR_STOP=1 <<'SQL'
           create role anon;
           create role authenticated;
-          create role django_app with login password 'django_app';
-          create schema django authorization django_app;
-          alter role django_app set search_path = django;
-          revoke all on schema django from public, anon, authenticated;
+          create role admin_supabase with login createrole password 'admin';
+          grant create on database postgres to admin_supabase;
+          create schema storage;
+          create table storage.buckets (id text primary key, name text, public boolean);
+          grant usage on schema storage to admin_supabase;
+          grant select, insert on storage.buckets to admin_supabase;
           SQL
+      - name: Roda deploy/supabase.sql de verdade (duas vezes, é idempotente)
+        env:
+          PGUSER: admin_supabase
+          PGPASSWORD: admin
+        run: |
+          for vez in 1 2; do
+            sed "s/TROQUE-POR-UMA-SENHA-FORTE/django_app/" deploy/supabase.sql | psql -v ON_ERROR_STOP=1
+          done
+          test "$(psql -tAc "select pg_get_userbyid(nspowner) from pg_namespace where nspname = 'django'")" = "django_app"
+          test "$(psql -tAc "select public from storage.buckets where id = 'anexos-django'")" = "f"
+          test "$(psql -tAc "select count(*) from pg_auth_members m join pg_roles r on r.oid = m.roleid where r.rolname = 'django_app'")" -eq 0
       - name: migrate no schema django
         env:
           DATABASE_URL: postgresql://django_app:django_app@localhost:5432/postgres

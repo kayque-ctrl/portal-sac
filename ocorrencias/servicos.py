@@ -12,6 +12,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 from django.utils.html import escape
@@ -308,9 +309,12 @@ def atualizar_ocorrencia(user, oc, dados) -> Resultado:
     if atribuido:
         from contas.models import Usuario
 
-        responsavel = Usuario.objects.filter(
-            pk=atribuido, papel__in=[Papel.OPERADOR, Papel.ADMIN]
-        ).first()
+        try:
+            responsavel = Usuario.objects.filter(
+                pk=atribuido, papel__in=[Papel.OPERADOR, Papel.ADMIN]
+            ).first()
+        except ValidationError:  # id que nem é UUID (formulário adulterado)
+            responsavel = None
         if responsavel is None:
             return Resultado("Responsável inválido.")
 

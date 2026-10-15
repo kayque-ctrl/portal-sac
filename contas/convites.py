@@ -8,6 +8,7 @@ login atualiza last_login) ou troca a senha.
 
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
@@ -26,7 +27,7 @@ def usuario_do_token(uid: str, token: str) -> Usuario | None:
     try:
         pk = force_str(urlsafe_base64_decode(uid))
         user = Usuario.objects.get(pk=pk, is_active=True)
-    except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+    except (TypeError, ValueError, OverflowError, ValidationError, Usuario.DoesNotExist):
         return None
     return user if default_token_generator.check_token(user, token) else None
 

@@ -124,8 +124,9 @@ class Ocorrencia(models.Model):
     # ----- rastreio do status anterior (para detectar mudanças no save) -----
 
     @classmethod
-    def from_db(cls, db, field_names, values):
-        obj = super().from_db(db, field_names, values)
+    def from_db(cls, db, field_names, values, **kwargs):
+        # **kwargs repassa o `fetch_mode` que o Django 6.1+ passa a enviar.
+        obj = super().from_db(db, field_names, values, **kwargs)
         obj._status_original = obj.__dict__.get("status")
         return obj
 

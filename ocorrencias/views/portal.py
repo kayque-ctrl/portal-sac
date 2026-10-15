@@ -21,10 +21,12 @@ from ..labels import (
     ITEM_CATEGORIAS,
     ITEM_TEXTO,
     ITEM_TEXTO_PADRAO,
+    REFERENCIA_FORM,
     STATUS_LABEL,
     STATUS_ORDEM,
     TIPO_LABEL,
     TIPOS_FORM,
+    ReferenciaTipo,
     SinalVolume,
 )
 from ..models import Aviso, Ocorrencia
@@ -301,6 +303,8 @@ def _config_formulario() -> dict:
         "exigemFoto": CATEGORIAS_EXIGEM_FOTO,
         "dispensamDados": CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
         "comSinalVolume": CATEGORIAS_COM_SINAL_VOLUME,
+        "referencias": REFERENCIA_FORM,
+        "referenciaLabel": dict(ReferenciaTipo.choices),
         "categoriaTexto": ITEM_TEXTO,
         "textoPadrao": ITEM_TEXTO_PADRAO,
         "sinaisVolume": [{"valor": v, "label": label} for v, label in SinalVolume.choices],
@@ -311,7 +315,7 @@ def _config_formulario() -> dict:
 def nova(request):
     contexto = {
         "config": _config_formulario(),
-        "referencias": [("nf", "Nota Fiscal"), ("pedido", "Pedido")],
+        "referencias": [(valor, rotulo) for valor, rotulo in ReferenciaTipo.choices],
         "accept": ACCEPT_ATTR,
         "max_anexos": MAX_ANEXOS,
         "inicial": None,

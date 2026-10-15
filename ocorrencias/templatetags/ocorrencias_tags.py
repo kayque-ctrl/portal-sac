@@ -112,12 +112,6 @@ def limite_upload():
     return settings.UPLOAD_MAX_TOTAL_BYTES
 
 
-@register.simple_tag
-def limite_upload_mb():
-    mb = settings.UPLOAD_MAX_TOTAL_BYTES / (1024 * 1024)
-    return f"{mb:g}".replace(".", ",")
-
-
 # ---------- componentes ----------
 
 

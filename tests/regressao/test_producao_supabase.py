@@ -171,5 +171,6 @@ def test_formularios_informam_o_limite_ao_navegador(ocorrencia, cliente, entrar,
     for url in ("/portal/nova", f"/portal/{ocorrencia.pk}"):
         html = http.get(url).content.decode()
         assert f'data-anexos-limite="{4 * 1024 * 1024}"' in html
-        assert "data-comprimir" in html
+        # A compressão das fotos acontece no componente da lista de anexos (spec 017).
+        assert f"listaAnexos({{ max: 5, limite: {4 * 1024 * 1024} }})" in html
         assert "data-erro-upload" in html

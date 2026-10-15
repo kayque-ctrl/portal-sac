@@ -31,7 +31,9 @@ from .labels import (
     STATUS_BLOQUEADOS,
     STATUS_LABEL,
     TIPOS_FORM,
+    REFERENCIA_FORM,
     Prioridade,
+    ReferenciaTipo,
     SinalVolume,
     Status,
     formatar_referencia,
@@ -81,7 +83,7 @@ def _salvar_anexos(oc, arquivos, autor, mensagem=None) -> list[str]:
 
 def verificar_duplicata(user, referencia: str) -> dict | None:
     """
-    A empresa já tem ocorrência em andamento com a mesma NF/Pedido? Avisa o
+    A empresa já tem ocorrência em andamento com a mesma referência (NF, Pedido ou Picking)? Avisa o
     cliente antes de abrir outra (não bloqueia).
     """
     ref = (referencia or "").strip()
@@ -174,12 +176,12 @@ def criar_ocorrencia(user, dados, arquivos) -> Resultado:
 
     ref_final = ref_tipo_final = None
     if tipo in CATEGORIAS_COM_REFERENCIA:
-        if referencia_tipo not in ("nf", "pedido"):
-            return Resultado("Escolha se vai informar Nota Fiscal ou Pedido.")
+        if referencia_tipo not in ReferenciaTipo.values:
+            return Resultado("Escolha a referência: Nota Fiscal, Pedido ou Picking.")
         if not referencia:
-            return Resultado("Informe o número da Nota Fiscal ou do Pedido.")
+            return Resultado(f"Informe o {REFERENCIA_FORM[referencia_tipo]['campo'].lower()}.")
         ref_final, ref_tipo_final = referencia[:80], referencia_tipo
-    elif referencia and referencia_tipo in ("nf", "pedido"):
+    elif referencia and referencia_tipo in ReferenciaTipo.values:
         # Opcional (ex.: Reclamação/Sugestão): salva se foi preenchida.
         ref_final, ref_tipo_final = referencia[:80], referencia_tipo
 
@@ -199,7 +201,10 @@ def criar_ocorrencia(user, dados, arquivos) -> Resultado:
     # foto pode cobrir vários itens.
     precisa_foto = any(p["categoria"] in CATEGORIAS_EXIGEM_FOTO for p in preparados)
     if precisa_foto and not any((a.content_type or "").startswith("image/") for a in arquivos):
-        return Resultado("Anexe pelo menos uma foto mostrando a avaria/produto vencido/volume trocado.")
+        return Resultado(
+            "Anexe pelo menos uma foto mostrando a avaria/produto vencido/volume trocado. "
+            "PDF e planilha podem ir junto, mas não substituem a foto."
+        )
 
     with transaction.atomic():
         oc = Ocorrencia(

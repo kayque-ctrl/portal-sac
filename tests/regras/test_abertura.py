@@ -39,8 +39,8 @@ def test_somente_cliente_abre(operador):
     [
         ({"tipo": "outro"}, "Selecione um tipo válido."),
         ({"descricao": "curta"}, "Descreva a ocorrência com pelo menos 10 caracteres."),
-        ({"referencia_tipo": ""}, "Escolha se vai informar Nota Fiscal ou Pedido."),
-        ({"referencia": ""}, "Informe o número da Nota Fiscal ou do Pedido."),
+        ({"referencia_tipo": ""}, "Escolha a referência: Nota Fiscal, Pedido ou Picking."),
+        ({"referencia": ""}, "Informe o número do pedido."),
     ],
 )
 def test_validacoes_de_abertura(cliente, extra, erro):

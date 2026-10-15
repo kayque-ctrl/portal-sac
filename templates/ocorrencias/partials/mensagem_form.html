@@ -30,14 +30,7 @@ de avisar o cliente (dá para reenviar), nunca vaza uma nota.
     class="w-full rounded-lg border px-3 py-2 text-zinc-900 outline-none focus:ring-2 dark:text-white"
     :class="interna ? 'border-amber-300 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/10 dark:border-amber-900/60 dark:bg-amber-950/20' : 'border-zinc-300 bg-white focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-400'">{{ msg_conteudo|default:'' }}</textarea>
 
-  <ul x-show="arquivos.length > 0" x-cloak class="flex flex-wrap gap-2">
-    <template x-for="(nome, i) in arquivos" :key="i">
-      <li class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-        <i data-lucide="paperclip" style="width:12px;height:12px"></i>
-        <span class="max-w-[160px] truncate" x-text="nome"></span>
-      </li>
-    </template>
-  </ul>
+  {% include "partials/lista_anexos.html" with id_campo="anexos-mensagem" %}
 
   {% if msg_erro %}<p role="alert" class="text-sm text-red-600 dark:text-red-400">{{ msg_erro }}</p>{% endif %}
   <p data-erro-upload hidden role="alert" class="text-sm text-red-600 dark:text-red-400"></p>
@@ -45,14 +38,6 @@ de avisar o cliente (dá para reenviar), nunca vaza uma nota.
 
   <div class="flex items-center justify-between gap-2">
     <div class="flex items-center gap-2">
-      <label class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
-        {% icone "paperclip" 16 %} Anexar
-        <input x-ref="arquivos" type="file" name="anexos" multiple accept="{{ accept }}" data-comprimir @change="escolher" class="hidden">
-      </label>
-      <button type="button" x-show="arquivos.length > 0" x-cloak @click="limparArquivos()"
-        class="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
-        {% icone "x" 13 %} limpar
-      </button>
       {% if permite_nota_interna %}
       <span class="inline-flex items-center gap-1 text-xs font-medium" :class="interna ? 'text-amber-700 dark:text-amber-400' : 'text-zinc-600 dark:text-zinc-300'">
         <span x-show="interna" class="inline-flex items-center gap-1">{% icone "lock" 12 %} Só a operação vê</span>
@@ -66,7 +51,6 @@ de avisar o cliente (dá para reenviar), nunca vaza uma nota.
       :class="interna ? 'bg-amber-600 hover:bg-amber-700' : 'bg-zinc-900 hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200'"
       x-text="enviando ? 'Enviando…' : (interna ? 'Salvar nota interna' : (permiteNotaInterna ? 'Enviar ao cliente' : 'Enviar'))">Enviar</button>
   </div>
-  <p class="text-xs text-zinc-500">Até {{ max_anexos }} arquivos — foto, planilha ou PDF.</p>
 
   <template x-teleport="body">
     <div x-show="modalBump" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-fadein" @click.self="modalBump = false" @keydown.escape.window="modalBump = false">

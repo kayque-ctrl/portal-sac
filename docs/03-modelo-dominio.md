@@ -31,7 +31,7 @@ OcorrenciaTipo    produtos | atraso | reclamacao_sugestao
                   | avaria | falta | sobra | troca_volume | extravio | falta_troca | outro   ← legado
 ItemCategoria     avaria | falta | sobra | troca_volume | vencido | pre_vencido
 SinalVolume       falta | sobra                     ← só em itens troca_volume (spec 004)
-ReferenciaTipo    nf | pedido
+ReferenciaTipo    nf | pedido | picking             ← picking: spec 016
 Status            aberta | em_analise | resolvida | concluida | recusada
 Prioridade        baixa | media | alta
 AvisoTipo         info | alerta
@@ -73,7 +73,7 @@ atendente da **operação**; no portal do cliente (lista e painel) é o
 - Só o papel `cliente` abre ocorrência.
 - Descrição com pelo menos 10 caracteres, exceto em `produtos` (os itens já
   descrevem).
-- `produtos` e `atraso` exigem referência (NF ou Pedido); em
+- `produtos` e `atraso` exigem referência (NF, Pedido ou Picking); em
   `reclamacao_sugestao` ela é opcional. `produtos` exige ao menos um item
   (com limite de `MAX_ITENS`).
 - Item com categoria em `CATEGORIAS_EXIGEM_FOTO` (`avaria`, `vencido`,

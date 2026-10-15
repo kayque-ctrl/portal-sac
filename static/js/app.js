@@ -62,9 +62,9 @@ document.addEventListener("DOMContentLoaded", desenharIcones);
 
 // ---------------------------------------------------------------- anexos
 // Fotos de celular têm vários MB, e a Vercel limita o corpo da requisição a
-// 4,5 MB (spec 015). Ao escolher arquivos num <input data-comprimir>, as fotos
-// são reduzidas aqui mesmo (port do imagem.ts do projeto original). No envio,
-// formulários com data-anexos-limite conferem a soma antes de mandar.
+// 4,5 MB (spec 015). O componente listaAnexos (spec 017) reduz as fotos ao
+// adicionar (port do imagem.ts do projeto original). No envio, formulários com
+// data-anexos-limite conferem a soma antes de mandar.
 
 const FOTO_MAX_LADO = 1600;
 const FOTO_QUALIDADE = 0.8;
@@ -107,26 +107,6 @@ function mostrarErroUpload(form, mensagem) {
 function formatarMb(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1).replace(".", ",");
 }
-
-document.addEventListener("change", async (e) => {
-  const input = e.target;
-  if (!(input instanceof HTMLInputElement) || input.type !== "file" || !input.hasAttribute("data-comprimir")) return;
-  const arquivos = Array.from(input.files || []);
-  if (!arquivos.some((f) => f.type.startsWith("image/"))) return;
-  const form = input.form;
-  if (form) {
-    form.dataset.comprimindo = "1";
-    mostrarErroUpload(form, null);
-  }
-  try {
-    const prontos = await Promise.all(arquivos.map(comprimirImagem));
-    const dt = new DataTransfer();
-    prontos.forEach((f) => dt.items.add(f));
-    input.files = dt.files;
-  } finally {
-    if (form) delete form.dataset.comprimindo;
-  }
-});
 
 // Fase de bolha: roda depois das validações do Alpine (@submit) e só age se
 // o envio ainda for seguir.
@@ -327,23 +307,87 @@ document.addEventListener("alpine:init", () => {
   }));
 
   /** Formulário de mensagem (nota interna x resposta ao cliente). */
+  /**
+   * Lista de anexos (spec 017): cada escolha ACRESCENTA arquivos (o <input
+   * type=file> nativo substitui a seleção), cada um pode ser removido, e as
+   * fotos são reduzidas ao adicionar. O campo escondido `anexos` recebe a lista
+   * via DataTransfer; é ele que vai no envio.
+   */
+  Alpine.data("listaAnexos", (opts) => ({
+    max: opts.max,
+    limite: opts.limite,
+    arquivos: [],
+    erro: null,
+    preparando: false,
+    get total() {
+      return this.arquivos.reduce((soma, a) => soma + a.arquivo.size, 0);
+    },
+    get resumo() {
+      const n = this.arquivos.length;
+      if (!n) return `Nenhum arquivo. Aceita foto, PDF e planilha: até ${this.max} arquivos, ${formatarMb(this.limite)} MB no total.`;
+      return `${n} de ${this.max} arquivos · ${formatarMb(this.total)} de ${formatarMb(this.limite)} MB`;
+    },
+    tamanho(bytes) {
+      return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${formatarMb(bytes)} MB`;
+    },
+    async adicionar(e) {
+      const escolhidos = Array.from(e.target.files || []);
+      e.target.value = "";
+      if (!escolhidos.length) return;
+      this.erro = null;
+      this.preparando = true;
+      const form = this.$el.closest("form");
+      if (form) form.dataset.comprimindo = "1";
+      try {
+        const prontos = await Promise.all(escolhidos.map(comprimirImagem));
+        for (let i = 0; i < prontos.length; i++) {
+          const original = escolhidos[i];
+          const arquivo = prontos[i];
+          const chave = `${original.name}|${original.size}|${original.lastModified}`;
+          if (this.arquivos.some((a) => a.chave === chave)) continue; // o mesmo arquivo duas vezes
+          if (this.arquivos.length >= this.max) {
+            this.erro = `Máximo de ${this.max} arquivos por envio. Remova algum para adicionar outro.`;
+            break;
+          }
+          if (this.total + arquivo.size > this.limite) {
+            this.erro = `"${original.name}" não coube: os anexos somariam ${formatarMb(this.total + arquivo.size)} MB e o limite por envio é ${formatarMb(this.limite)} MB.`;
+            continue;
+          }
+          const extensao = (arquivo.name.split(".").pop() || "").slice(0, 4);
+          this.arquivos.push({ chave, arquivo, extensao, foto: arquivo.type.startsWith("image/") });
+        }
+      } finally {
+        this.preparando = false;
+        if (form) delete form.dataset.comprimindo;
+        this.sincronizar();
+      }
+    },
+    remover(i) {
+      this.arquivos.splice(i, 1);
+      this.erro = null;
+      this.sincronizar();
+    },
+    sincronizar() {
+      const dt = new DataTransfer();
+      this.arquivos.forEach((a) => dt.items.add(a.arquivo));
+      this.$refs.campo.files = dt.files;
+      this.$dispatch("anexos-mudaram", {
+        fotos: this.arquivos.filter((a) => a.foto).length,
+        quantidade: this.arquivos.length,
+        total: this.total,
+      });
+    },
+  }));
+
   Alpine.data("mensagemForm", (opts) => ({
     interna: opts.interna,
     permiteNotaInterna: opts.permiteNotaInterna,
     avisaBump: opts.avisaBump,
-    arquivos: [],
     modalBump: false,
     confirmado: false,
     enviando: false,
     init() {
       this.form = this.$el;
-    },
-    escolher(e) {
-      this.arquivos = Array.from(e.target.files || []).map((f) => f.name);
-    },
-    limparArquivos() {
-      this.$refs.arquivos.value = "";
-      this.arquivos = [];
     },
     onSubmit(e) {
       // Nota interna não movimenta o status → não precisa confirmar.
@@ -466,7 +510,7 @@ document.addEventListener("alpine:init", () => {
     descricaoGeral: inicial?.descricao || "",
 
     // Rascunho / edição do produto.
-    catProduto: "avaria",
+    catProduto: "",
     sinalVolume: "",
     codigo: "",
     descricao: "",
@@ -515,6 +559,15 @@ document.addEventListener("alpine:init", () => {
     },
     get podeAvancar() {
       return this.tipo !== "" && (!this.exigeReferencia || this.referenciaOk);
+    },
+    /** Por que o "Continuar" está desabilitado (spec 018): mostrado na tela, não só no title. */
+    get motivoBloqueio() {
+      if (this.tipo === "") return "Para continuar, escolha o que aconteceu.";
+      if (this.exigeReferencia && this.refTipo === "")
+        return "Para continuar, escolha a referência (Nota Fiscal, Pedido ou Picking) e informe o número.";
+      if (this.exigeReferencia && this.referencia.trim() === "")
+        return `Para continuar, informe o ${this.config.referencias[this.refTipo].campo.toLowerCase()}.`;
+      return "";
     },
     get mostrarExtrato() {
       return this.passo === 2 && this.categoriaComProduto;
@@ -608,7 +661,7 @@ document.addEventListener("alpine:init", () => {
 
     // ----- produtos -----
     limparProduto() {
-      this.catProduto = "avaria";
+      this.catProduto = "";
       this.sinalVolume = "";
       this.codigo = "";
       this.descricao = "";
@@ -617,13 +670,17 @@ document.addEventListener("alpine:init", () => {
       this.produtoErro = null;
     },
     salvarProduto() {
+      if (!this.catProduto) {
+        this.produtoErro = "Escolha a categoria do produto.";
+        return;
+      }
       const dispensa = this.dispensaDadosProduto;
       const digitada = parseInt(this.quantidade, 10);
       // Troca de volume: sem quantidade informada, assume 1 volume.
       const qtd = dispensa && !Number.isFinite(digitada) ? 1 : digitada;
       if (!dispensa) {
         if (!this.codigo.trim() || !this.descricao.trim() || !Number.isFinite(qtd) || qtd <= 0) {
-          this.produtoErro = "Preencha código, descrição e uma quantidade maior que zero.";
+          this.produtoErro = "Preencha o código, a descrição e uma quantidade maior que zero.";
           return;
         }
       } else if (!Number.isFinite(qtd) || qtd <= 0) {
@@ -702,10 +759,6 @@ document.addEventListener("alpine:init", () => {
     },
 
     // ----- anexos e envio -----
-    contarFotos(e) {
-      this.anexosFotos = Array.from(e.target.files || []).filter((f) => f.type.startsWith("image/")).length;
-      if (this.anexosFotos > 0) this.anexoErro = null;
-    },
     onEnviar(e) {
       if (!this.categoriaComProduto && this.descricaoGeral.trim().length < 10) {
         e.preventDefault();
@@ -715,7 +768,7 @@ document.addEventListener("alpine:init", () => {
       this.descricaoErro = null;
       if (this.precisaFoto && this.anexosFotos === 0) {
         e.preventDefault();
-        this.anexoErro = "Anexe pelo menos uma foto mostrando a avaria/produto vencido/volume trocado.";
+        this.anexoErro = "Anexe pelo menos uma foto mostrando a avaria/produto vencido/volume trocado. PDF e planilha podem ir junto, mas não substituem a foto.";
         return;
       }
       this.anexoErro = null;

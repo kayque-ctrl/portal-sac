@@ -38,6 +38,7 @@ class SinalVolume(models.TextChoices):
 class ReferenciaTipo(models.TextChoices):
     NF = "nf", "Nota Fiscal"
     PEDIDO = "pedido", "Pedido"
+    PICKING = "picking", "Picking"  # spec 016
 
 
 class Status(models.TextChoices):
@@ -65,10 +66,18 @@ PRIORIDADE_LABEL = dict(Prioridade.choices)
 ITEM_CATEGORIA_LABEL = dict(ItemCategoria.choices)
 REFERENCIA_LABEL = dict(ReferenciaTipo.choices)
 
+# Como cada referência aparece no formulário (rótulo do campo e exemplo) e no
+# texto curto ("NF 123"). Um tipo novo de referência entra só aqui.
+REFERENCIA_FORM = {
+    "nf": {"campo": "Número da nota fiscal", "exemplo": "Ex.: 123456", "curto": "NF"},
+    "pedido": {"campo": "Número do pedido", "exemplo": "Ex.: 987654", "curto": "Pedido"},
+    "picking": {"campo": "Número do picking", "exemplo": "Ex.: 004512", "curto": "Picking"},
+}
+
 # Tipos oferecidos ao abrir uma ocorrência.
 TIPOS_FORM = [OcorrenciaTipo.PRODUTOS, OcorrenciaTipo.ATRASO, OcorrenciaTipo.RECLAMACAO_SUGESTAO]
 
-# Tipos que exigem referência (NF ou Pedido).
+# Tipos que exigem referência (NF, Pedido ou Picking).
 CATEGORIAS_COM_REFERENCIA = [OcorrenciaTipo.PRODUTOS, OcorrenciaTipo.ATRASO]
 
 # Tipos em que se lançam produtos.
@@ -174,11 +183,9 @@ def rotulo_item(categoria: str | None, sinal_volume: str | None = None) -> str:
 
 
 def formatar_referencia(tipo: str | None, referencia: str | None) -> str:
-    """Ex.: "NF 12345" ou "Pedido 987"."""
+    """Ex.: "NF 12345", "Pedido 987" ou "Picking 4512"."""
     if not referencia:
         return ""
-    if tipo == "nf":
-        return f"NF {referencia}"
-    if tipo == "pedido":
-        return f"Pedido {referencia}"
+    if tipo in REFERENCIA_FORM:
+        return f"{REFERENCIA_FORM[tipo]['curto']} {referencia}"
     return referencia

@@ -10,7 +10,7 @@
 
   <a href="{% url 'portal:inicio' %}" class="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">{% icone "arrow-left" 16 %} Voltar</a>
   <h1 class="mt-3 text-2xl font-semibold text-zinc-900 dark:text-white">Abrir ocorrência</h1>
-  <p class="mt-1 text-sm text-zinc-500">É rápido — em dois passos.</p>
+  <p class="mt-1 text-sm text-zinc-500">É rápido, em dois passos. Campos com <span class="text-red-600" aria-hidden="true">*</span> são obrigatórios.</p>
 
   {# Rascunho salvo #}
   <div x-show="rascunho" x-cloak class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm dark:border-blue-900/50 dark:bg-blue-950/25">
@@ -45,7 +45,8 @@
       {# ---------------- Passo 1 ---------------- #}
       <div x-show="passo === 1" class="space-y-6">
         <div>
-          <p class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">O que aconteceu?</p>
+          <p class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">1. O que aconteceu? <span class="text-red-600" aria-hidden="true">*</span></p>
+          <p class="mt-1 text-xs text-zinc-500">Escolha uma opção.</p>
           <div class="mt-3 grid gap-3 sm:grid-cols-3">
             {% for t in config.tipos %}
             <button type="button" @click="trocarCategoria('{{ t.valor }}')" :aria-pressed="tipo === '{{ t.valor }}'"
@@ -61,8 +62,11 @@
 
         <div class="rounded-xl border border-zinc-200 p-5 dark:border-zinc-800">
           <p class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Nota ou Pedido <span x-show="tipo !== '' && !exigeReferencia" x-cloak class="font-normal text-zinc-500">(opcional)</span>
+            Referência (Nota Fiscal, Pedido ou Picking)
+            <span x-show="exigeReferencia" x-cloak><span class="text-red-600" aria-hidden="true">*</span></span>
+            <span x-show="tipo !== '' && !exigeReferencia" x-cloak class="font-normal text-zinc-500">(opcional)</span>
           </p>
+          <p class="mt-1 text-xs text-zinc-500">Escolha uma opção e informe o número que está no documento.</p>
           <div class="mt-3 flex gap-3">
             {% for rt, rotulo in referencias %}
             <button type="button" @click="escolherRefTipo('{{ rt }}')" :aria-pressed="refTipo === '{{ rt }}'"
@@ -71,15 +75,19 @@
             {% endfor %}
           </div>
           <template x-if="refTipo !== ''">
-            <input name="referencia" x-model="referencia" x-init="$el.focus()" maxlength="80"
-              :placeholder="refTipo === 'nf' ? 'Nº da nota fiscal' : 'Nº do pedido'"
-              class="mt-4 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-400">
+            <div class="mt-4">
+            <label for="referencia" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300"><span x-text="config.referencias[refTipo].campo"></span> <span x-show="exigeReferencia" class="text-red-600" aria-hidden="true">*</span></label>
+            <input id="referencia" name="referencia" x-model="referencia" x-init="$el.focus()" maxlength="80"
+              :placeholder="config.referencias[refTipo].exemplo"
+              class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-400">
+            </div>
           </template>
         </div>
       </div>
 
       {# ---------------- Passo 2 ---------------- #}
       <div x-show="passo === 2" x-cloak class="space-y-6">
+        <p class="text-sm text-zinc-600 dark:text-zinc-400">2. Preencha os detalhes abaixo e confira o resumo antes de enviar.</p>
         {# Aviso de possível duplicidade #}
         <div x-show="duplicata" x-cloak class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/25">
           <span class="mt-0.5 text-amber-600 dark:text-amber-400">{% icone "message-square-warning" 17 %}</span>
@@ -93,7 +101,7 @@
         <div x-show="categoriaComProduto" class="rounded-xl border border-zinc-200 p-5 dark:border-zinc-800">
           <p class="block text-sm font-medium text-zinc-700 dark:text-zinc-300" x-text="editandoIndex !== null ? 'Editar produto' : 'Adicionar produto'"></p>
 
-          <p x-show="!podeLancarProdutos" class="mt-2 text-sm text-zinc-500">Informe a Nota Fiscal ou o Pedido acima para lançar produtos.</p>
+          <p x-show="!podeLancarProdutos" class="mt-2 text-sm text-zinc-500">Informe a referência (Nota Fiscal, Pedido ou Picking) acima para lançar produtos.</p>
 
           <div x-show="podeLancarProdutos">
             <div class="mt-4 flex flex-wrap items-center gap-2">
@@ -109,22 +117,32 @@
 
             <div class="mt-4 space-y-4">
               <div class="grid gap-3 sm:grid-cols-2">
-                <select x-model="catProduto" aria-label="Categoria do produto"
-                  class="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-                  {% for c in config.categorias %}<option value="{{ c.valor }}">{{ c.label }}</option>{% endfor %}
-                </select>
-                <input x-model="quantidade" type="number" min="1" aria-label="Quantidade" :placeholder="dispensaDadosProduto ? 'Quantidade (padrão 1)' : 'Quantidade'"
-                  class="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+                <div>
+                  <label for="categoria-produto" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Categoria do produto <span class="text-red-600" aria-hidden="true">*</span></label>
+                  <select id="categoria-produto" x-model="catProduto" @change="produtoErro = null" class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+                    <option value="" disabled>Selecione a categoria</option>
+                    {% for c in config.categorias %}<option value="{{ c.valor }}">{{ c.label }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label for="quantidade-produto" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Quantidade <span x-show="!dispensaDadosProduto"><span class="text-red-600" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-normal text-zinc-500">(opcional, padrão 1)</span></label>
+                  <input id="quantidade-produto" x-model="quantidade" type="number" min="1" placeholder="Ex.: 2" class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+                </div>
               </div>
               <div class="grid gap-3 sm:grid-cols-[1fr_2fr]">
-                <input x-model="codigo" aria-label="Código do produto" :placeholder="dispensaDadosProduto ? 'Código (opcional)' : 'Código'"
-                  class="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-                <input x-model="descricao" aria-label="Descrição do produto" :placeholder="dispensaDadosProduto ? 'Descrição do produto (opcional)' : 'Descrição do produto'"
-                  class="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+                <div>
+                  <label for="codigo-produto" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Código do produto <span x-show="!dispensaDadosProduto"><span class="text-red-600" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-normal text-zinc-500">(opcional)</span></label>
+                  <input id="codigo-produto" x-model="codigo" placeholder="Ex.: 7891234" class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+                </div>
+                <div>
+                  <label for="descricao-produto" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Descrição do produto <span x-show="!dispensaDadosProduto"><span class="text-red-600" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-normal text-zinc-500">(opcional)</span></label>
+                  <input id="descricao-produto" x-model="descricao" placeholder="Ex.: Camisa polo azul M" class="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+                </div>
               </div>
               {# Troca de volume: o volume falta ou sobra? (spec 004) #}
               <fieldset x-show="pedeSinalVolume" x-cloak>
                 <legend class="text-sm font-medium text-zinc-700 dark:text-zinc-300">O volume está faltando ou sobrando? <span class="text-red-600" aria-hidden="true">*</span></legend>
+                <p class="mt-1 text-xs text-zinc-500">Escolha uma opção.</p>
                 <div class="mt-2 flex gap-2">
                   {% for s in config.sinaisVolume %}
                   <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-zinc-400"
@@ -152,16 +170,20 @@
         {# Descrição #}
         <div>
           <label for="descricao" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Descrição <span x-show="categoriaComProduto" class="font-normal text-zinc-500">(opcional)</span>
+            Descrição <span x-show="!categoriaComProduto"><span class="text-red-600" aria-hidden="true">*</span></span><span x-show="categoriaComProduto" class="font-normal text-zinc-500">(opcional)</span>
           </label>
-          <textarea id="descricao" name="descricao" x-model="descricaoGeral" @input="descricaoErro = null" rows="5" placeholder="Conte o que aconteceu…"
+          <p class="mt-1 text-xs text-zinc-500">Descreva o que aconteceu, quando e como<span x-show="!categoriaComProduto"> (mínimo de 10 caracteres)</span>.</p>
+          <textarea id="descricao" name="descricao" x-model="descricaoGeral" @input="descricaoErro = null" rows="5" placeholder="Ex.: A entrega estava prevista para segunda e chegou na quarta, com duas caixas amassadas."
             class="mt-2 w-full rounded-lg border bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-400"
             :class="descricaoErro ? 'border-red-400' : 'border-zinc-300 dark:border-zinc-700'"></textarea>
+          <p x-show="!categoriaComProduto" class="mt-1 text-right text-xs"
+            :class="descricaoGeral.trim().length >= 10 ? 'text-green-600 dark:text-green-400' : 'text-zinc-500'"
+            x-text="descricaoGeral.trim().length + ' de 10 caracteres mínimos'"></p>
           <p x-show="descricaoErro" role="alert" class="mt-1.5 text-sm text-red-600 dark:text-red-400" x-text="descricaoErro"></p>
         </div>
 
-        {# Anexos #}
-        <div>
+        {# Anexos (spec 017: lista que acumula e permite remover) #}
+        <div @anexos-mudaram="anexosFotos = $event.detail.fotos; if (anexosFotos > 0) anexoErro = null">
           <label for="anexos" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Anexos
             <span x-show="precisaFoto" class="font-normal" :class="anexosFotos > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'"
@@ -170,10 +192,9 @@
           </label>
           <p class="mt-1.5 flex items-center gap-1 text-xs text-zinc-500">
             <span x-show="precisaFoto" class="inline-flex items-center gap-1">{% icone "camera" 12 %} Inclua ao menos uma foto mostrando a avaria/produto vencido/volume trocado — pode cobrir vários itens de uma vez.</span>
-            Aceita foto, planilha (Excel/CSV) e PDF — até {{ max_anexos }} arquivos, {% limite_upload_mb %} MB no total. Fotos são reduzidas automaticamente.
+            Aceita foto, planilha (Excel/CSV) e PDF. Adicione um ou vários de cada vez; fotos são reduzidas automaticamente.
           </p>
-          <input id="anexos" name="anexos" type="file" multiple accept="{{ accept }}" data-comprimir @change="contarFotos"
-            class="mt-2 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-700 dark:text-zinc-400 dark:file:bg-white dark:file:text-zinc-900">
+          <div class="mt-2">{% include "partials/lista_anexos.html" with id_campo="anexos" %}</div>
           <p x-show="anexoErro" role="alert" class="mt-1.5 text-sm text-red-600 dark:text-red-400" x-text="anexoErro"></p>
           <p data-erro-upload hidden role="alert" class="mt-1.5 text-sm text-red-600 dark:text-red-400"></p>
         </div>
@@ -183,7 +204,7 @@
           <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Confira antes de enviar</p>
           <dl class="mt-3 space-y-2 text-zinc-700 dark:text-zinc-300">
             <div class="flex gap-2"><dt class="text-zinc-500">Categoria:</dt><dd x-text="tipo ? config.tipoLabel[tipo] : '—'"></dd></div>
-            <div x-show="referenciaOk" class="flex gap-2"><dt class="text-zinc-500" x-text="(refTipo === 'nf' ? 'Nota Fiscal' : 'Pedido') + ':'"></dt><dd x-text="referencia"></dd></div>
+            <div x-show="referenciaOk" class="flex gap-2"><dt class="text-zinc-500" x-text="config.referenciaLabel[refTipo] + ':'"></dt><dd x-text="referencia"></dd></div>
             <div x-show="categoriaComProduto" class="flex gap-2"><dt class="text-zinc-500">Produtos:</dt><dd x-text="itens.length + (itens.length === 1 ? ' produto' : ' produtos')"></dd></div>
             <div x-show="precisaFoto" class="flex gap-2"><dt class="text-zinc-500">Fotos:</dt>
               <dd :class="anexosFotos > 0 ? '' : 'text-red-600 dark:text-red-400'" x-text="anexosFotos > 0 ? anexosFotos + (anexosFotos > 1 ? ' anexadas' : ' anexada') : 'nenhuma anexada ainda'"></dd></div>
@@ -194,10 +215,13 @@
 
       {% include "partials/erro.html" with classe="mt-6" %}
 
+      <p x-show="passo === 1 && !podeAvancar" class="mt-6 flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400" data-motivo-bloqueio>
+        <i data-lucide="info" style="width:15px;height:15px"></i> <span x-text="motivoBloqueio"></span>
+      </p>
       <div class="mt-6 flex gap-3">
         <template x-if="passo === 1">
           <div class="flex gap-3">
-            <button type="button" @click="continuar()" :disabled="!podeAvancar" :title="!podeAvancar ? 'Escolha a categoria (e a referência, se necessária)' : ''"
+            <button type="button" @click="continuar()" :disabled="!podeAvancar" :title="motivoBloqueio"
               class="flex h-11 items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-6 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
               Continuar <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
             </button>

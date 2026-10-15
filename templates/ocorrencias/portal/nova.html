@@ -122,6 +122,19 @@
                 <input x-model="descricao" aria-label="Descrição do produto" :placeholder="dispensaDadosProduto ? 'Descrição do produto (opcional)' : 'Descrição do produto'"
                   class="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
               </div>
+              {# Troca de volume: o volume falta ou sobra? (spec 004) #}
+              <fieldset x-show="pedeSinalVolume" x-cloak>
+                <legend class="text-sm font-medium text-zinc-700 dark:text-zinc-300">O volume está faltando ou sobrando? <span class="text-red-600" aria-hidden="true">*</span></legend>
+                <div class="mt-2 flex gap-2">
+                  {% for s in config.sinaisVolume %}
+                  <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-zinc-400"
+                    :class="sinalVolume === '{{ s.valor }}' ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900' : 'border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'">
+                    <input type="radio" name="sinal_volume_rascunho" value="{{ s.valor }}" x-model="sinalVolume" form="sem-form" class="sr-only">
+                    {{ s.label }}
+                  </label>
+                  {% endfor %}
+                </div>
+              </fieldset>
               <p x-show="dispensaDadosProduto" class="text-xs text-zinc-500">Em troca de volume, o importante é a foto do volume — código, descrição e quantidade são opcionais.</p>
             </div>
 
@@ -215,10 +228,10 @@
           <template x-for="(it, i) in itens" :key="i">
             <li class="rounded-lg border p-3 text-sm" :class="editandoIndex === i ? 'border-zinc-900 dark:border-white' : 'border-zinc-100 dark:border-zinc-800'">
               <div class="flex items-center justify-between gap-2">
-                <span class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" x-text="config.categoriaLabel[it.categoria]"></span>
+                <span class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" x-text="rotuloItem(it)"></span>
                 <span class="font-medium tabular-nums"
-                  :class="sinal(it.categoria) === 'pos' ? 'text-green-600 dark:text-green-400' : sinal(it.categoria) === 'neg' ? 'text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-300'"
-                  x-text="(sinal(it.categoria) === 'pos' ? '+' : sinal(it.categoria) === 'neg' ? '-' : '') + it.quantidade"></span>
+                  :class="sinal(it) === 'pos' ? 'text-green-600 dark:text-green-400' : sinal(it) === 'neg' ? 'text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-300'"
+                  x-text="(sinal(it) === 'pos' ? '+' : sinal(it) === 'neg' ? '-' : '') + it.quantidade"></span>
               </div>
               <dl class="mt-2 space-y-1">
                 <div class="flex gap-1.5"><dt class="shrink-0 text-xs font-medium text-zinc-500">Nome:</dt><dd class="truncate text-zinc-800 dark:text-zinc-200" x-text="it.descricao"></dd></div>

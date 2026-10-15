@@ -92,7 +92,9 @@ Regras por categoria:
   foto nos anexos (`CATEGORIAS_EXIGEM_FOTO`).
 - `troca_volume` dispensa código, descrição e quantidade detalhada
   (`CATEGORIAS_DISPENSAM_DADOS_PRODUTO`).
-- `falta` e `sobra` têm sinal (− / +) na exibição (`sinal_categoria`).
+- `troca_volume` exige informar se o volume **falta ou sobra** (spec 004);
+  o item mostra "Troca de volume (falta)" e o sinal correspondente.
+- `falta` e `sobra` têm sinal (− / +) na exibição (`sinal_item`).
 
 ## Ligação com o Trello
 

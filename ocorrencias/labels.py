@@ -28,6 +28,13 @@ class ItemCategoria(models.TextChoices):
     PRE_VENCIDO = "pre_vencido", "Pré-vencido"
 
 
+class SinalVolume(models.TextChoices):
+    """Na troca de volume: o volume está faltando ou sobrando (spec 004)."""
+
+    FALTA = "falta", "Falta"
+    SOBRA = "sobra", "Sobra"
+
+
 class ReferenciaTipo(models.TextChoices):
     NF = "nf", "Nota Fiscal"
     PEDIDO = "pedido", "Pedido"
@@ -75,6 +82,9 @@ CATEGORIAS_EXIGEM_FOTO = ["avaria", "vencido", "pre_vencido", "troca_volume"]
 # Categorias em que o cliente nem abriu o produto (troca de volume): código,
 # descrição e quantidade detalhados deixam de ser obrigatórios.
 CATEGORIAS_DISPENSAM_DADOS_PRODUTO = ["troca_volume"]
+
+# Categorias em que o cliente informa se o volume falta ou sobra (spec 004).
+CATEGORIAS_COM_SINAL_VOLUME = ["troca_volume"]
 
 # Status em que a conversa fica bloqueada (só reabrindo volta a enviar).
 STATUS_BLOQUEADOS = [Status.RESOLVIDA, Status.CONCLUIDA, Status.RECUSADA]
@@ -137,6 +147,21 @@ def sinal_categoria(cat: str | None) -> str:
     if cat == "sobra":
         return "pos"
     return "neutro"
+
+
+def sinal_item(categoria: str | None, sinal_volume: str | None = None) -> str:
+    """Sinal de um item: falta/sobra pela categoria; na troca de volume, pelo sinal informado."""
+    if categoria in CATEGORIAS_COM_SINAL_VOLUME:
+        return sinal_categoria(sinal_volume)
+    return sinal_categoria(categoria)
+
+
+def rotulo_item(categoria: str | None, sinal_volume: str | None = None) -> str:
+    """Ex.: "Avaria" ou "Troca de volume (falta)"."""
+    rotulo = ITEM_CATEGORIA_LABEL.get(categoria, categoria or "")
+    if categoria in CATEGORIAS_COM_SINAL_VOLUME and sinal_volume in SinalVolume.values:
+        return f"{rotulo} ({SinalVolume(sinal_volume).label.lower()})"
+    return rotulo
 
 
 def formatar_referencia(tipo: str | None, referencia: str | None) -> str:

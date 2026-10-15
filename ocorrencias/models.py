@@ -23,6 +23,7 @@ from .labels import (
     OcorrenciaTipo,
     Prioridade,
     ReferenciaTipo,
+    SinalVolume,
     Status,
 )
 
@@ -229,6 +230,9 @@ class OcorrenciaItem(models.Model):
     codigo = models.CharField(max_length=80, blank=True, default="")
     descricao = models.CharField(max_length=300)
     quantidade = models.PositiveIntegerField()
+    # Só na troca de volume: o volume falta ou sobra (spec 004). Nulo nas demais
+    # categorias e nos itens lançados antes desta regra.
+    sinal_volume = models.CharField(max_length=5, choices=SinalVolume.choices, null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -238,6 +242,19 @@ class OcorrenciaItem(models.Model):
 
     def __str__(self) -> str:
         return f"{self.descricao} ({self.quantidade})"
+
+    @property
+    def sinal(self) -> str:
+        """neg / pos / neutro, para o sinal e a cor da quantidade."""
+        from .labels import sinal_item
+
+        return sinal_item(self.categoria, self.sinal_volume)
+
+    @property
+    def rotulo_categoria(self) -> str:
+        from .labels import rotulo_item
+
+        return rotulo_item(self.categoria, self.sinal_volume)
 
 
 class Mensagem(models.Model):

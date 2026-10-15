@@ -72,13 +72,13 @@ def test_falta_nao_exige_foto(cliente):
 
 
 def test_troca_de_volume_exige_foto(cliente):
-    dados = dados_produtos(itens_json='[{"categoria": "troca_volume", "codigo": "", "descricao": "", "quantidade": ""}]')
+    dados = dados_produtos(itens_json='[{"categoria": "troca_volume", "codigo": "", "descricao": "", "quantidade": "", "sinal_volume": "falta"}]')
     r = servicos.criar_ocorrencia(cliente, dados, [])
     assert "Anexe pelo menos uma foto" in r.erro
 
 
 def test_troca_de_volume_dispensa_codigo_descricao_e_quantidade(cliente):
-    dados = dados_produtos(itens_json='[{"categoria": "troca_volume", "codigo": "", "descricao": "", "quantidade": ""}]')
+    dados = dados_produtos(itens_json='[{"categoria": "troca_volume", "codigo": "", "descricao": "", "quantidade": "", "sinal_volume": "falta"}]')
 
     r = servicos.criar_ocorrencia(cliente, dados, [foto()])
 

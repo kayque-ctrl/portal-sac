@@ -12,7 +12,7 @@ usa chave primária UUID.
 | `Usuario` | contas | Usuário (cliente, operador ou admin). Login por e-mail. `ativado_em` nulo = convite pendente |
 | `Empresa` | contas | Empresa cliente; agrupa usuários do papel `cliente` |
 | `Ocorrencia` | ocorrencias | Registro central: protocolo, tipo, referência, status, prioridade, responsável, SLA, arquivamento e lixeira |
-| `OcorrenciaItem` | ocorrencias | Produto lançado numa ocorrência do tipo `produtos` |
+| `OcorrenciaItem` | ocorrencias | Produto lançado numa ocorrência do tipo `produtos`; `sinal_volume` (falta/sobra) só na troca de volume |
 | `Mensagem` | ocorrencias | Conversa cliente ↔ operação; `interna=True` é nota só da operação |
 | `Anexo` | ocorrencias | Arquivo da abertura ou de uma mensagem |
 | `HistoricoStatus` | ocorrencias | Auditoria de cada troca de status (consulta pública e KPIs) |
@@ -30,6 +30,7 @@ TipoPessoa        pf | pj | funcionario
 OcorrenciaTipo    produtos | atraso | reclamacao_sugestao
                   | avaria | falta | sobra | troca_volume | extravio | falta_troca | outro   ← legado
 ItemCategoria     avaria | falta | sobra | troca_volume | vencido | pre_vencido
+SinalVolume       falta | sobra                     ← só em itens troca_volume (spec 004)
 ReferenciaTipo    nf | pedido
 Status            aberta | em_analise | resolvida | concluida | recusada
 Prioridade        baixa | media | alta
@@ -78,7 +79,14 @@ atendente da **operação**; no portal do cliente (lista e painel) é o
 - Item com categoria em `CATEGORIAS_EXIGEM_FOTO` (`avaria`, `vencido`,
   `pre_vencido`, `troca_volume`) exige ao menos uma imagem nos anexos; o
   conteúdo da imagem é conferido (arquivo renomeado é recusado).
-- `troca_volume` dispensa código, descrição e quantidade detalhada.
+- `troca_volume` dispensa código, descrição e quantidade detalhada, mas
+  **exige** `sinal_volume` (`falta` ou `sobra`). Sem ele, a abertura inteira é
+  recusada com mensagem clara, mesmo com o formulário burlado. Nas demais
+  categorias o campo é descartado. Itens antigos, sem sinal, aparecem com
+  sinal neutro.
+- Importação de planilha: coluna opcional `sinal` (ou o texto da categoria,
+  "Troca de volume - falta"); linha de troca de volume sem sinal é ignorada e
+  contada nas ignoradas.
 - Anexos: até 5 arquivos de 10 MB; imagens, PDF, XLSX, XLS e CSV.
 - Aviso de duplicidade (não bloqueia): se a empresa já tem ocorrência
   `aberta`, `em_analise` ou `resolvida` com a mesma referência, mostra o

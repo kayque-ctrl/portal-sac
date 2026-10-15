@@ -57,11 +57,6 @@ def referencia(oc):
     return labels.formatar_referencia(oc.referencia_tipo, oc.referencia)
 
 
-@register.filter
-def sinal(cat):
-    return labels.sinal_categoria(cat)
-
-
 # ---------- formatação ----------
 
 

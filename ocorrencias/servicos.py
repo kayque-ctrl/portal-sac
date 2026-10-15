@@ -23,6 +23,7 @@ from . import emails
 from .labels import (
     CATEGORIAS_COM_PRODUTOS,
     CATEGORIAS_COM_REFERENCIA,
+    CATEGORIAS_COM_SINAL_VOLUME,
     CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
     CATEGORIAS_EXIGEM_FOTO,
     ITEM_CATEGORIA_LABEL,
@@ -31,6 +32,7 @@ from .labels import (
     STATUS_LABEL,
     TIPOS_FORM,
     Prioridade,
+    SinalVolume,
     Status,
     formatar_referencia,
 )
@@ -131,9 +133,23 @@ def _preparar_itens(itens_json: str) -> tuple[list[dict], str | None]:
             if quantidade <= 0:
                 quantidade = 1
 
+        # Troca de volume: o cliente diz se o volume falta ou sobra (spec 004).
+        # Recusa explícita, para não descartar o item em silêncio.
+        sinal_volume = None
+        if categoria in CATEGORIAS_COM_SINAL_VOLUME:
+            sinal_volume = str(it.get("sinal_volume") or "")
+            if sinal_volume not in SinalVolume.values:
+                return [], "Na troca de volume, informe se o volume está faltando ou sobrando."
+
         if (dispensa or codigo) and descricao and quantidade > 0:
             preparados.append(
-                {"categoria": categoria, "codigo": codigo, "descricao": descricao, "quantidade": quantidade}
+                {
+                    "categoria": categoria,
+                    "codigo": codigo,
+                    "descricao": descricao,
+                    "quantidade": quantidade,
+                    "sinal_volume": sinal_volume,
+                }
             )
     return preparados, None
 

@@ -54,10 +54,39 @@ def test_em_tratativa_e_amarelo_e_distinto_de_aguardando_aprovacao():
     assert "amber" in labels.STATUS_BADGE["resolvida"]
 
 
+@pytest.mark.parametrize(
+    ("categoria", "sinal_volume", "esperado"),
+    [
+        ("troca_volume", "falta", "neg"),
+        ("troca_volume", "sobra", "pos"),
+        ("troca_volume", None, "neutro"),  # item lançado antes da spec 004
+        ("falta", None, "neg"),
+        ("avaria", "sobra", "neutro"),  # sinal só vale na troca de volume
+    ],
+)
+def test_sinal_do_item(categoria, sinal_volume, esperado):
+    assert labels.sinal_item(categoria, sinal_volume) == esperado
+
+
+@pytest.mark.parametrize(
+    ("categoria", "sinal_volume", "esperado"),
+    [
+        ("troca_volume", "falta", "Troca de volume (falta)"),
+        ("troca_volume", "sobra", "Troca de volume (sobra)"),
+        ("troca_volume", None, "Troca de volume"),
+        ("avaria", "falta", "Avaria"),
+        (None, None, ""),
+    ],
+)
+def test_rotulo_do_item(categoria, sinal_volume, esperado):
+    assert labels.rotulo_item(categoria, sinal_volume) == esperado
+
+
 def test_regras_de_troca_de_volume():
     """Spec 009."""
     assert "troca_volume" in labels.CATEGORIAS_EXIGEM_FOTO
     assert "troca_volume" in labels.CATEGORIAS_DISPENSAM_DADOS_PRODUTO
+    assert labels.CATEGORIAS_COM_SINAL_VOLUME == ["troca_volume"]
 
 
 # ---------------------------------------------------------------- conversa

@@ -14,6 +14,7 @@ from ..apresentacao import preparar_conversa
 from ..labels import (
     CATEGORIAS_COM_PRODUTOS,
     CATEGORIAS_COM_REFERENCIA,
+    CATEGORIAS_COM_SINAL_VOLUME,
     CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
     CATEGORIAS_EXIGEM_FOTO,
     ITEM_CATEGORIA_LABEL,
@@ -22,6 +23,7 @@ from ..labels import (
     STATUS_ORDEM,
     TIPO_LABEL,
     TIPOS_FORM,
+    SinalVolume,
 )
 from ..models import Aviso, Ocorrencia
 from ..permissoes import colegas_da_empresa, mensagens_visiveis, ocorrencias_visiveis
@@ -296,6 +298,8 @@ def _config_formulario() -> dict:
         "categoriaLabel": ITEM_CATEGORIA_LABEL,
         "exigemFoto": CATEGORIAS_EXIGEM_FOTO,
         "dispensamDados": CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
+        "comSinalVolume": CATEGORIAS_COM_SINAL_VOLUME,
+        "sinaisVolume": [{"valor": v, "label": label} for v, label in SinalVolume.choices],
     }
 
 

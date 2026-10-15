@@ -9,7 +9,16 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 
 from .formato import formatar_data
-from .labels import ITEM_CATEGORIA_LABEL, PRIORIDADE_LABEL, STATUS_LABEL, TIPO_LABEL, formatar_referencia
+from .labels import (
+    CATEGORIAS_COM_SINAL_VOLUME,
+    CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
+    ITEM_CATEGORIA_LABEL,
+    PRIORIDADE_LABEL,
+    STATUS_LABEL,
+    TIPO_LABEL,
+    formatar_referencia,
+    rotulo_item,
+)
 
 # Alinhado ao limite de itens por ocorrência (MAX_ITENS na criação).
 MAX_LINHAS = 100
@@ -40,6 +49,16 @@ def normalizar_categoria(v: str) -> str | None:
         return "pre_vencido"
     if "venc" in s:
         return "vencido"
+    return None
+
+
+def normalizar_sinal(v: str) -> str | None:
+    """Coluna "sinal" da planilha (troca de volume): falta ou sobra."""
+    s = _sem_acento(v)
+    if s.startswith("falt") or s in ("-", "neg"):
+        return "falta"
+    if s.startswith("sobr") or s in ("+", "pos"):
+        return "sobra"
     return None
 
 
@@ -101,6 +120,8 @@ def importar_produtos(arquivo) -> dict:
     i_desc = _achar_coluna(headers, ["nome", "descricao", "produto", "descricao do produto"])
     i_cat = _achar_coluna(headers, ["categoria", "tipo"])
     i_qtd = _achar_coluna(headers, ["quantidade", "qtd", "qtde", "quant"])
+    # Opcional: só a troca de volume usa (spec 004).
+    i_sinal = _achar_coluna(headers, ["sinal", "falta/sobra", "falta ou sobra", "volume"])
 
     if min(i_cod, i_desc, i_cat, i_qtd) < 0:
         return {**vazio, "erro": "Colunas esperadas: código, nome, categoria, quantidade."}
@@ -119,13 +140,38 @@ def importar_produtos(arquivo) -> dict:
     for linha in linhas[1:]:
         codigo = celula(linha, i_cod)
         descricao = celula(linha, i_desc)
-        categoria = normalizar_categoria(celula(linha, i_cat))
+        texto_categoria = celula(linha, i_cat)
+        categoria = normalizar_categoria(texto_categoria)
         digitos = re.sub(r"\D", "", celula(linha, i_qtd))
         quantidade = int(digitos) if digitos else 0
-        if not categoria or not codigo or not descricao or quantidade <= 0:
+        sinal_volume = None
+        if categoria in CATEGORIAS_COM_SINAL_VOLUME:
+            # Coluna "sinal" ou, na falta dela, o texto da categoria ("Troca de volume - falta").
+            texto_sinal = celula(linha, i_sinal) if i_sinal >= 0 else ""
+            resto_categoria = _sem_acento(texto_categoria).replace("troca de volume", "").replace("troca", "")
+            sinal_volume = normalizar_sinal(texto_sinal) or normalizar_sinal(resto_categoria.strip(" -:/()"))
+            if sinal_volume is None:
+                ignoradas += 1
+                continue
+        if categoria in CATEGORIAS_DISPENSAM_DADOS_PRODUTO:
+            # Mesma regra do formulário (spec 009): código, descrição e quantidade opcionais.
+            descricao = descricao or ITEM_CATEGORIA_LABEL[categoria]
+            quantidade = quantidade or 1
+            codigo_obrigatorio = False
+        else:
+            codigo_obrigatorio = True
+        if not categoria or (codigo_obrigatorio and not codigo) or not descricao or quantidade <= 0:
             ignoradas += 1
             continue
-        itens.append({"categoria": categoria, "codigo": codigo, "descricao": descricao, "quantidade": quantidade})
+        itens.append(
+            {
+                "categoria": categoria,
+                "codigo": codigo,
+                "descricao": descricao,
+                "quantidade": quantidade,
+                "sinal_volume": sinal_volume,
+            }
+        )
 
     return {"itens": itens, "total": len(itens), "ignoradas": ignoradas}
 
@@ -178,7 +224,7 @@ def planilha_ocorrencia(oc) -> bytes:
         _cabecalho(ws)
         _larguras(ws, [18, 16, 40, 12])
         for it in itens:
-            ws.append([ITEM_CATEGORIA_LABEL.get(it.categoria, ""), it.codigo, it.descricao, it.quantidade])
+            ws.append([rotulo_item(it.categoria, it.sinal_volume), it.codigo, it.descricao, it.quantidade])
         ws.auto_filter.ref = f"A1:D{len(itens) + 1}"
 
     return _bytes(wb)

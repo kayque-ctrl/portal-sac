@@ -373,6 +373,7 @@ document.addEventListener("alpine:init", () => {
 
     // Rascunho / edição do produto.
     catProduto: "avaria",
+    sinalVolume: "",
     codigo: "",
     descricao: "",
     quantidade: "",
@@ -430,11 +431,20 @@ document.addEventListener("alpine:init", () => {
     get dispensaDadosProduto() {
       return this.config.dispensamDados.includes(this.catProduto);
     },
+    get pedeSinalVolume() {
+      return this.config.comSinalVolume.includes(this.catProduto);
+    },
     get itensJson() {
       return JSON.stringify(this.podeLancarProdutos ? this.itens : []);
     },
-    sinal(cat) {
-      return cat === "falta" ? "neg" : cat === "sobra" ? "pos" : "neutro";
+    /** Sinal do item (mesma regra de labels.sinal_item): na troca de volume, vem do falta/sobra. */
+    sinal(it) {
+      const base = this.config.comSinalVolume.includes(it.categoria) ? it.sinal_volume : it.categoria;
+      return base === "falta" ? "neg" : base === "sobra" ? "pos" : "neutro";
+    },
+    rotuloItem(it) {
+      const rotulo = this.config.categoriaLabel[it.categoria];
+      return it.sinal_volume ? `${rotulo} (${it.sinal_volume})` : rotulo;
     },
 
     // ----- rascunho -----
@@ -505,6 +515,7 @@ document.addEventListener("alpine:init", () => {
     // ----- produtos -----
     limparProduto() {
       this.catProduto = "avaria";
+      this.sinalVolume = "";
       this.codigo = "";
       this.descricao = "";
       this.quantidade = "";
@@ -525,11 +536,16 @@ document.addEventListener("alpine:init", () => {
         this.produtoErro = "Informe uma quantidade maior que zero.";
         return;
       }
+      if (this.pedeSinalVolume && !this.sinalVolume) {
+        this.produtoErro = "Informe se o volume está faltando ou sobrando.";
+        return;
+      }
       const novo = {
         categoria: this.catProduto,
         codigo: this.codigo.trim(),
         descricao: this.descricao.trim() || this.config.categoriaLabel.troca_volume,
         quantidade: qtd,
+        sinal_volume: this.pedeSinalVolume ? this.sinalVolume : null,
       };
       if (this.editandoIndex !== null) {
         const copia = [...this.itens];
@@ -543,6 +559,7 @@ document.addEventListener("alpine:init", () => {
     editarProduto(i) {
       const it = this.itens[i];
       this.catProduto = it.categoria;
+      this.sinalVolume = it.sinal_volume || "";
       this.codigo = it.codigo;
       this.descricao = it.descricao;
       this.quantidade = String(it.quantidade);
@@ -577,10 +594,11 @@ document.addEventListener("alpine:init", () => {
     },
     baixarModelo() {
       const csv =
-        "codigo;nome;categoria;quantidade\n" +
-        "001;Camisa azul;Avaria;1\n" +
-        "002;Camisa preta;Falta;10\n" +
-        "003;Caneca;Sobra;5\n";
+        "codigo;nome;categoria;quantidade;sinal\n" +
+        "001;Camisa azul;Avaria;1;\n" +
+        "002;Camisa preta;Falta;10;\n" +
+        "003;Caneca;Sobra;5;\n" +
+        ";Volume 2 de 3;Troca de volume;1;Falta\n";
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
       const a = document.createElement("a");
       a.href = url;

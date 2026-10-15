@@ -1,5 +1,8 @@
 Django>=6.1,<6.2
 openpyxl>=3.1
 python-dotenv>=1.0
-# Para PostgreSQL (DB_ENGINE=postgresql):
-# psycopg[binary]>=3.2
+# Produção (Vercel + Supabase, spec 015)
+psycopg[binary]>=3.2
+dj-database-url>=2.2
+django-storages[s3]>=1.14
+whitenoise>=6.7

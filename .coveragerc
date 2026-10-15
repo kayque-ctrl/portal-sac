@@ -1,8 +1,9 @@
 [run]
-source = ocorrencias,contas
+source = ocorrencias,contas,config,api
 omit =
     */migrations/*
     */popular_demo.py
+    config/asgi.py
 
 [report]
 # Piso da cobertura: só sobe. Aumente quando a cobertura real subir.

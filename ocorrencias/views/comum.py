@@ -3,6 +3,7 @@
 import uuid
 from functools import wraps
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -69,6 +70,10 @@ def baixar_anexo(request, pk):
         raise Http404
     if anexo.mensagem and anexo.mensagem.interna and not request.user.eh_operacao:
         raise Http404
+    if settings.ANEXOS_REMOTOS:
+        # Bucket privado do Supabase: URL assinada que expira em 60 s. A
+        # permissão já foi conferida acima; o link nunca aparece na página.
+        return redirect(anexo.arquivo.url)
     try:
         arquivo = anexo.arquivo.open("rb")
     except FileNotFoundError:

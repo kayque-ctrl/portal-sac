@@ -14,9 +14,68 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: requirements-dev.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - name: Migrations em dia
         run: python manage.py makemigrations --check --dry-run
       - name: Suíte completa (inclui regressão) com cobertura
         run: pytest --cov
+
+  # Mesmo banco da produção (Postgres, spec 015): usuário django_app e schema
+  # django, como em deploy/supabase.sql. Pega diferenças entre SQLite e Postgres.
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      DB_SSLMODE: disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Usuário e schema como no Supabase
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon;
+          create role authenticated;
+          create role django_app with login password 'django_app';
+          create schema django authorization django_app;
+          alter role django_app set search_path = django;
+          revoke all on schema django from public, anon, authenticated;
+          SQL
+      - name: migrate no schema django
+        env:
+          DATABASE_URL: postgresql://django_app:django_app@localhost:5432/postgres
+        run: |
+          python manage.py migrate --noinput
+          python manage.py check --database default
+          test "$(psql -tAc "select count(*) from information_schema.tables where table_schema = 'django'")" -gt 10
+          test "$(psql -tAc "select count(*) from information_schema.tables where table_schema = 'public'")" -eq 0
+      - name: Check recusa conexão fora do schema django
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: |
+          if python manage.py check --database default; then
+            echo "O check ocorrencias.E001 deveria ter barrado o schema public" && exit 1
+          fi
+      - name: Suíte completa no Postgres
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: pytest -q

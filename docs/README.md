@@ -10,6 +10,7 @@ que a afeta.
 | [03-modelo-dominio.md](03-modelo-dominio.md) | Entidades, enums, relacionamentos e regras de negócio |
 | [04-processo-sdd.md](04-processo-sdd.md) | Como um card do Trello vira spec, e a spec vira código e commit |
 | [05-testes.md](05-testes.md) | Padrão de testes com pytest e suíte de regressão |
+| [06-deploy.md](06-deploy.md) | Deploy na Vercel com Supabase, passo a passo |
 
 As specs ficam na pasta local `specs/` (fora do Git), uma por card de
 trabalho, a partir do `specs/TEMPLATE.md`. O processo está em

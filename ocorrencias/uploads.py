@@ -57,10 +57,22 @@ def conteudo_imagem_confere(arquivo) -> bool:
     return False
 
 
+def _mb(n: int) -> str:
+    return f"{n / (1024 * 1024):.1f}".replace(".", ",")
+
+
 def validar_arquivos(arquivos) -> str | None:
     """Valida a lista de anexos; devolve a mensagem de erro ou None."""
+    from django.conf import settings
+
     if len(arquivos) > MAX_ANEXOS:
         return f"Envie no máximo {MAX_ANEXOS} anexos."
+    total = sum(a.size for a in arquivos)
+    if total > settings.UPLOAD_MAX_TOTAL_BYTES:
+        return (
+            f"Os anexos somam {_mb(total)} MB; o limite por envio é {_mb(settings.UPLOAD_MAX_TOTAL_BYTES)} MB. "
+            "Envie em mais de uma mensagem."
+        )
     for a in arquivos:
         if a.size > MAX_TAMANHO_BYTES:
             return f'"{a.name}" excede o limite de 10 MB.'

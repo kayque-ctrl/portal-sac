@@ -114,7 +114,15 @@ Princípios:
 
 - `.env` lido com `python-dotenv`. Sem `.env`: `DEBUG`, SQLite e e-mail no
   console.
-- PostgreSQL com `DB_ENGINE=postgresql` (instalar `psycopg[binary]`).
+- Configuração por ambiente em [config/ambiente.py](../config/ambiente.py):
+  funções puras (banco, storage, segurança, e-mail, limite de upload) chamadas
+  pelo `settings.py` e testadas em `tests/unit/test_ambiente.py`.
+- Banco: `DATABASE_URL` (Postgres do Supabase, schema `django`, usuário
+  `django_app`); sem ela, SQLite. O check `ocorrencias.E001` barra o `migrate`
+  fora do schema esperado.
+- Anexos: `STORAGE_BACKEND=supabase` grava num bucket privado; a view de
+  download confere a permissão e redireciona para URL assinada de 60 s.
+- Produção completa (Vercel + Supabase): [06-deploy.md](06-deploy.md).
 - Fuso `America/Sao_Paulo`, idioma `pt-br`.
 - Chaves primárias UUID em todas as entidades de negócio.
 - Protocolo `AAAA-NNNNNN` gerado por um contador (`ProtocoloSeq`) com
@@ -125,7 +133,8 @@ Princípios:
 
 | Comando | Substitui | Frequência sugerida |
 | --- | --- | --- |
-| `arquivar_concluidas --dias 30` | `pg_cron` da migration 0007 | Diária |
+| `arquivar_concluidas --dias 30` | `pg_cron` da migration 0007 | Diária (local/servidor próprio) |
+| `GET /cron/arquivar` (Vercel Cron, `Authorization: Bearer $CRON_SECRET`) | o mesmo, em produção | Diária, 03:00 de Brasília (`vercel.json`) |
 
 ## Testes
 
@@ -147,11 +156,11 @@ estão em [05-testes.md](05-testes.md).
 | Server Actions | `servicos.py` (regras) + `views/` (HTTP) |
 | `kpis_cliente()` (SQL) + `kpis-cliente.ts` | `kpis.py` |
 | `sla.ts`, `labels.ts`, `format.ts`, `uploads.ts` | `sla.py`, `labels.py`, `formato.py`, `uploads.py` |
-| Supabase Storage (bucket privado + URL assinada) | `MEDIA_ROOT` + download pela view `/anexos/<id>` |
+| Supabase Storage (bucket privado + URL assinada) | Em produção, o mesmo Storage via `django-storages`, com a permissão conferida pela view `/anexos/<id>` antes da URL assinada; em desenvolvimento, `MEDIA_ROOT` |
 | `generateLink` / `verifyOtp` | Tokens do Django em `contas/convites.py`, uso único |
 | Nodemailer | `django.core.mail` (`emails.py`) |
 | ExcelJS | openpyxl (`planilhas.py`) |
-| pg_cron (auto-arquivar) | `manage.py arquivar_concluidas --dias 30` |
+| pg_cron (auto-arquivar) | Vercel Cron em `/cron/arquivar` (ou `manage.py arquivar_concluidas`) |
 | Componentes React "use client" | Templates Django + Alpine.js (`static/js/app.js`) |
 | Nivo (gráficos) | Chart.js no painel da operação; HTML/CSS no painel do cliente |
 | `proxy.ts` (middleware de sessão) | Sessão do Django + decorators de acesso |

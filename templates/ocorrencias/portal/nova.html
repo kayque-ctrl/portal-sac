@@ -22,7 +22,7 @@
   </div>
 
   <div class="mt-6" :class="mostrarExtrato ? 'grid gap-6 lg:grid-cols-3' : ''">
-    <form method="post" enctype="multipart/form-data" @submit="onEnviar" :class="mostrarExtrato ? 'lg:col-span-2' : ''">
+    <form method="post" enctype="multipart/form-data" @submit="onEnviar" @envio-cancelado="enviando = false" data-anexos-limite="{% limite_upload %}" :class="mostrarExtrato ? 'lg:col-span-2' : ''">
       {% csrf_token %}
       <input type="hidden" name="tipo" :value="tipo">
       <input type="hidden" name="referencia_tipo" :value="refTipo">
@@ -170,11 +170,12 @@
           </label>
           <p class="mt-1.5 flex items-center gap-1 text-xs text-zinc-500">
             <span x-show="precisaFoto" class="inline-flex items-center gap-1">{% icone "camera" 12 %} Inclua ao menos uma foto mostrando a avaria/produto vencido/volume trocado — pode cobrir vários itens de uma vez.</span>
-            Aceita foto, planilha (Excel/CSV) e PDF — até {{ max_anexos }} arquivos, 10 MB cada.
+            Aceita foto, planilha (Excel/CSV) e PDF — até {{ max_anexos }} arquivos, {% limite_upload_mb %} MB no total. Fotos são reduzidas automaticamente.
           </p>
-          <input id="anexos" name="anexos" type="file" multiple accept="{{ accept }}" @change="contarFotos"
+          <input id="anexos" name="anexos" type="file" multiple accept="{{ accept }}" data-comprimir @change="contarFotos"
             class="mt-2 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-700 dark:text-zinc-400 dark:file:bg-white dark:file:text-zinc-900">
           <p x-show="anexoErro" role="alert" class="mt-1.5 text-sm text-red-600 dark:text-red-400" x-text="anexoErro"></p>
+          <p data-erro-upload hidden role="alert" class="mt-1.5 text-sm text-red-600 dark:text-red-400"></p>
         </div>
 
         {# Revisão antes de enviar #}

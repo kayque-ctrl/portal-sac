@@ -1,6 +1,7 @@
 from urllib.parse import urlencode
 
 from django import template
+from django.conf import settings
 from django.utils.html import format_html
 
 from .. import formato, labels, notificacoes
@@ -100,6 +101,21 @@ def plural(n, formas):
     """{{ n|plural:"ocorrência,ocorrências" }}"""
     um, varios = formas.split(",")
     return um if n == 1 else varios
+
+
+# ---------- uploads ----------
+
+
+@register.simple_tag
+def limite_upload():
+    """Soma máxima dos anexos de um envio, em bytes (o navegador confere antes de enviar)."""
+    return settings.UPLOAD_MAX_TOTAL_BYTES
+
+
+@register.simple_tag
+def limite_upload_mb():
+    mb = settings.UPLOAD_MAX_TOTAL_BYTES / (1024 * 1024)
+    return f"{mb:g}".replace(".", ",")
 
 
 # ---------- componentes ----------

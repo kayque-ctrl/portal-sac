@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import comum, operacao, portal, publico
+from .views import comum, cron, operacao, portal, publico
 
 publico_urls = [
     path("", publico.inicio, name="inicio"),
@@ -8,6 +8,7 @@ publico_urls = [
     path("anexos/<uuid:pk>", comum.baixar_anexo, name="anexo"),
     path("notificacoes/recentes", comum.notificacoes_recentes, name="notificacoes_recentes"),
     path("notificacoes/marcar-lidas", comum.marcar_lidas, name="marcar_lidas"),
+    path("cron/arquivar", cron.arquivar, name="cron_arquivar"),
 ]
 
 portal_urls = (

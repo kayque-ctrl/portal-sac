@@ -60,6 +60,100 @@ new MutationObserver(() => {
 }).observe(document.documentElement, { childList: true, subtree: true });
 document.addEventListener("DOMContentLoaded", desenharIcones);
 
+// ---------------------------------------------------------------- anexos
+// Fotos de celular têm vários MB, e a Vercel limita o corpo da requisição a
+// 4,5 MB (spec 015). Ao escolher arquivos num <input data-comprimir>, as fotos
+// são reduzidas aqui mesmo (port do imagem.ts do projeto original). No envio,
+// formulários com data-anexos-limite conferem a soma antes de mandar.
+
+const FOTO_MAX_LADO = 1600;
+const FOTO_QUALIDADE = 0.8;
+const FOTO_SEM_COMPRIMIR_ATE = 1_500_000; // bytes
+
+/** Reduz uma foto (JPEG). Não-imagem, GIF, foto pequena ou qualquer falha: devolve o original. */
+async function comprimirImagem(arquivo) {
+  if (!arquivo.type.startsWith("image/") || arquivo.type === "image/gif") return arquivo;
+  try {
+    const bitmap = await createImageBitmap(arquivo);
+    const escala = Math.min(1, FOTO_MAX_LADO / Math.max(bitmap.width, bitmap.height));
+    if (escala >= 1 && arquivo.size < FOTO_SEM_COMPRIMIR_ATE) {
+      bitmap.close?.();
+      return arquivo;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * escala);
+    canvas.height = Math.round(bitmap.height * escala);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", FOTO_QUALIDADE));
+    if (!blob || blob.size >= arquivo.size) return arquivo;
+    const nome = arquivo.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return new File([blob], nome, { type: "image/jpeg", lastModified: Date.now() });
+  } catch {
+    return arquivo;
+  }
+}
+
+function mostrarErroUpload(form, mensagem) {
+  const el = form.querySelector("[data-erro-upload]");
+  if (!el) {
+    if (mensagem) window.alert(mensagem);
+    return;
+  }
+  el.textContent = mensagem || "";
+  el.hidden = !mensagem;
+}
+
+function formatarMb(bytes) {
+  return (bytes / (1024 * 1024)).toFixed(1).replace(".", ",");
+}
+
+document.addEventListener("change", async (e) => {
+  const input = e.target;
+  if (!(input instanceof HTMLInputElement) || input.type !== "file" || !input.hasAttribute("data-comprimir")) return;
+  const arquivos = Array.from(input.files || []);
+  if (!arquivos.some((f) => f.type.startsWith("image/"))) return;
+  const form = input.form;
+  if (form) {
+    form.dataset.comprimindo = "1";
+    mostrarErroUpload(form, null);
+  }
+  try {
+    const prontos = await Promise.all(arquivos.map(comprimirImagem));
+    const dt = new DataTransfer();
+    prontos.forEach((f) => dt.items.add(f));
+    input.files = dt.files;
+  } finally {
+    if (form) delete form.dataset.comprimindo;
+  }
+});
+
+// Fase de bolha: roda depois das validações do Alpine (@submit) e só age se
+// o envio ainda for seguir.
+document.addEventListener("submit", (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement) || !form.dataset.anexosLimite || e.defaultPrevented) return;
+  const cancelar = (mensagem) => {
+    e.preventDefault();
+    mostrarErroUpload(form, mensagem);
+    form.dispatchEvent(new CustomEvent("envio-cancelado"));
+  };
+  if (form.dataset.comprimindo) {
+    cancelar("Aguarde: as fotos ainda estão sendo preparadas.");
+    return;
+  }
+  const limite = Number(form.dataset.anexosLimite);
+  let total = 0;
+  for (const campo of form.elements) {
+    if (campo.type === "file") for (const f of campo.files || []) total += f.size;
+  }
+  if (limite && total > limite) {
+    cancelar(`Os anexos somam ${formatarMb(total)} MB; o limite por envio é ${formatarMb(limite)} MB. Envie em mais de uma mensagem.`);
+    return;
+  }
+  mostrarErroUpload(form, null);
+});
+
 // ---------------------------------------------------------------- componentes
 
 document.addEventListener("alpine:init", () => {

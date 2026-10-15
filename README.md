@@ -29,7 +29,8 @@ Django. O de/para entre as duas versões está em
 | Camada | Tecnologia |
 | --- | --- |
 | Backend | Python 3.12+, Django 6.1 |
-| Banco | SQLite em desenvolvimento, PostgreSQL em produção |
+| Banco | SQLite em desenvolvimento, PostgreSQL do Supabase em produção |
+| Hospedagem | Vercel (função Python) + Supabase Storage para anexos |
 | Front-end | Templates Django, Tailwind v4, Alpine.js, Lucide, Chart.js (todos via CDN, sem etapa de build) |
 | Planilhas | openpyxl (importação e exportação `.xlsx`) |
 | E-mail | `django.core.mail` (SMTP; sem SMTP, as mensagens saem no console) |
@@ -180,12 +181,18 @@ conteúdo (inclusive os links de convite) aparece no console do `runserver`.
 
 ## Produção
 
-- `DJANGO_DEBUG=false`, `DJANGO_SECRET_KEY` forte, `DJANGO_ALLOWED_HOSTS` e
-  `DJANGO_CSRF_TRUSTED_ORIGINS` preenchidos.
-- PostgreSQL (`DB_ENGINE=postgresql` e `pip install "psycopg[binary]"`).
-- `python manage.py collectstatic`, servido por WhiteNoise ou pelo proxy.
-- Compilar o Tailwind com `@tailwindcss/cli` em vez do script de navegador.
-- Agendar `arquivar_concluidas`.
+Hospedado na **Vercel**, com banco e anexos no **Supabase**: Postgres no schema
+`django` e bucket privado no Storage. O passo a passo (Supabase, migrations,
+variáveis da Vercel e roteiro de teste) está em
+[docs/06-deploy.md](docs/06-deploy.md).
+
+- As migrations rodam **manualmente**, antes do deploy, pela conexão direta.
+- Com `DJANGO_DEBUG=false` a aplicação não sobe com chave fraca e liga HTTPS,
+  cookies seguros e HSTS.
+- Fotos são reduzidas no navegador (limite de 4,5 MB por requisição da Vercel).
+- O CI também roda a suíte num Postgres com o mesmo schema e usuário da produção.
+- Melhoria futura: compilar o Tailwind com `@tailwindcss/cli` em vez do script
+  de navegador.
 
 ## Documentação
 
@@ -196,4 +203,5 @@ conteúdo (inclusive os links de convite) aparece no console do `runserver`.
 | [docs/03-modelo-dominio.md](docs/03-modelo-dominio.md) | Entidades, enums, relacionamentos e regras |
 | [docs/04-processo-sdd.md](docs/04-processo-sdd.md) | Do card do Trello à spec, ao código e ao commit |
 | [docs/05-testes.md](docs/05-testes.md) | Padrão de testes com pytest e suíte de regressão |
+| [docs/06-deploy.md](docs/06-deploy.md) | Deploy na Vercel com Supabase, passo a passo |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, commits, versionamento e checklist de PR |

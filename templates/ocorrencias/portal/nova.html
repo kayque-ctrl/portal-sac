@@ -234,7 +234,7 @@
                   x-text="(sinal(it) === 'pos' ? '+' : sinal(it) === 'neg' ? '-' : '') + it.quantidade"></span>
               </div>
               <dl class="mt-2 space-y-1">
-                <div class="flex gap-1.5"><dt class="shrink-0 text-xs font-medium text-zinc-500">Nome:</dt><dd class="truncate text-zinc-800 dark:text-zinc-200" x-text="it.descricao"></dd></div>
+                <div class="flex gap-1.5"><dt class="shrink-0 text-xs font-medium text-zinc-500">Nome:</dt><dd class="truncate" :class="config.categoriaTexto[it.categoria] || config.textoPadrao" x-text="it.descricao"></dd></div>
                 <div x-show="it.codigo" class="flex gap-1.5"><dt class="shrink-0 text-xs font-medium text-zinc-500">Código:</dt><dd class="truncate tabular-nums text-zinc-600 dark:text-zinc-300" x-text="it.codigo"></dd></div>
               </dl>
               <div class="mt-2 flex items-center gap-3">

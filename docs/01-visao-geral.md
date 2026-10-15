@@ -95,6 +95,8 @@ Regras por categoria:
 - `troca_volume` exige informar se o volume **falta ou sobra** (spec 004);
   o item mostra "Troca de volume (falta)" e o sinal correspondente.
 - `falta` e `sobra` têm sinal (− / +) na exibição (`sinal_item`).
+- `avaria`, `pre_vencido` e `vencido` têm cor de fonte própria na descrição
+  do produto (`ITEM_TEXTO`, spec 006).
 
 ## Ligação com o Trello
 

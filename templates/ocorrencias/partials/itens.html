@@ -10,7 +10,7 @@
         {% if it.categoria %}
         <span class="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium {{ it.categoria|item_badge }}">{{ it.rotulo_categoria }}</span>
         {% endif %}
-        <span class="min-w-0 truncate text-zinc-800 dark:text-zinc-200">
+        <span class="min-w-0 truncate {{ it.categoria|item_texto }}">
           {{ it.descricao }}{% if it.codigo %}<span class="text-zinc-500"> · Cód. {{ it.codigo }}</span>{% endif %}
         </span>
       </span>

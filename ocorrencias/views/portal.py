@@ -19,6 +19,8 @@ from ..labels import (
     CATEGORIAS_EXIGEM_FOTO,
     ITEM_CATEGORIA_LABEL,
     ITEM_CATEGORIAS,
+    ITEM_TEXTO,
+    ITEM_TEXTO_PADRAO,
     STATUS_LABEL,
     STATUS_ORDEM,
     TIPO_LABEL,
@@ -299,6 +301,8 @@ def _config_formulario() -> dict:
         "exigemFoto": CATEGORIAS_EXIGEM_FOTO,
         "dispensamDados": CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
         "comSinalVolume": CATEGORIAS_COM_SINAL_VOLUME,
+        "categoriaTexto": ITEM_TEXTO,
+        "textoPadrao": ITEM_TEXTO_PADRAO,
         "sinaisVolume": [{"valor": v, "label": label} for v, label in SinalVolume.choices],
     }
 

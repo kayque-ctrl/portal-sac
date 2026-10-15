@@ -133,6 +133,15 @@ ITEM_BADGE = {
     "pre_vencido": "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
 }
 
+# Cor da FONTE da descrição do produto (spec 006): só as categorias pedidas no
+# card, nos mesmos tons das etiquetas. As demais seguem o texto padrão.
+ITEM_TEXTO = {
+    "avaria": "text-amber-700 dark:text-amber-400",
+    "pre_vencido": "text-orange-700 dark:text-orange-400",
+    "vencido": "text-rose-700 dark:text-rose-400",
+}
+ITEM_TEXTO_PADRAO = "text-zinc-800 dark:text-zinc-200"
+
 PAPEL_BADGE = {
     "admin": "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
     "operador": "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",

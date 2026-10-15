@@ -48,6 +48,12 @@ def item_badge(v):
 
 
 @register.filter
+def item_texto(v):
+    """Cor da fonte da descrição do produto conforme a categoria (spec 006)."""
+    return labels.ITEM_TEXTO.get(v, labels.ITEM_TEXTO_PADRAO)
+
+
+@register.filter
 def status_dot(v):
     return labels.STATUS_DOT.get(v, "bg-zinc-400")
 

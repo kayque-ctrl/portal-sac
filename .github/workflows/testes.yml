@@ -72,9 +72,30 @@ jobs:
           for vez in 1 2; do
             sed "s/TROQUE-POR-UMA-SENHA-FORTE/django_app/" deploy/supabase.sql | psql -v ON_ERROR_STOP=1
           done
-          test "$(psql -tAc "select pg_get_userbyid(nspowner) from pg_namespace where nspname = 'django'")" = "django_app"
-          test "$(psql -tAc "select public from storage.buckets where id = 'anexos-django'")" = "f"
-          test "$(psql -tAc "select count(*) from pg_auth_members m join pg_roles r on r.oid = m.roleid where r.rolname = 'django_app'")" -eq 0
+          # Cada conferência vira anotação no GitHub (visível sem abrir os logs).
+          confere() {
+            local nome="$1" esperado="$2" sql="$3" obtido
+            obtido="$(psql -tAc "$sql")"
+            if [ "$obtido" = "$esperado" ]; then
+              echo "::notice::$nome: ok ($obtido)"
+            else
+              echo "::error::$nome: esperado '$esperado', obtido '$obtido'"
+              falhou=1
+            fi
+          }
+          falhou=0
+          confere "dono do schema django" "django_app" \
+            "select pg_get_userbyid(nspowner) from pg_namespace where nspname = 'django'"
+          confere "bucket anexos-django privado" "f" \
+            "select public from storage.buckets where id = 'anexos-django'"
+          # O Postgres 16+ mantém a participação só administrativa de quem criou o
+          # role (necessária para gerenciá-lo); o que não pode sobrar é poder AGIR
+          # como django_app (SET ROLE), concedido pelo script só durante a criação.
+          confere "ninguém age como django_app" "0" \
+            "select count(*) from pg_auth_members m join pg_roles r on r.oid = m.roleid where r.rolname = 'django_app' and m.set_option"
+          confere "search_path do django_app" "search_path=django" \
+            "select array_to_string(setconfig, ',') from pg_db_role_setting s join pg_roles r on r.oid = s.setrole where r.rolname = 'django_app'"
+          exit $falhou
       - name: migrate no schema django
         env:
           DATABASE_URL: postgresql://django_app:django_app@localhost:5432/postgres

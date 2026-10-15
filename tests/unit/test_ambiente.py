@@ -30,6 +30,19 @@ def test_booleano_usa_o_padrao_quando_ausente():
     assert ambiente.booleano(None, True) is True
 
 
+@pytest.mark.parametrize(
+    ("env", "esperado"),
+    [
+        ({}, True),  # máquina local
+        ({"VERCEL": "1"}, False),  # Vercel sem DJANGO_DEBUG: nunca liga sozinho
+        ({"VERCEL": "1", "DJANGO_DEBUG": "true"}, True),  # explícito manda
+        ({"DJANGO_DEBUG": "false"}, False),
+    ],
+)
+def test_debug_desligado_por_padrao_na_vercel(env, esperado):
+    assert ambiente.debug(env) is esperado
+
+
 def test_lista_ignora_vazios_e_espacos():
     assert ambiente.lista(" a.com, ,b.com ") == ["a.com", "b.com"]
     assert ambiente.lista(None) == []

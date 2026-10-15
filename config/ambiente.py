@@ -32,6 +32,14 @@ def booleano(valor: str | None, padrao: bool = False) -> bool:
     return valor.strip().lower() in ("1", "true", "yes", "on")
 
 
+def debug(env: dict) -> bool:
+    """
+    DJANGO_DEBUG explícito manda. Sem ele, liga só fora da Vercel: em produção,
+    esquecer a variável nunca pode ligar o modo debug (a Vercel define VERCEL=1).
+    """
+    return booleano(env.get("DJANGO_DEBUG"), not env.get("VERCEL"))
+
+
 def lista(valor: str | None) -> list[str]:
     return [v.strip() for v in (valor or "").split(",") if v.strip()]
 

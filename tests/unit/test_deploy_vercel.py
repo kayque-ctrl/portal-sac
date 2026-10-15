@@ -12,9 +12,11 @@ def vercel() -> dict:
     return json.loads((RAIZ / "vercel.json").read_text(encoding="utf-8"))
 
 
-def test_todas_as_rotas_vao_para_o_django():
-    assert vercel()["rewrites"] == [{"source": "/(.*)", "destination": "/api/index"}]
-    assert "api/index.py" in vercel()["functions"]
+def test_todas_as_rotas_vao_para_o_django_com_o_caminho_original():
+    """`routes` preserva o caminho pedido; com `rewrites` o Django recebia sempre /api/index."""
+    assert vercel()["builds"] == [{"src": "api/index.py", "use": "@vercel/python"}]
+    assert vercel()["routes"] == [{"src": "/(.*)", "dest": "api/index.py"}]
+    assert "rewrites" not in vercel()
 
 
 def test_cron_aponta_para_uma_rota_existente():

@@ -17,7 +17,7 @@ load_dotenv(BASE_DIR / ".env")
 ENV = os.environ
 
 SECRET_KEY = ENV.get("DJANGO_SECRET_KEY", ambiente.SECRET_DEV)
-DEBUG = ambiente.booleano(ENV.get("DJANGO_DEBUG"), True)
+DEBUG = ambiente.debug(ENV)
 ALLOWED_HOSTS = ambiente.lista(ENV.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"))
 CSRF_TRUSTED_ORIGINS = ambiente.lista(ENV.get("DJANGO_CSRF_TRUSTED_ORIGINS"))
 
@@ -136,5 +136,9 @@ LOGGING = {
     "loggers": {
         "ocorrencias": {"handlers": ["console"], "level": "INFO"},
         "contas": {"handlers": ["console"], "level": "INFO"},
+        # Em produção o Django silencia estes por padrão; no console eles aparecem
+        # nos Runtime Logs da Vercel (ex.: motivo de um 400 DisallowedHost ou de um 500).
+        "django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
     },
 }

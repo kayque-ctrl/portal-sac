@@ -113,5 +113,5 @@ jobs:
           fi
       - name: Suíte completa no Postgres
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          TESTES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: pytest -q

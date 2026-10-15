@@ -13,7 +13,16 @@ from . import ambiente
 from .settings import *  # noqa: F403
 from .settings import BASE_DIR
 
-DATABASES = {"default": ambiente.banco({"DATABASE_URL": os.environ.get("TESTES_DATABASE_URL", "")}, BASE_DIR)}
+DATABASES = {
+    "default": ambiente.banco(
+        {
+            "DATABASE_URL": os.environ.get("TESTES_DATABASE_URL", ""),
+            # O Postgres descartável do CI não tem SSL (DB_SSLMODE=disable no workflow).
+            "DB_SSLMODE": os.environ.get("DB_SSLMODE", "require"),
+        },
+        BASE_DIR,
+    )
+}
 
 STORAGES = ambiente.storages({})
 ANEXOS_REMOTOS = False

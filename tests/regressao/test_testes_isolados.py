@@ -30,3 +30,17 @@ def test_storage_e_email_dos_testes_sao_locais():
     assert settings.ANEXOS_REMOTOS is False
     assert settings.STORAGES["default"]["BACKEND"] == "django.core.files.storage.FileSystemStorage"
     assert settings.SMTP_CONFIGURADO is False
+
+
+def test_postgres_dos_testes_respeita_o_sslmode(monkeypatch):
+    """O CI roda a suíte num Postgres sem SSL: TESTES_DATABASE_URL + DB_SSLMODE=disable."""
+    import importlib
+
+    import config.settings_testes as st
+
+    monkeypatch.setenv("TESTES_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/postgres")
+    monkeypatch.setenv("DB_SSLMODE", "disable")
+    importlib.reload(st)
+
+    assert st.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql"
+    assert st.DATABASES["default"]["OPTIONS"]["sslmode"] == "disable"

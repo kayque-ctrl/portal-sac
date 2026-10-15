@@ -1,0 +1,20 @@
+{% load ocorrencias_tags %}
+{% comment %}Uma linha de aviso. Parâmetros: a (Aviso), dispensavel (bool){% endcomment %}
+<div class="flex items-start gap-3 px-4 py-3 {% if a.tipo == 'alerta' %}bg-amber-50 dark:bg-amber-950/30{% else %}bg-white dark:bg-zinc-900{% endif %}">
+  <span class="mt-0.5 {% if a.tipo == 'alerta' %}text-amber-600 dark:text-amber-400{% else %}text-blue-600 dark:text-blue-400{% endif %}">
+    {% if a.tipo == 'alerta' %}{% icone "triangle-alert" 20 %}{% else %}{% icone "info" 20 %}{% endif %}
+  </span>
+  <div class="min-w-0 flex-1">
+    <p class="font-medium {% if a.tipo == 'alerta' %}text-amber-900 dark:text-amber-100{% else %}text-zinc-900 dark:text-white{% endif %}">{{ a.titulo }}</p>
+    <p class="mt-0.5 line-clamp-2 text-sm {% if a.tipo == 'alerta' %}text-amber-800 dark:text-amber-200{% else %}text-zinc-600 dark:text-zinc-400{% endif %}">{{ a.mensagem }}</p>
+    {% if a.expira_em %}
+    <p class="mt-1 text-xs {% if a.tipo == 'alerta' %}text-amber-700 dark:text-amber-300/80{% else %}text-zinc-500{% endif %}">Válido até {{ a.expira_em|dia }}</p>
+    {% endif %}
+  </div>
+  {% if dispensavel and a.tipo != 'alerta' %}
+  <button type="button" @click="dispensar('{{ a.id }}')" aria-label="Dispensar aviso: {{ a.titulo }}"
+    class="shrink-0 rounded p-1 text-zinc-400 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:hover:text-zinc-200">
+    {% icone "x" 16 %}
+  </button>
+  {% endif %}
+</div>

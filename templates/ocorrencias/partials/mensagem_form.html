@@ -1,0 +1,82 @@
+{% load ocorrencias_tags %}
+{% comment %}
+Formulário de mensagem. Parâmetros: action, permite_nota_interna, avisa_bump,
+msg_erro, msg_conteudo, msg_interna, accept, max_anexos.
+Para a operação, o padrão é nota interna: esquecer de trocar o modo só deixa
+de avisar o cliente (dá para reenviar), nunca vaza uma nota.
+{% endcomment %}
+<form method="post" action="{{ action }}" enctype="multipart/form-data" class="space-y-3"
+  x-data="mensagemForm({ permiteNotaInterna: {{ permite_nota_interna|yesno:'true,false' }}, avisaBump: {{ avisa_bump|yesno:'true,false' }}, interna: {% if permite_nota_interna %}{% if msg_erro %}{{ msg_interna|yesno:'true,false' }}{% else %}true{% endif %}{% else %}false{% endif %} })"
+  @submit="onSubmit">
+  {% csrf_token %}
+
+  {% if permite_nota_interna %}
+  <input type="hidden" name="interna" :value="interna ? 'on' : ''">
+  <div role="tablist" aria-label="Tipo de mensagem" class="inline-flex rounded-lg border border-zinc-300 p-0.5 dark:border-zinc-700">
+    <button type="button" role="tab" :aria-selected="interna" @click="interna = true"
+      class="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors"
+      :class="interna ? 'bg-amber-600 text-white' : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'">
+      {% icone "lock" 14 %} Nota interna
+    </button>
+    <button type="button" role="tab" :aria-selected="!interna" @click="interna = false"
+      class="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors"
+      :class="!interna ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'">
+      {% icone "eye" 14 %} Responder ao cliente
+    </button>
+  </div>
+  {% endif %}
+
+  <textarea name="conteudo" rows="3" :placeholder="interna ? 'Escreva uma nota interna…' : 'Escreva uma resposta…'"
+    class="w-full rounded-lg border px-3 py-2 text-zinc-900 outline-none focus:ring-2 dark:text-white"
+    :class="interna ? 'border-amber-300 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/10 dark:border-amber-900/60 dark:bg-amber-950/20' : 'border-zinc-300 bg-white focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-400'">{{ msg_conteudo|default:'' }}</textarea>
+
+  <ul x-show="arquivos.length > 0" x-cloak class="flex flex-wrap gap-2">
+    <template x-for="(nome, i) in arquivos" :key="i">
+      <li class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+        <i data-lucide="paperclip" style="width:12px;height:12px"></i>
+        <span class="max-w-[160px] truncate" x-text="nome"></span>
+      </li>
+    </template>
+  </ul>
+
+  {% if msg_erro %}<p role="alert" class="text-sm text-red-600 dark:text-red-400">{{ msg_erro }}</p>{% endif %}
+  {% for m in messages %}{% if 'mensagem' in m.tags %}<p role="alert" class="text-sm text-amber-600 dark:text-amber-400">{{ m }}</p>{% endif %}{% endfor %}
+
+  <div class="flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <label class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+        {% icone "paperclip" 16 %} Anexar
+        <input x-ref="arquivos" type="file" name="anexos" multiple accept="{{ accept }}" @change="escolher" class="hidden">
+      </label>
+      <button type="button" x-show="arquivos.length > 0" x-cloak @click="limparArquivos()"
+        class="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+        {% icone "x" 13 %} limpar
+      </button>
+      {% if permite_nota_interna %}
+      <span class="inline-flex items-center gap-1 text-xs font-medium" :class="interna ? 'text-amber-700 dark:text-amber-400' : 'text-zinc-600 dark:text-zinc-300'">
+        <span x-show="interna" class="inline-flex items-center gap-1">{% icone "lock" 12 %} Só a operação vê</span>
+        <span x-show="!interna" x-cloak class="inline-flex items-center gap-1">{% icone "eye" 12 %} Visível para o cliente</span>
+      </span>
+      {% endif %}
+    </div>
+
+    <button type="submit" :disabled="enviando"
+      class="flex h-10 items-center justify-center rounded-lg px-5 text-sm font-medium text-white transition-colors disabled:opacity-60"
+      :class="interna ? 'bg-amber-600 hover:bg-amber-700' : 'bg-zinc-900 hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200'"
+      x-text="enviando ? 'Enviando…' : (interna ? 'Salvar nota interna' : (permiteNotaInterna ? 'Enviar ao cliente' : 'Enviar'))">Enviar</button>
+  </div>
+  <p class="text-xs text-zinc-500">Até {{ max_anexos }} arquivos — foto, planilha ou PDF.</p>
+
+  <template x-teleport="body">
+    <div x-show="modalBump" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-fadein" @click.self="modalBump = false" @keydown.escape.window="modalBump = false">
+      <div class="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+        <h3 class="text-base font-semibold text-zinc-900 dark:text-white">Mover para Em tratativa?</h3>
+        <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Ao enviar esta mensagem, a ocorrência sairá de <strong>Aberta</strong> e passará para <strong>Em tratativa</strong>.</p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button type="button" @click="modalBump = false" class="h-10 rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Cancelar</button>
+          <button type="button" @click="confirmarEnvio()" class="h-10 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </template>
+</form>

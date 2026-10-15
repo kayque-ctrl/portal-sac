@@ -1,0 +1,29 @@
+{% load ocorrencias_tags %}
+{% comment %}
+Trilha do andamento. Caminho feliz: aberta → em tratativa → aguardando
+aprovação → resolvida. "Recusada" é desfecho alternativo.
+Parâmetro: passos = [{label, estado, numero, ultimo, linha_feita}] (ver tag andamento).
+{% endcomment %}
+<ol aria-label="Andamento da ocorrência" class="flex items-center gap-2 overflow-x-auto pb-1">
+  {% for p in passos %}
+  <li class="flex shrink-0 items-center gap-2">
+    <div class="flex items-center gap-2">
+      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold
+        {% if p.estado == 'feito' %}bg-zinc-900 text-white dark:bg-white dark:text-zinc-900
+        {% elif p.estado == 'atual' %}bg-white text-zinc-900 ring-2 ring-zinc-900 dark:bg-zinc-900 dark:text-white dark:ring-white
+        {% elif p.estado == 'recusado' %}bg-red-600 text-white
+        {% else %}bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500{% endif %}">
+        {% if p.estado == 'feito' %}{% icone "check" 14 %}{% elif p.estado == 'recusado' %}{% icone "x" 14 %}{% else %}{{ p.numero }}{% endif %}
+      </span>
+      <span class="whitespace-nowrap text-xs
+        {% if p.estado == 'futuro' %}text-zinc-500 dark:text-zinc-500
+        {% elif p.estado == 'recusado' %}font-medium text-red-600 dark:text-red-400
+        {% elif p.estado == 'atual' %}font-medium text-zinc-900 dark:text-white
+        {% else %}text-zinc-600 dark:text-zinc-300{% endif %}">{{ p.label }}</span>
+    </div>
+    {% if not p.ultimo %}
+    <span class="h-px w-6 {{ p.linha }}"></span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>

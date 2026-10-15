@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% comment %}Layout das telas públicas centralizadas (login, consulta, senha).{% endcomment %}
+{% block body %}
+<main class="relative flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-zinc-950">
+  {% include "partials/tema.html" with classe="absolute right-4 top-4" %}
+  <div class="w-full {% block largura %}max-w-sm{% endblock %}">
+    {% block conteudo %}{% endblock %}
+  </div>
+</main>
+{% endblock %}

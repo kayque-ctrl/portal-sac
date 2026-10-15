@@ -1,0 +1,15 @@
+{% load ocorrencias_tags %}
+{% if anexos %}
+<ul class="flex flex-wrap gap-2">
+  {% for a in anexos %}
+  <li>
+    <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer"
+      class="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+      <span class="text-zinc-500">{% icone "paperclip" 14 %}</span>
+      <span class="max-w-[200px] truncate">{{ a.nome_arquivo }}</span>
+      {% if a.tamanho_bytes %}<span class="text-xs text-zinc-500">{{ a.tamanho_bytes|tamanho }}</span>{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

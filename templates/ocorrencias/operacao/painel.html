@@ -1,0 +1,157 @@
+{% extends "area.html" %}
+{% load ocorrencias_tags %}
+{% block title %}Painel · Operação{% endblock %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>{% endblock %}
+
+{% block conteudo %}
+<div class="space-y-8">
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-zinc-900 dark:text-white">Painel</h1>
+      <p class="mt-1 text-sm text-zinc-500">{{ total }} {{ total|plural:"ocorrência,ocorrências" }}</p>
+    </div>
+    <a href="{{ export_href }}" class="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">{% icone "download" 16 %} Exportar Excel</a>
+  </div>
+
+  {# Filtros #}
+  <form method="get" class="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div>
+      <label for="empresa" class="block text-xs font-medium text-zinc-500">Empresa</label>
+      <select id="empresa" name="empresa" class="mt-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+        <option value="">Todas</option>
+        {% for e in empresas %}<option value="{{ e.id }}" {% if e.id|stringformat:'s' == filtros.empresa %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="status" class="block text-xs font-medium text-zinc-500">Status</label>
+      <select id="status" name="status" class="mt-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+        <option value="">Todos</option>
+        {% for v, l in status_labels %}<option value="{{ v }}" {% if v == filtros.status %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="tipo" class="block text-xs font-medium text-zinc-500">Categoria</label>
+      <select id="tipo" name="tipo" class="mt-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+        <option value="">Todas</option>
+        {% for v, l in tipo_labels %}<option value="{{ v }}" {% if v == filtros.tipo %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="de" class="block text-xs font-medium text-zinc-500">De</label>
+      <input id="de" name="de" type="date" value="{{ filtros.de }}" class="mt-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+    </div>
+    <div>
+      <label for="ate" class="block text-xs font-medium text-zinc-500">Até</label>
+      <input id="ate" name="ate" type="date" value="{{ filtros.ate }}" class="mt-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+    </div>
+    <button type="submit" class="h-[34px] rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Aplicar</button>
+    {% if tem_filtro %}<a href="{% url 'operacao:painel' %}" class="h-[34px] px-2 py-1.5 text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-800 dark:hover:text-zinc-200">Limpar</a>{% endif %}
+  </form>
+
+  {# KPIs #}
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    {% for c in cartoes %}{% include "partials/stat_card.html" with label=c.label valor=c.valor destaque=c.destaque %}{% endfor %}
+  </div>
+
+  {% if not total %}
+  <div class="rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">Nenhuma ocorrência com os filtros atuais.</div>
+  {% else %}
+  {# Gráficos #}
+  <div class="grid gap-4 lg:grid-cols-2">
+    {% for id, titulo in graficos_titulos %}
+    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 class="text-sm font-semibold text-zinc-900 dark:text-white">{{ titulo }}</h3>
+      <div class="relative mt-3 h-64"><canvas id="{{ id }}" role="img" aria-label="{{ titulo }}"></canvas></div>
+    </div>
+    {% endfor %}
+  </div>
+  {{ graficos|json_script:"dados-graficos" }}
+
+  {# Tabela por empresa (também serve de "table view" acessível) #}
+  <section>
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Por empresa</h2>
+    <div class="mt-3 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <table class="w-full text-sm">
+        <thead class="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-900">
+          <tr>
+            <th class="px-4 py-2 font-medium">Empresa</th>
+            <th class="px-4 py-2 text-right font-medium">Abertas</th>
+            <th class="px-4 py-2 text-right font-medium">Total</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {% for e in empresas_ordenadas %}
+          <tr class="bg-white dark:bg-zinc-900/40">
+            <td class="px-4 py-2.5 text-zinc-900 dark:text-zinc-100">{{ e.nome }}</td>
+            <td class="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">{{ e.abertas }}</td>
+            <td class="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">{{ e.total }}</td>
+            <td class="px-4 py-2.5 text-right">{% if e.id %}<a href="{% url 'operacao:lista' %}?empresa={{ e.id }}" class="text-xs font-medium text-zinc-900 underline underline-offset-4 dark:text-white">Ver</a>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+{% if total %}
+<script>
+  (function () {
+    const dados = JSON.parse(document.getElementById("dados-graficos").textContent);
+    const escuro = document.documentElement.classList.contains("dark");
+    const cor = {
+      texto: escuro ? "#a1a1aa" : "#52525b",
+      grade: escuro ? "#27272a" : "#e4e4e7",
+      superficie: escuro ? "#18181b" : "#ffffff",
+      serie: escuro ? "#60a5fa" : "#2563eb",
+      cat: ["#2563eb", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"],
+    };
+    Chart.defaults.color = cor.texto;
+    Chart.defaults.font.family = "Geist, Arial, sans-serif";
+    Chart.defaults.font.size = 11;
+    const eixos = (horizontal) => ({
+      x: { grid: { display: !!horizontal, color: cor.grade }, border: { display: false }, ticks: { precision: 0 }, beginAtZero: true },
+      y: { grid: { display: !horizontal, color: cor.grade }, border: { display: false }, ticks: { precision: 0 }, beginAtZero: true },
+    });
+    const semLegenda = { legend: { display: false } };
+
+    new Chart(document.getElementById("g-status"), {
+      type: "bar",
+      data: { labels: dados.porStatus.map((p) => p.label), datasets: [{ data: dados.porStatus.map((p) => p.valor), backgroundColor: cor.serie, borderRadius: 6 }] },
+      options: { maintainAspectRatio: false, plugins: semLegenda, scales: eixos(false) },
+    });
+
+    new Chart(document.getElementById("g-tipo"), {
+      type: "doughnut",
+      data: {
+        labels: dados.porTipo.map((p) => p.label),
+        datasets: [{ data: dados.porTipo.map((p) => p.valor), backgroundColor: dados.porTipo.map((_, i) => cor.cat[i % cor.cat.length]), borderColor: cor.superficie, borderWidth: 2 }],
+      },
+      options: { maintainAspectRatio: false, cutout: "62%", plugins: { legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } } } },
+    });
+
+    new Chart(document.getElementById("g-tempo"), {
+      type: "line",
+      data: {
+        labels: dados.porTempo.map((p) => p.label),
+        datasets: [{ data: dados.porTempo.map((p) => p.valor), borderColor: cor.serie, backgroundColor: cor.serie + "24", fill: true, tension: 0.35, pointBackgroundColor: cor.superficie, pointBorderColor: cor.serie, pointBorderWidth: 2, pointRadius: 3.5 }],
+      },
+      options: { maintainAspectRatio: false, plugins: semLegenda, scales: eixos(false) },
+    });
+
+    const elEmp = document.getElementById("g-empresa");
+    if (dados.porEmpresa.length === 0) {
+      elEmp.parentElement.innerHTML = '<p class="text-sm text-zinc-500">Sem dados de empresa.</p>';
+    } else {
+      new Chart(elEmp, {
+        type: "bar",
+        data: { labels: dados.porEmpresa.map((p) => p.label), datasets: [{ data: dados.porEmpresa.map((p) => p.valor), backgroundColor: cor.serie, borderRadius: 5 }] },
+        options: { indexAxis: "y", maintainAspectRatio: false, plugins: semLegenda, scales: eixos(true) },
+      });
+    }
+  })();
+</script>
+{% endif %}
+{% endblock %}

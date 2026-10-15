@@ -1,0 +1,24 @@
+{% comment %}
+Modal de confirmação para usar DENTRO de um <form x-data="confirmar" @submit="interceptar">.
+Parâmetros: titulo, mensagem, rotulo (padrão "Confirmar"), perigo (bool).
+{% endcomment %}
+<template x-teleport="body">
+  <div x-show="aberto" x-cloak @keydown.escape.window="if (!enviando) aberto = false"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-fadein"
+    @click.self="if (!enviando) aberto = false">
+    <div class="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 class="text-base font-semibold text-zinc-900 dark:text-white">{{ titulo }}</h3>
+      <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{{ mensagem|safe }}</p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button type="button" @click="aberto = false" :disabled="enviando"
+          class="h-10 rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+          Cancelar
+        </button>
+        <button type="button" @click="confirmar()" :disabled="enviando"
+          class="h-10 rounded-lg px-4 text-sm font-medium text-white disabled:opacity-60 {% if perigo %}bg-red-600 hover:bg-red-700{% else %}bg-zinc-900 hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200{% endif %}">
+          <span x-text="enviando ? 'Aguarde…' : '{{ rotulo|default:'Confirmar'|escapejs }}'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,117 @@
+{% extends "area.html" %}
+{% load ocorrencias_tags %}
+{% block title %}Ocorrências · Operação{% endblock %}
+
+{% block conteudo %}
+<h1 class="text-2xl font-semibold text-zinc-900 dark:text-white">Ocorrências</h1>
+<p class="mt-1 text-sm text-zinc-500">{{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"ocorrência,ocorrências" }}{% if tem_filtro %} (filtrado){% endif %}</p>
+
+{% for m in messages %}{% if not m.extra_tags %}
+<p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/40 dark:text-green-300">{{ m }}</p>
+{% endif %}{% endfor %}
+
+{# Abas de situação #}
+<div class="mt-4 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
+  {% for aba in abas %}
+  <a href="?{% query q=aba.params.q tipo=aba.params.tipo empresa=aba.params.empresa situacao=aba.chave %}"
+    class="-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors {% if situacao == aba.chave %}border-zinc-900 text-zinc-900 dark:border-white dark:text-white{% else %}border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200{% endif %}">{{ aba.label }}</a>
+  {% endfor %}
+</div>
+
+{% if empresa %}
+<div class="mt-4 inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+  Empresa: <strong class="font-medium">{{ empresa_nome|default:empresa }}</strong>
+</div>
+{% endif %}
+
+{# Filtros #}
+<form method="get" class="mt-6 flex flex-wrap items-center gap-2">
+  {% if empresa %}<input type="hidden" name="empresa" value="{{ empresa }}">{% endif %}
+  <input type="hidden" name="situacao" value="{{ situacao }}">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar por protocolo, descrição ou cliente…"
+    class="min-w-56 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+  <select name="status" class="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+    <option value="">Todos os status</option>
+    {% for v, l in status_opcoes %}<option value="{{ v }}" {% if v == status %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <select name="tipo" class="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+    <option value="">Todos os tipos</option>
+    {% for v, l in tipos %}<option value="{{ v }}" {% if v == tipo %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Filtrar</button>
+  {% if tem_filtro %}
+  <a href="{% url 'operacao:lista' %}" class="px-2 py-1.5 text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-800 dark:hover:text-zinc-200">Limpar</a>
+  {% endif %}
+</form>
+
+{# Lista #}
+{% if not pagina.object_list %}
+  <div class="mt-8 rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">
+    {% if situacao == "lixeira" %}A lixeira está vazia.{% else %}Nenhuma ocorrência{% if status or tipo or q %} com esse filtro{% endif %}.{% endif %}
+  </div>
+
+{% elif situacao == "lixeira" %}
+  {{ ids_lixeira|json_script:"ids-lixeira" }}
+  <div class="mt-4" x-data="lixeira(JSON.parse(document.getElementById('ids-lixeira').textContent))">
+    {# Barra de ações #}
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+      <label class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+        <input type="checkbox" :checked="todos" @change="alternarTodos()" class="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600">
+        Selecionar todos (<span x-text="sel.length"></span>/<span x-text="ids.length"></span>)
+      </label>
+      <form method="post" action="{% url 'operacao:esvaziar_lixeira' %}" x-data="confirmar" @submit="interceptar">
+        {% csrf_token %}
+        <button type="submit" class="flex h-9 items-center gap-1.5 rounded-lg border border-red-300 px-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/30">{% icone "trash-2" 15 %} Esvaziar lixeira</button>
+        {% include "partials/modal.html" with titulo="Esvaziar a lixeira?" mensagem="Isso apaga <strong>definitivamente</strong> todas as ocorrências da lixeira e seus anexos." rotulo="Esvaziar" perigo=True %}
+      </form>
+    </div>
+
+    {# Lista com seleção #}
+    <form method="post" action="{% url 'operacao:excluir_selecionadas' %}" x-data="confirmar" @submit="interceptar">
+      {% csrf_token %}
+      <ul class="mt-3 space-y-2">
+        {% for oc in pagina.object_list %}
+        <li class="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <input type="checkbox" name="ids" value="{{ oc.id }}" x-model="sel" class="h-4 w-4 shrink-0 rounded border-zinc-300 dark:border-zinc-600">
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium text-zinc-900 dark:text-white">{{ oc.tipo|tipo_label }}</p>
+            <p class="mt-0.5 text-xs text-zinc-500">Protocolo {{ oc.protocolo }} · {{ oc.cliente.nome|default:"Cliente" }} · {{ oc.criado_em|data }}</p>
+          </div>
+          <a href="{% url 'operacao:detalhe' oc.pk %}" class="shrink-0 text-xs font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">Abrir / Restaurar</a>
+        </li>
+        {% endfor %}
+      </ul>
+      <button type="submit" :disabled="sel.length === 0"
+        class="mt-4 flex h-10 items-center gap-1.5 rounded-lg bg-red-600 px-5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+        {% icone "trash-2" 16 %} Excluir selecionadas (<span x-text="sel.length"></span>)
+      </button>
+      {% include "partials/modal.html" with titulo="Excluir definitivamente?" mensagem="As ocorrências selecionadas e seus anexos serão apagados. Não pode ser desfeito." rotulo="Excluir" perigo=True %}
+    </form>
+  </div>
+
+{% else %}
+  <ul class="mt-4 space-y-3">
+    {% for oc in pagina.object_list %}
+    <li>
+      <a href="{% url 'operacao:detalhe' oc.pk %}" class="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <p class="truncate font-medium tabular-nums text-zinc-900 dark:text-white">{{ oc.protocolo }}</p>
+            <p class="mt-0.5 text-sm text-zinc-500">{{ oc.cliente.nome|default:"Cliente" }}{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %} · {{ oc.tipo|tipo_label }}</p>
+            {% if oc.descricao %}<p class="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-400">{{ oc.descricao }}</p>{% endif %}
+          </div>
+          <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {% sla_badge oc %}
+            <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ oc.prioridade|prioridade_badge }}">{{ oc.prioridade|prioridade_label }}</span>
+            {% status_badge oc.status %}
+          </div>
+        </div>
+        <p class="mt-3 text-xs text-zinc-500">{{ oc.criado_em|data }}</p>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% include "partials/paginacao.html" %}
+{% endblock %}

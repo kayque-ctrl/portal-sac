@@ -1,0 +1,32 @@
+{% load static %}<!doctype html>
+<html lang="pt-BR" class="h-full antialiased">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Portal de Ocorrências{% endblock %}</title>
+  <meta name="description" content="Abra e acompanhe ocorrências de entrega: atrasos, avarias e extravios.">
+  {# Aplica o tema antes da página pintar — evita flash. Padrão: claro. #}
+  <script>
+    (function () {
+      try { document.documentElement.classList.toggle("dark", localStorage.getItem("theme") === "dark"); } catch (e) {}
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {# Tailwind v4 no navegador (para produção, compile com o Tailwind CLI — ver README). #}
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @custom-variant dark (&:where(.dark, .dark *));
+    @theme { --font-sans: "Geist", Arial, Helvetica, sans-serif; }
+  </style>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="flex min-h-full flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+  {% block body %}{% endblock %}
+</body>
+</html>

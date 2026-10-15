@@ -1,0 +1,32 @@
+{% extends "area.html" %}
+{% load ocorrencias_tags %}
+{% block title %}Notificações · Portal de Ocorrências{% endblock %}
+
+{% block conteudo %}
+<a href="{{ voltar }}" class="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">{% icone "arrow-left" 16 %} Voltar</a>
+<h1 class="mt-3 text-2xl font-semibold text-zinc-900 dark:text-white">Notificações</h1>
+
+{% if not notificacoes %}
+<div class="mt-6 flex flex-col items-center gap-2 rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
+  <span class="text-zinc-300 dark:text-zinc-600">{% icone "bell" 24 %}</span>
+  <p class="text-sm text-zinc-500">Nenhuma notificação.</p>
+</div>
+{% else %}
+<ul class="mt-6 divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+  {% for n in notificacoes %}
+  <li class="bg-white transition-colors hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50">
+    {% if n.ocorrencia_id %}<a href="{{ area_base }}/{{ n.ocorrencia_id }}" class="block">{% endif %}
+    <div class="flex items-start gap-3 px-4 py-3">
+      {% notif_icone n.mensagem %}
+      <div class="min-w-0 flex-1">
+        <p class="text-sm {% if n.lida %}text-zinc-600 dark:text-zinc-400{% else %}font-medium text-zinc-900 dark:text-white{% endif %}">{{ n.mensagem }}</p>
+        <p class="mt-0.5 text-xs text-zinc-500">{{ n.criado_em|relativo }}</p>
+      </div>
+      {% if not n.lida %}<span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500"></span>{% endif %}
+    </div>
+    {% if n.ocorrencia_id %}</a>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

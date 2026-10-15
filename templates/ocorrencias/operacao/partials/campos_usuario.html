@@ -1,0 +1,40 @@
+{% comment %}
+Campos de perfil (convite e edição). Parâmetros: v (valores atuais: dict ou
+Usuario), empresas, tipos_pessoa, pode_admin. Requer x-data com `papel`.
+{% endcomment %}
+<div>
+  <label for="papel" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Papel</label>
+  <select id="papel" name="papel" x-model="papel" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+    <option value="cliente">Cliente</option>
+    <option value="operador">Operador</option>
+    {% if pode_admin or v.papel == "admin" %}<option value="admin">Administrador</option>{% endif %}
+  </select>
+</div>
+
+<template x-if="papel === 'cliente'">
+  <div class="contents">
+    <div>
+      <label for="tipo_pessoa" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Tipo de pessoa</label>
+      <select id="tipo_pessoa" name="tipo_pessoa" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+        <option value="">—</option>
+        {% for valor, rotulo in tipos_pessoa %}<option value="{{ valor }}" {% if v.tipo_pessoa == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="documento" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Documento (CPF/CNPJ)</label>
+      <input id="documento" name="documento" value="{{ v.documento|default:'' }}" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+    </div>
+    <div>
+      <label for="empresa_id" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Empresa</label>
+      <select id="empresa_id" name="empresa_id" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+        <option value="">Nenhuma</option>
+        {% for e in empresas %}<option value="{{ e.pk }}" {% if v.empresa_id|stringformat:'s' == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+</template>
+
+<div>
+  <label for="telefone" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Telefone</label>
+  <input id="telefone" name="telefone" value="{{ v.telefone|default:'' }}" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+</div>

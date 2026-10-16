@@ -1,28 +1,26 @@
 {% extends "partials/centralizado.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Defina sua senha · Portal de Ocorrências{% endblock %}
+{% block frase %}Bem-vindo(a)<br>ao Portal SAC.{% endblock %}
 
 {% block conteudo %}
-<div class="text-center">
-  <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Defina sua senha</h1>
-  <p class="mt-1 text-sm text-zinc-500">Bem-vindo(a)! Crie uma senha para acessar o portal.</p>
+<div>
+  <h1>Defina sua senha</h1>
+  <p class="mt-1 suave">Bem-vindo(a)! Crie uma senha para acessar o portal.</p>
 </div>
 
-<form method="post" class="mt-8 space-y-4" x-data="definirSenha">
+<form method="post" class="flex flex-col gap-4" x-data="definirSenha">
   {% csrf_token %}
   {% include "partials/campo_senha.html" with id="senha" name="senha" label="Nova senha" autocomplete="new-password" minlength=8 hint="Mínimo de 8 caracteres." model="senha" %}
 
-  <div>
+  <div class="flex flex-col gap-1">
     {% include "partials/campo_senha.html" with id="confirma" name="confirma" label="Confirme a senha" autocomplete="new-password" minlength=8 model="confirma" %}
-    <p x-show="conferem" x-cloak class="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">{% icone "check" 13 %} As senhas conferem.</p>
-    <p x-show="naoConferem" x-cloak class="mt-1 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">{% icone "x" 13 %} As senhas não conferem.</p>
+    <p x-show="conferem" x-cloak class="flex items-center gap-1 text-sm text-green-700 dark:text-green-400">{% icone "check" 14 %} As senhas conferem.</p>
+    <p x-show="naoConferem" x-cloak class="erro flex items-center gap-1">{% icone "x" 14 %} As senhas não conferem.</p>
   </div>
 
   {% include "partials/erro.html" %}
 
-  <button type="submit" :disabled="naoConferem"
-    class="flex h-11 w-full items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
-    Definir senha e entrar
-  </button>
+  <button type="submit" :disabled="naoConferem" class="btn btn-primario btn-grande btn-bloco">Definir senha e entrar</button>
 </form>
 {% endblock %}

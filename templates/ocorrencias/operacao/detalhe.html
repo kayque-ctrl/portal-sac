@@ -3,147 +3,128 @@
 {% block title %}{{ oc.protocolo }} · Operação{% endblock %}
 
 {% block conteudo %}
-<a href="{% url 'operacao:lista' %}" class="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">{% icone "arrow-left" 16 %} Todas as ocorrências</a>
+<nav class="migalha" aria-label="Caminho"><a href="{% url 'operacao:lista' %}">{% icone "arrow-left" 15 %} Todas as ocorrências</a><span aria-hidden="true">/</span><span class="mono">{{ oc.protocolo }}</span></nav>
 
-<div class="mt-3 flex items-start justify-between gap-4">
-  <div>
-    <h1 class="text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">{{ oc.protocolo }}</h1>
-    <p class="mt-1 text-sm text-zinc-500">{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %} · Aberta em {{ oc.criado_em|data }}</p>
+<div class="topo" style="align-items: flex-start">
+  <div class="titulo">
+    <h1>{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</h1>
+    <p class="subtitulo"><span class="mono">{{ oc.protocolo }}</span> · {{ oc.cliente.nome|default:"Cliente" }}{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %} · Aberta em {{ oc.criado_em|data }}</p>
   </div>
-  <div class="flex shrink-0 flex-col items-end gap-2">
+  <div class="flex flex-wrap items-center gap-2">
     {% status_badge oc.status %}
     {% sla_badge oc %}
-    <a href="{% url 'operacao:exportar' oc.pk %}" class="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">{% icone "download" 13 %} Exportar</a>
+    <a href="{% url 'operacao:exportar' oc.pk %}" class="btn btn-linha btn-peq">{% icone "download" 15 %} Exportar</a>
   </div>
 </div>
 
 {% if oc.status == "concluida" and oc.aprovada_por %}
-<div class="mt-4 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm dark:border-green-900/50 dark:bg-green-950/25">
-  <span class="text-green-600 dark:text-green-400">{% icone "check-circle-2" 17 %}</span>
-  <span class="text-green-800 dark:text-green-200">
-    Aprovada por <strong class="font-medium">{{ oc.aprovada_por.nome }}</strong>{% if oc.aprovada_por.empresa %} ({{ oc.aprovada_por.empresa.nome }}){% endif %}{% if oc.aprovada_em %} · {{ oc.aprovada_em|data }}{% endif %}
-  </span>
-</div>
+<p class="caixa-ok flex items-center gap-2">{% icone "check-circle-2" 17 %}<span>Aprovada por <strong>{{ oc.aprovada_por.nome }}</strong>{% if oc.aprovada_por.empresa %} ({{ oc.aprovada_por.empresa.nome }}){% endif %}{% if oc.aprovada_em %} · {{ oc.aprovada_em|data }}{% endif %}</span></p>
 {% endif %}
 
-<div x-data="{ aba: 'conversa' }">
-{# Abas só no celular (spec 020): no computador tudo aparece lado a lado. #}
-<div role="tablist" aria-label="Seções do atendimento" class="mt-6 grid grid-cols-2 rounded-lg border border-zinc-300 p-0.5 md:hidden dark:border-zinc-700" x-cloak>
-  {% for chave, rotulo in abas_celular %}
-  <button type="button" role="tab" id="aba-{{ chave }}" aria-controls="painel-{{ chave }}" :aria-selected="aba === '{{ chave }}'" @click="aba = '{{ chave }}'"
-    class="h-9 rounded-md text-sm font-medium transition-colors"
-    :class="aba === '{{ chave }}' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-600 dark:text-zinc-300'">{{ rotulo }}</button>
-  {% endfor %}
-</div>
-
-<div class="mt-6 grid gap-6 md:grid-cols-3">
-  {# ---------- Coluna principal ---------- #}
-  <div class="space-y-8 md:col-span-2">
-    <section id="painel-conversa" role="tabpanel" aria-labelledby="aba-conversa" :class="aba === 'conversa' ? '' : 'max-md:hidden'">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500">Linha do tempo</h2>
-      <div class="mt-3 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-        <div class="max-h-[36rem] overflow-y-auto bg-zinc-50 p-4 dark:bg-zinc-950/40" x-data x-init="$nextTick(() => { $el.scrollTop = $el.scrollHeight })">
-          {% include "ocorrencias/partials/linha_do_tempo.html" %}
-        </div>
-        <div class="border-t border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          {% if encerrada %}
-            <p class="text-sm text-zinc-500">Conversa encerrada ({{ oc.status|status_label }}). Use <strong>Reabrir</strong> (ao lado) para responder.</p>
-          {% else %}
-            {% url 'operacao:mensagem' oc.pk as acao_msg %}
-            {% include "ocorrencias/partials/mensagem_form.html" with action=acao_msg permite_nota_interna=True avisa_bump=avisa_bump %}
-          {% endif %}
-        </div>
-      </div>
-    </section>
+<div x-data="{ aba: 'conversa' }" class="flex flex-col gap-4">
+  {# Abas só no celular (spec 020): no computador tudo aparece lado a lado. #}
+  <div role="tablist" aria-label="Seções do atendimento" class="seg seg-cheio md:hidden" x-cloak>
+    {% for chave, rotulo in abas_celular %}
+    <button type="button" role="tab" id="aba-{{ chave }}" aria-controls="painel-{{ chave }}" :aria-selected="aba === '{{ chave }}'" @click="aba = '{{ chave }}'">{{ rotulo }}</button>
+    {% endfor %}
   </div>
 
-  {# ---------- Coluna lateral ---------- #}
-  <aside id="painel-atender" role="tabpanel" aria-labelledby="aba-atender" :class="aba === 'atender' ? '' : 'max-md:hidden'" class="space-y-6">
-    {# Gerenciar #}
-    <form method="post" action="{% url 'operacao:atualizar' oc.pk %}" @submit="onSubmit"
-      x-data="controles({ status: '{{ oc.status }}', atribuido: '{{ oc.atribuido_a_id|default_if_none:'' }}', temTratativa: {{ tem_tratativa|yesno:'true,false' }} })"
-      class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      {% csrf_token %}
-      <h2 class="text-sm font-semibold text-zinc-900 dark:text-white">Gerenciar</h2>
-      <div class="mt-4 space-y-4">
-        <div>
-          <label for="status" class="block text-xs font-medium uppercase tracking-wide text-zinc-500">Status</label>
-          <select id="status" name="status" x-model="statusSel" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+  <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_360px] md:items-start">
+    {# ---------- Linha do tempo ---------- #}
+    <section id="painel-conversa" role="tabpanel" aria-labelledby="aba-conversa" :class="aba === 'conversa' ? '' : 'max-md:hidden'" class="card overflow-hidden" style="padding: 0">
+      <div class="flex items-center gap-2 border-b px-4 py-3" style="border-color: var(--linha-2)">
+        <h2 class="card-titulo">Linha do tempo</h2>
+        <span class="ml-auto hidden text-[13px] suave sm:inline">mais antigo em cima · mais novo embaixo</span>
+      </div>
+      <div class="tl-rolagem" x-data x-init="$nextTick(() => { $el.scrollTop = $el.scrollHeight })">
+        {% include "ocorrencias/partials/linha_do_tempo.html" %}
+      </div>
+      <div class="border-t p-3 sm:p-4" style="border-color: var(--linha-2); background: var(--sup)">
+        {% if encerrada %}
+          <p class="text-sm suave">Conversa encerrada ({{ oc.status|status_label }}). Use <strong>Reabrir</strong> (em Ações) para responder.</p>
+        {% else %}
+          {% url 'operacao:mensagem' oc.pk as acao_msg %}
+          {% include "ocorrencias/partials/mensagem_form.html" with action=acao_msg permite_nota_interna=True avisa_bump=avisa_bump %}
+        {% endif %}
+      </div>
+    </section>
+
+    {# ---------- Atender ---------- #}
+    <aside id="painel-atender" role="tabpanel" aria-labelledby="aba-atender" :class="aba === 'atender' ? '' : 'max-md:hidden'" class="flex flex-col gap-4">
+      <form method="post" action="{% url 'operacao:atualizar' oc.pk %}" @submit="onSubmit"
+        x-data="controles({ status: '{{ oc.status }}', atribuido: '{{ oc.atribuido_a_id|default_if_none:'' }}', temTratativa: {{ tem_tratativa|yesno:'true,false' }} })"
+        class="card flex flex-col gap-3">
+        {% csrf_token %}
+        <h2>Atendimento</h2>
+        <div class="campo">
+          <label for="status">Situação</label>
+          <select id="status" name="status" x-model="statusSel" class="in">
             {% for v, l in status_opcoes %}<option value="{{ v }}" {% if v == oc.status %}selected{% endif %}>{{ l }}</option>{% endfor %}
           </select>
-          <p x-show="statusSel === 'resolvida'" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-400">Fica aguardando a aprovação do cliente.</p>
+          <p x-show="statusSel === 'resolvida'" x-cloak class="ajuda">Fica aguardando a aprovação do cliente.</p>
         </div>
 
         <template x-if="statusSel === 'recusada'">
-          <div>
-            <label for="motivo_recusa" class="block text-xs font-medium uppercase tracking-wide text-zinc-500">Motivo da recusa</label>
-            <textarea id="motivo_recusa" name="motivo_recusa" required rows="3" placeholder="Explique por que a ocorrência foi recusada (o cliente vê isso)."
-              class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">{{ oc.motivo_recusa|default:'' }}</textarea>
+          <div class="campo">
+            <label for="motivo_recusa">Motivo da recusa <span class="obg" aria-hidden="true">*</span></label>
+            <textarea id="motivo_recusa" name="motivo_recusa" required rows="3" placeholder="Explique por que a ocorrência foi recusada (o cliente vê isso)." class="in">{{ oc.motivo_recusa|default:'' }}</textarea>
           </div>
         </template>
 
-        <div>
-          <label for="prioridade" class="block text-xs font-medium uppercase tracking-wide text-zinc-500">Prioridade</label>
-          <select id="prioridade" name="prioridade" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-            {% for v, l in prioridades %}<option value="{{ v }}" {% if v == oc.prioridade %}selected{% endif %}>{{ l }}</option>{% endfor %}
-          </select>
-        </div>
-
-        <div>
-          <label for="atribuido_a" class="block text-xs font-medium uppercase tracking-wide text-zinc-500">Responsável</label>
-          <select id="atribuido_a" name="atribuido_a" x-model="atribuidoSel" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-            <option value="">Ninguém</option>
-            {% for op in operadores %}<option value="{{ op.pk }}" {% if op.pk == oc.atribuido_a_id %}selected{% endif %}>{{ op.nome }}</option>{% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <p x-show="bloqueado" x-cloak class="mt-3 text-xs text-amber-600 dark:text-amber-400">Para mudar o status, <span x-text="faltando"></span>.</p>
-
-      {% if controles_erro %}<p role="alert" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ controles_erro }}</p>{% endif %}
-      {% for m in messages %}{% if 'controles' in m.tags %}<p class="mt-3 text-sm text-green-600 dark:text-green-400">{{ m }}</p>{% endif %}{% endfor %}
-
-      <button type="submit" :disabled="bloqueado" :title="bloqueado ? 'Defina um responsável e registre uma mensagem para o cliente antes de mudar o status.' : ''"
-        class="mt-4 flex h-10 w-full items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Salvar</button>
-
-      <template x-teleport="body">
-        <div x-show="modal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-fadein" @click.self="modal = false" @keydown.escape.window="modal = false">
-          <div class="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 class="text-base font-semibold text-zinc-900 dark:text-white">Marcar como resolvida?</h3>
-            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">A ocorrência será enviada para <strong>aprovação do cliente</strong> e a conversa fica bloqueada até ele aprovar ou reabrir.</p>
-            <div class="mt-5 flex justify-end gap-2">
-              <button type="button" @click="modal = false" class="h-10 rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Cancelar</button>
-              <button type="button" @click="confirmar()" class="h-10 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Confirmar</button>
-            </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="campo">
+            <label for="prioridade">Prioridade</label>
+            <select id="prioridade" name="prioridade" class="in">
+              {% for v, l in prioridades %}<option value="{{ v }}" {% if v == oc.prioridade %}selected{% endif %}>{{ l }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="atribuido_a">Responsável</label>
+            <select id="atribuido_a" name="atribuido_a" x-model="atribuidoSel" class="in">
+              <option value="">Ninguém</option>
+              {% for op in operadores %}<option value="{{ op.pk }}" {% if op.pk == oc.atribuido_a_id %}selected{% endif %}>{{ op.nome }}</option>{% endfor %}
+            </select>
           </div>
         </div>
-      </template>
-    </form>
 
-    {# Solicitar coleta #}
-    <form method="post" action="{% url 'operacao:coleta' oc.pk %}" x-data="enviando" @submit="enviando = true"
-      class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      {% csrf_token %}
-      <h2 class="flex items-center gap-1.5 text-sm font-semibold text-zinc-900 dark:text-white"><span class="text-zinc-500">{% icone "truck" 15 %}</span> Solicitar coleta</h2>
-      <p class="mt-1 text-xs text-zinc-500">Envia um e-mail padrão pedindo a coleta desta ocorrência à transportadora.</p>
-      <div class="mt-3">
-        <label for="email_transportadora" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">E-mail da transportadora</label>
-        <input id="email_transportadora" name="email_transportadora" type="email" required placeholder="transportadora@exemplo.com"
-          class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-      </div>
-      {% if coleta_erro %}<p role="alert" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ coleta_erro }}</p>{% endif %}
-      {% for m in messages %}{% if 'coleta' in m.tags %}<p class="mt-3 text-sm text-green-600 dark:text-green-400">{{ m }}</p>{% endif %}{% endfor %}
-      <button type="submit" :disabled="enviando"
-        class="mt-3 flex h-9 w-full items-center justify-center rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        x-text="enviando ? 'Enviando…' : 'Solicitar coleta'">Solicitar coleta</button>
-    </form>
+        <p x-show="bloqueado" x-cloak class="ajuda" style="color: var(--interna-tinta)">Para mudar o status, <span x-text="faltando"></span>.</p>
+        {% if controles_erro %}<p role="alert" class="caixa-erro">{{ controles_erro }}</p>{% endif %}
+        {% for m in messages %}{% if 'controles' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
 
-    {# Ações de ciclo de vida #}
-    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 class="text-sm font-semibold text-zinc-900 dark:text-white">Ações</h2>
-      <div class="mt-4 space-y-2">
+        <button type="submit" :disabled="bloqueado" class="btn btn-primario btn-bloco">Salvar alterações</button>
+        <p class="ajuda">Cada mudança aparece na linha do tempo.</p>
+
+        <template x-teleport="body">
+          <div x-show="modal" x-cloak class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 animate-fadein sm:items-center" @click.self="modal = false" @keydown.escape.window="modal = false">
+            <div class="card w-full max-w-md shadow-xl" role="dialog" aria-modal="true">
+              <h3 class="text-lg font-bold">Marcar como resolvida?</h3>
+              <p class="mt-2 text-[15px] suave">A ocorrência será enviada para <strong>aprovação do cliente</strong> e a conversa fica bloqueada até ele aprovar ou reabrir.</p>
+              <div class="mt-5 flex justify-end gap-2">
+                <button type="button" @click="modal = false" class="btn btn-linha">Cancelar</button>
+                <button type="button" @click="confirmar()" class="btn btn-primario">Confirmar</button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </form>
+
+      <form method="post" action="{% url 'operacao:coleta' oc.pk %}" x-data="enviando" @submit="enviando = true" class="card flex flex-col gap-3">
+        {% csrf_token %}
+        <h2 class="flex items-center gap-2">{% icone "truck" 17 %} Solicitar coleta</h2>
+        <div class="campo">
+          <label for="email_transportadora">E-mail da transportadora</label>
+          <input id="email_transportadora" name="email_transportadora" type="email" required placeholder="Ex.: coleta@transportadora.com.br" class="in">
+          <span class="ajuda">Envia um e-mail padrão pedindo a coleta. Fica registrado como comentário interno.</span>
+        </div>
+        {% if coleta_erro %}<p role="alert" class="caixa-erro">{{ coleta_erro }}</p>{% endif %}
+        {% for m in messages %}{% if 'coleta' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
+        <button type="submit" :disabled="enviando" class="btn btn-linha" x-text="enviando ? 'Enviando…' : 'Solicitar coleta'">Solicitar coleta</button>
+      </form>
+
+      <section aria-labelledby="ac-tit" class="card flex flex-col gap-2">
+        <h2 id="ac-tit">Ações</h2>
         {% if oc.excluida_em %}
-          <p class="text-xs text-red-600 dark:text-red-400">Esta ocorrência está na lixeira.</p>
+          <p class="text-sm" style="color: var(--perigo)">Esta ocorrência está na lixeira.</p>
           {% include "ocorrencias/operacao/partials/acao.html" with acao="restaurar" rotulo="Restaurar" %}
         {% else %}
           {% if encerrada %}{% include "ocorrencias/operacao/partials/acao.html" with acao="reabrir" rotulo="Reabrir" %}{% endif %}
@@ -156,25 +137,23 @@
           {% if user.eh_admin %}
           <form method="post" action="{% url 'operacao:ciclo' oc.pk 'excluir' %}" x-data="confirmar" @submit="interceptar">
             {% csrf_token %}
-            <button type="submit" class="flex h-9 w-full items-center justify-center rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30">Excluir</button>
+            <button type="submit" class="btn btn-perigo btn-bloco">Excluir</button>
             {% include "partials/modal.html" with titulo="Enviar para a lixeira?" mensagem="A ocorrência sai das listas e pode ser restaurada pela aba Lixeira." rotulo="Excluir" perigo=True %}
           </form>
           {% endif %}
         {% endif %}
-      </div>
-    </div>
+      </section>
 
-    {# Cliente #}
-    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 class="text-sm font-semibold text-zinc-900 dark:text-white">Cliente</h2>
-      <dl class="mt-3 space-y-2 text-sm">
-        <div><dt class="text-xs text-zinc-500">Nome</dt><dd class="text-zinc-800 dark:text-zinc-200">{{ oc.cliente.nome|default:"—" }}</dd></div>
-        {% if oc.cliente.empresa %}<div><dt class="text-xs text-zinc-500">Empresa</dt><dd class="text-zinc-800 dark:text-zinc-200">{{ oc.cliente.empresa.nome }}</dd></div>{% endif %}
-        {% if oc.cliente.documento %}<div><dt class="text-xs text-zinc-500">Documento</dt><dd class="text-zinc-800 dark:text-zinc-200">{{ oc.cliente.documento }}</dd></div>{% endif %}
-        {% if oc.cliente.telefone %}<div><dt class="text-xs text-zinc-500">Telefone</dt><dd class="text-zinc-800 dark:text-zinc-200">{{ oc.cliente.telefone }}</dd></div>{% endif %}
-      </dl>
-    </div>
-  </aside>
-</div>
+      <section aria-labelledby="cl-tit" class="card flex flex-col gap-3">
+        <h2 id="cl-tit">Cliente</h2>
+        <dl class="dados">
+          <dt>Nome</dt><dd>{{ oc.cliente.nome|default:"—" }}</dd>
+          {% if oc.cliente.empresa %}<dt>Empresa</dt><dd>{{ oc.cliente.empresa.nome }}</dd>{% endif %}
+          {% if oc.cliente.documento %}<dt>Documento</dt><dd class="mono">{{ oc.cliente.documento }}</dd>{% endif %}
+          {% if oc.cliente.telefone %}<dt>Telefone</dt><dd>{{ oc.cliente.telefone }}</dd>{% endif %}
+        </dl>
+      </section>
+    </aside>
+  </div>
 </div>
 {% endblock %}

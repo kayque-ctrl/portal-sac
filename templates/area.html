@@ -1,95 +1,131 @@
 {% extends "base.html" %}
 {% load ocorrencias_tags %}
+{% comment %}
+Casca das áreas internas (spec 022): menu lateral no computador; cabeçalho e
+barra de baixo no celular. O menu vem de context_processors.cabecalho.
+{% endcomment %}
 
 {% block body %}
-<div class="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-  {# ---------- Cabeçalho ---------- #}
-  <header class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-    <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-      <div class="flex items-center gap-4">
-        <a href="{{ area_base }}/" class="flex items-baseline gap-2 rounded transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400">
-          <span class="text-sm font-semibold text-zinc-900 dark:text-white">Ocorrências</span>
-          <span class="hidden text-xs text-zinc-500 sm:inline">·</span>
-          <span class="hidden text-sm text-zinc-500 sm:inline">{% if user.eh_operacao %}Operações{% else %}Meu portal{% endif %}</span>
+<div class="casca">
+  {# ---------- Menu lateral (computador) ---------- #}
+  <aside class="sb" aria-label="Menu">
+    <a href="{{ area_base }}/" class="marca">
+      <span class="logo" aria-hidden="true">SAC</span>
+      <span><strong>Portal SAC</strong><span>{% if user.eh_operacao %}Operação{% else %}{{ user.empresa.nome|default:"Meu portal" }}{% endif %}</span></span>
+    </a>
+
+    {% if not user.eh_operacao %}
+    <a href="{% url 'portal:nova' %}" class="btn btn-destaque btn-grande" data-abrir-ocorrencia>{% icone "plus" 18 %} Abrir ocorrência</a>
+    {% endif %}
+
+    <nav aria-label="Principal">
+      {% for grupo, links in menu %}
+        {% if grupo %}<span class="grupo">{{ grupo }}</span>{% endif %}
+        {% for href, rotulo, ico in links %}
+        <a href="{{ href }}" class="item" {% if href == menu_atual %}aria-current="page"{% endif %}>
+          {% icone ico 18 %}{{ rotulo }}
+          {% if href == "/operacao/" and qtd_ativas %}<span class="qtd" title="Ocorrências ativas">{{ qtd_ativas }}</span>{% endif %}
         </a>
-        {% if not user.eh_operacao %}
-          <nav aria-label="Principal" class="flex items-center gap-1">
-            {% url 'portal:inicio' as u_inicio %}{% url 'portal:dashboard' as u_painel %}
-            <a href="{{ u_inicio }}" {% if request.path != u_painel %}aria-current="page"{% endif %}
-              class="rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 {% if request.path != u_painel %}bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white{% else %}text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200{% endif %}">Início</a>
-            <a href="{{ u_painel }}" {% if request.path == u_painel %}aria-current="page"{% endif %}
-              class="rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 {% if request.path == u_painel %}bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white{% else %}text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200{% endif %}">Painel</a>
-          </nav>
-        {% endif %}
-      </div>
-
-      <div class="flex items-center gap-3">
-        <span class="hidden text-sm text-zinc-600 sm:inline dark:text-zinc-400">{{ user.nome }}</span>
-
-        {# Sino de notificações #}
-        <div x-data="sino({{ notif_nao_lidas|default:0 }})" class="relative" @click.outside="aberto = false">
-          <button type="button" @click="alternar()" aria-label="Notificações"
-            class="relative flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
-            {% icone "bell" 18 %}
-            <span x-show="naoLidas > 0" x-cloak x-text="naoLidas > 9 ? '9+' : naoLidas"
-              class="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white"></span>
+        {% endfor %}
+        {% if forloop.first %}
+        {# Sino: abre a lista das recentes; "Ver todas" leva à página. #}
+        <div x-data="sino({{ notif_nao_lidas|default:0 }})" class="relative" @click.outside="aberto = false" @keydown.escape="aberto = false">
+          <button type="button" @click="alternar()" class="item" :aria-expanded="aberto" aria-haspopup="true" {% if na_notificacoes %}aria-current="page"{% endif %} data-sino>
+            {% icone "bell" 18 %}Notificações
+            <span x-show="naoLidas > 0" x-cloak class="qtd" x-text="naoLidas > 9 ? '9+' : naoLidas"></span>
           </button>
-
-          <div x-show="aberto" x-cloak
-            class="absolute right-0 top-11 z-50 w-80 origin-top-right overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl animate-fadein dark:border-zinc-800 dark:bg-zinc-900">
-            <div class="flex items-center justify-between gap-2 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
-              <span class="text-sm font-semibold text-zinc-900 dark:text-white">Notificações</span>
-              <button type="button" x-show="temNaoLidas" x-cloak @click="marcarTodas()" data-marcar-todas
-                class="rounded text-xs font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-300 dark:hover:text-white">Marcar todas como lidas</button>
+          <div x-show="aberto" x-cloak class="fixed left-[264px] top-6 z-50 w-[22rem] overflow-hidden rounded-2xl border animate-fadein" style="background: var(--sup); border-color: var(--linha); color: var(--tinta); box-shadow: 0 18px 40px rgba(0,0,0,.18)">
+            <div class="flex items-center justify-between gap-2 border-b px-4 py-3" style="border-color: var(--linha-2)">
+              <span class="text-sm font-bold">Notificações</span>
+              <button type="button" x-show="temNaoLidas" x-cloak @click="marcarTodas()" data-marcar-todas class="link text-xs">Marcar todas como lidas</button>
             </div>
-            <p x-show="carregado && itens.length === 0" class="px-4 py-6 text-center text-sm text-zinc-500">Nenhuma notificação.</p>
-            <p x-show="!carregado" class="px-4 py-6 text-center text-sm text-zinc-500">Carregando…</p>
-            <ul x-show="itens.length > 0" class="max-h-80 divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800">
+            <p x-show="carregado && itens.length === 0" class="px-4 py-6 text-center text-sm suave">Nenhuma notificação.</p>
+            <p x-show="!carregado" class="px-4 py-6 text-center text-sm suave">Carregando…</p>
+            <ul x-show="itens.length > 0" class="max-h-96 overflow-y-auto">
               <template x-for="n in itens" :key="n.id">
-                <li class="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                  <a :href="n.href || '#'" class="flex items-start gap-2.5 px-4 py-2.5" @click="if (!n.href) $event.preventDefault(); aberto = false">
-                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800" :class="n.cor">
-                      <i :data-lucide="n.icone" style="width:15px;height:15px"></i>
+                <li class="border-b last:border-0" style="border-color: var(--linha-2)">
+                  <a :href="n.href || '#'" class="flex items-start gap-3 px-4 py-3 hover:bg-[var(--sup-2)]" @click="if (!n.href) $event.preventDefault(); aberto = false">
+                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style="background: var(--sup-2)" :class="n.cor"><i :data-lucide="n.icone" style="width:15px;height:15px"></i></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm" :class="n.lida ? 'suave' : 'font-semibold'" x-text="n.mensagem"></span>
+                      <span class="mt-0.5 block text-xs suave" x-text="n.quando"></span>
                     </span>
-                    <div class="min-w-0 flex-1">
-                      <p class="text-sm" :class="n.lida ? 'text-zinc-600 dark:text-zinc-400' : 'font-medium text-zinc-800 dark:text-zinc-100'" x-text="n.mensagem"></p>
-                      <p class="mt-0.5 text-xs text-zinc-500" x-text="n.quando"></p>
-                    </div>
-                    <span x-show="!n.lida" class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500"></span>
+                    <span x-show="!n.lida" class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background: var(--tinta)"></span>
                   </a>
                 </li>
               </template>
             </ul>
-            <a href="{{ area_base }}/notificacoes" @click="aberto = false"
-              class="block border-t border-zinc-100 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800/50">Ver todas</a>
+            <a href="{{ area_base }}/notificacoes" @click="aberto = false" class="block border-t px-4 py-3 text-center text-sm font-semibold hover:bg-[var(--sup-2)]" style="border-color: var(--linha-2)">Ver todas</a>
           </div>
         </div>
+        {% endif %}
+      {% endfor %}
+    </nav>
 
-        {% include "partials/tema.html" %}
+    <div class="eu">
+      <span class="av" aria-hidden="true">{{ user.nome|iniciais }}</span>
+      <span class="min-w-0 flex-1"><strong class="truncate">{{ user.nome }}</strong><span class="papel">{{ user.get_papel_display }}</span></span>
+      {% include "partials/tema.html" with classe="ico-sb" %}
+      <form method="post" action="{% url 'contas:logout' %}" x-data="confirmar" @submit="interceptar">
+        {% csrf_token %}
+        <button type="submit" class="ico-sb" aria-label="Sair" title="Sair">{% icone "log-out" 17 %}</button>
+        {% include "partials/modal.html" with titulo="Sair da conta?" mensagem="Você precisará entrar novamente para acessar o sistema." rotulo="Sair" %}
+      </form>
+    </div>
+  </aside>
 
-        {# Sair — confirma antes #}
+  {# ---------- Cabeçalho (celular) ---------- #}
+  <header class="mtopo">
+    <a href="{{ area_base }}/" class="marca">
+      <span class="logo" aria-hidden="true">SAC</span>
+      <span><strong>Portal SAC</strong><span>{% if user.eh_operacao %}Operação{% else %}{{ user.empresa.nome|default:"Meu portal" }}{% endif %}</span></span>
+    </a>
+    <span class="av ml-auto" aria-hidden="true">{{ user.nome|iniciais }}</span>
+  </header>
+
+  <main class="principal" id="conteudo">
+    <div class="principal-limite">
+      {% block conteudo %}{% endblock %}
+    </div>
+  </main>
+
+  {# ---------- Barra de baixo (celular) ---------- #}
+  <div x-data="{ mais: false }">
+    <nav aria-label="Principal no celular" class="tb">
+      {% if user.eh_operacao %}
+      <a href="/operacao/" {% if menu_atual == "/operacao/" %}aria-current="page"{% endif %}>{% icone "clipboard-list" 22 %}Fila{% if qtd_ativas %}<span class="ponto">{{ qtd_ativas }}</span>{% endif %}</a>
+      <a href="/operacao/painel" {% if menu_atual == "/operacao/painel" %}aria-current="page"{% endif %}>{% icone "bar-chart-3" 22 %}Painel</a>
+      {% else %}
+      <a href="/portal/" {% if menu_atual == "/portal/" %}aria-current="page"{% endif %}>{% icone "clipboard-list" 22 %}Ocorrências</a>
+      <a href="/portal/dashboard" {% if menu_atual == "/portal/dashboard" %}aria-current="page"{% endif %}>{% icone "bar-chart-3" 22 %}Painel</a>
+      <a href="{% url 'portal:nova' %}" class="abrir"><span>{% icone "plus" 26 %}</span>Abrir</a>
+      {% endif %}
+      <a href="{{ area_base }}/notificacoes" {% if na_notificacoes %}aria-current="page"{% endif %}>{% icone "bell" 22 %}Notificações{% if notif_nao_lidas %}<span class="ponto" aria-label="{{ notif_nao_lidas }} não lidas">{{ notif_nao_lidas }}</span>{% endif %}</a>
+      <button type="button" @click="mais = true" :aria-expanded="mais">{% if user.eh_operacao %}{% icone "menu" 22 %}Mais{% else %}{% icone "user-round" 22 %}Conta{% endif %}</button>
+    </nav>
+
+    <div x-show="mais" x-cloak class="folha-fundo md:hidden" @click.self="mais = false" @keydown.escape.window="mais = false">
+      <div class="folha animate-fadein" role="dialog" aria-label="{% if user.eh_operacao %}Mais opções{% else %}Conta{% endif %}">
+        <span class="alca" aria-hidden="true"></span>
+        <div class="flex items-center gap-3 px-2 pb-2">
+          <span class="av" aria-hidden="true" style="background: var(--linha); color: var(--tinta)">{{ user.nome|iniciais }}</span>
+          <span class="min-w-0"><strong class="block truncate">{{ user.nome }}</strong><span class="block text-sm suave">{{ user.email }}</span></span>
+        </div>
+        {% if user.eh_operacao %}
+          {% for grupo, links in menu %}{% if not forloop.first %}
+          <span class="grupo">{{ grupo }}</span>
+          {% for href, rotulo, ico in links %}<a href="{{ href }}" {% if href == menu_atual %}aria-current="page"{% endif %}>{% icone ico 20 %}{{ rotulo }}</a>{% endfor %}
+          {% endif %}{% endfor %}
+        {% endif %}
+        <span class="grupo">Preferências</span>
+        <div x-data="tema"><button type="button" class="linha-folha" @click="alternar()">{% icone "moon" 20 %}<span x-text="escuro ? 'Tema claro' : 'Tema escuro'">Tema escuro</span></button></div>
         <form method="post" action="{% url 'contas:logout' %}" x-data="confirmar" @submit="interceptar">
           {% csrf_token %}
-          <button type="submit" class="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white">Sair</button>
+          <button type="submit" class="linha-folha" style="color: var(--perigo)">{% icone "log-out" 20 %}Sair</button>
           {% include "partials/modal.html" with titulo="Sair da conta?" mensagem="Você precisará entrar novamente para acessar o sistema." rotulo="Sair" %}
         </form>
       </div>
     </div>
-  </header>
-
-  {# ---------- Navegação da operação ---------- #}
-  {% if user.eh_operacao %}
-  <nav class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-    <div class="mx-auto flex max-w-5xl gap-1 overflow-x-auto overflow-y-hidden px-6">
-      {% for href, label in nav_operacao %}
-        <a href="{{ href }}" class="-mb-px whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors {% if href == nav_atual %}border-zinc-900 text-zinc-900 dark:border-white dark:text-white{% else %}border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200{% endif %}">{{ label }}</a>
-      {% endfor %}
-    </div>
-  </nav>
-  {% endif %}
-
-  <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
-    {% block conteudo %}{% endblock %}
-  </main>
+  </div>
 </div>
 {% endblock %}

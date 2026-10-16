@@ -3,35 +3,35 @@
 {% block title %}Ocorrências · Operação{% endblock %}
 
 {% block conteudo %}
-<h1 class="text-2xl font-semibold text-zinc-900 dark:text-white">Ocorrências</h1>
-<p class="mt-1 text-sm text-zinc-500">{{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"ocorrência,ocorrências" }}{% if tem_filtro %} (filtrado){% endif %}</p>
-
-{% for m in messages %}{% if not m.extra_tags %}
-<p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/40 dark:text-green-300">{{ m }}</p>
-{% endif %}{% endfor %}
-
-{# Abas de situação #}
-<div class="mt-4 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
-  {% for aba in abas %}
-  <a href="?{% query q=aba.params.q tipo=aba.params.tipo empresa=aba.params.empresa cliente=aba.params.cliente responsavel=aba.params.responsavel situacao=aba.chave %}"
-    class="-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors {% if situacao == aba.chave %}border-zinc-900 text-zinc-900 dark:border-white dark:text-white{% else %}border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200{% endif %}">{{ aba.label }}</a>
-  {% endfor %}
+<div class="topo">
+  <div>
+    <h1>Ocorrências</h1>
+    <p class="subtitulo">{{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"ocorrência,ocorrências" }}{% if tem_filtro %} (filtrado){% endif %}</p>
+  </div>
 </div>
 
+{% for m in messages %}{% if not m.extra_tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
+
+{# Abas de situação #}
+<nav class="abas" aria-label="Situação">
+  {% for aba in abas %}
+  <a href="?{% query q=aba.params.q tipo=aba.params.tipo empresa=aba.params.empresa cliente=aba.params.cliente responsavel=aba.params.responsavel situacao=aba.chave %}" {% if situacao == aba.chave %}aria-current="page"{% endif %}>{{ aba.label }}</a>
+  {% endfor %}
+</nav>
+
 {% if empresa or cliente or responsavel %}
-<div class="mt-4 flex flex-wrap gap-2">
-  {% if empresa %}<span class="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Empresa: <strong class="font-medium">{{ empresa_nome|default:empresa }}</strong></span>{% endif %}
-  {% if cliente %}<span class="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Aberta por: <strong class="font-medium">{{ cliente_nome|default:"usuário removido" }}</strong></span>{% endif %}
-  {% if responsavel %}<span class="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Responsável: <strong class="font-medium">{{ responsavel_nome|default:"usuário removido" }}</strong></span>{% endif %}
+<div class="flex flex-wrap gap-2">
+  {% if empresa %}<span class="st st-neutro">Empresa: <strong>{{ empresa_nome|default:empresa }}</strong></span>{% endif %}
+  {% if cliente %}<span class="st st-neutro">Aberta por: <strong>{{ cliente_nome|default:"usuário removido" }}</strong></span>{% endif %}
+  {% if responsavel %}<span class="st st-neutro">Responsável: <strong>{{ responsavel_nome|default:"usuário removido" }}</strong></span>{% endif %}
 </div>
 {% endif %}
 
 {# Atalhos da aba Ativas (spec 020) #}
 {% if atalhos %}
-<nav aria-label="Atalhos da fila" class="mt-4 flex gap-2 overflow-x-auto pb-1">
+<nav aria-label="Atalhos da fila" class="pills">
   {% for a in atalhos %}
-  <a href="{% url_com fila=a.chave p='' %}" {% if a.chave == fila %}aria-current="true"{% endif %} data-atalho="{{ a.chave|default:'todas' }}"
-    class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 {% if a.chave == fila %}border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900{% elif a.chave == 'vencidas' and a.qtd %}border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300{% else %}border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800{% endif %}">
+  <a href="{% url_com fila=a.chave p='' %}" class="pill {% if a.chave == 'vencidas' and a.qtd %}alerta{% endif %}" {% if a.chave == fila %}aria-current="true"{% endif %} data-atalho="{{ a.chave|default:'todas' }}">
     {{ a.label }} <span class="tabular-nums opacity-80">{{ a.qtd }}</span>
   </a>
   {% endfor %}
@@ -39,91 +39,108 @@
 {% endif %}
 
 {# Filtros #}
-<form method="get" class="mt-6 flex flex-wrap items-center gap-2">
+<form method="get" class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
   {% if empresa %}<input type="hidden" name="empresa" value="{{ empresa }}">{% endif %}
   {% if cliente %}<input type="hidden" name="cliente" value="{{ cliente }}">{% endif %}
   {% if responsavel %}<input type="hidden" name="responsavel" value="{{ responsavel }}">{% endif %}
   {% if fila %}<input type="hidden" name="fila" value="{{ fila }}">{% endif %}
   <input type="hidden" name="situacao" value="{{ situacao }}">
-  <input type="search" name="q" value="{{ q }}" placeholder="Buscar por protocolo, descrição ou cliente…"
-    class="min-w-56 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-  <select name="status" class="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-    <option value="">Todos os status</option>
-    {% for v, l in status_opcoes %}<option value="{{ v }}" {% if v == status %}selected{% endif %}>{{ l }}</option>{% endfor %}
-  </select>
-  <select name="tipo" class="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-    <option value="">Todos os tipos</option>
-    {% for v, l in tipos %}<option value="{{ v }}" {% if v == tipo %}selected{% endif %}>{{ l }}</option>{% endfor %}
-  </select>
-  <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Filtrar</button>
-  {% if tem_filtro %}
-  <a href="{% url 'operacao:lista' %}" class="px-2 py-1.5 text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-800 dark:hover:text-zinc-200">Limpar</a>
-  {% endif %}
+  <label class="busca sm:min-w-72 sm:flex-1">
+    {% icone "search" 18 %}<span class="sr">Buscar</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="Protocolo, referência, descrição ou cliente">
+  </label>
+  <div class="grid grid-cols-2 gap-2 sm:flex">
+    <label class="sr" for="f-status">Status</label>
+    <select id="f-status" name="status" class="in sm:w-48">
+      <option value="">Todos os status</option>
+      {% for v, l in status_opcoes %}<option value="{{ v }}" {% if v == status %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+    <label class="sr" for="f-tipo">Tipo</label>
+    <select id="f-tipo" name="tipo" class="in sm:w-56">
+      <option value="">Todos os tipos</option>
+      {% for v, l in tipos %}<option value="{{ v }}" {% if v == tipo %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex items-center gap-2">
+    <button type="submit" class="btn btn-primario">Filtrar</button>
+    {% if tem_filtro %}<a href="{% url 'operacao:lista' %}" class="link px-2">Limpar</a>{% endif %}
+  </div>
 </form>
 
 {# Lista #}
 {% if not pagina.object_list %}
-  <div class="mt-8 rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">
+  <div class="card card-tracejado">
     {% if situacao == "lixeira" %}A lixeira está vazia.{% else %}Nenhuma ocorrência{% if tem_filtro %} com esse filtro{% endif %}.{% endif %}
   </div>
 
 {% elif situacao == "lixeira" %}
   {{ ids_lixeira|json_script:"ids-lixeira" }}
-  <div class="mt-4" x-data="lixeira(JSON.parse(document.getElementById('ids-lixeira').textContent))">
-    {# Barra de ações #}
-    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-      <label class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-        <input type="checkbox" :checked="todos" @change="alternarTodos()" class="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600">
+  <div class="flex flex-col gap-3" x-data="lixeira(JSON.parse(document.getElementById('ids-lixeira').textContent))">
+    <div class="card flex flex-wrap items-center justify-between gap-3" style="padding: 12px 16px">
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" :checked="todos" @change="alternarTodos()" class="h-4 w-4">
         Selecionar todos (<span x-text="sel.length"></span>/<span x-text="ids.length"></span>)
       </label>
       <form method="post" action="{% url 'operacao:esvaziar_lixeira' %}" x-data="confirmar" @submit="interceptar">
         {% csrf_token %}
-        <button type="submit" class="flex h-9 items-center gap-1.5 rounded-lg border border-red-300 px-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/30">{% icone "trash-2" 15 %} Esvaziar lixeira</button>
+        <button type="submit" class="btn btn-perigo btn-peq">{% icone "trash-2" 15 %} Esvaziar lixeira</button>
         {% include "partials/modal.html" with titulo="Esvaziar a lixeira?" mensagem="Isso apaga <strong>definitivamente</strong> todas as ocorrências da lixeira e seus anexos." rotulo="Esvaziar" perigo=True %}
       </form>
     </div>
 
-    {# Lista com seleção #}
-    <form method="post" action="{% url 'operacao:excluir_selecionadas' %}" x-data="confirmar" @submit="interceptar">
+    <form method="post" action="{% url 'operacao:excluir_selecionadas' %}" x-data="confirmar" @submit="interceptar" class="flex flex-col gap-3">
       {% csrf_token %}
-      <ul class="mt-3 space-y-2">
+      <ul class="flex flex-col gap-2">
         {% for oc in pagina.object_list %}
-        <li class="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <input type="checkbox" name="ids" value="{{ oc.id }}" x-model="sel" class="h-4 w-4 shrink-0 rounded border-zinc-300 dark:border-zinc-600">
+        <li class="mcard" style="flex-direction: row; align-items: center; gap: 12px">
+          <input type="checkbox" name="ids" value="{{ oc.id }}" x-model="sel" class="h-4 w-4 shrink-0">
           <div class="min-w-0 flex-1">
-            <p class="truncate font-medium text-zinc-900 dark:text-white">{{ oc.tipo|tipo_label }}</p>
-            <p class="mt-0.5 text-xs text-zinc-500">Protocolo {{ oc.protocolo }} · {{ oc.cliente.nome|default:"Cliente" }} · {{ oc.criado_em|data }}</p>
+            <p class="truncate font-bold">{{ oc.tipo|tipo_label }}</p>
+            <p class="text-sm suave">Protocolo <span class="mono">{{ oc.protocolo }}</span> · {{ oc.cliente.nome|default:"Cliente" }} · {{ oc.criado_em|data }}</p>
           </div>
-          <a href="{% url 'operacao:detalhe' oc.pk %}" class="shrink-0 text-xs font-medium text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">Abrir / Restaurar</a>
+          <a href="{% url 'operacao:detalhe' oc.pk %}" class="link shrink-0 text-sm">Abrir / Restaurar</a>
         </li>
         {% endfor %}
       </ul>
-      <button type="submit" :disabled="sel.length === 0"
-        class="mt-4 flex h-10 items-center gap-1.5 rounded-lg bg-red-600 px-5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
-        {% icone "trash-2" 16 %} Excluir selecionadas (<span x-text="sel.length"></span>)
-      </button>
+      <div>
+        <button type="submit" :disabled="sel.length === 0" class="btn btn-perigo-cheio">{% icone "trash-2" 16 %} Excluir selecionadas (<span x-text="sel.length"></span>)</button>
+      </div>
       {% include "partials/modal.html" with titulo="Excluir definitivamente?" mensagem="As ocorrências selecionadas e seus anexos serão apagados. Não pode ser desfeito." rotulo="Excluir" perigo=True %}
     </form>
   </div>
 
 {% else %}
-  <ul class="mt-4 space-y-3">
+  {# Computador: tabela #}
+  <div class="tbl-box hidden md:block">
+    <div class="tbl-rola">
+      <table class="tbl">
+        <thead><tr><th scope="col">Protocolo</th><th scope="col">Cliente</th><th scope="col">Ocorrência</th><th scope="col">Situação</th><th scope="col">Prioridade</th><th scope="col">Responsável</th><th scope="col">Prazo</th></tr></thead>
+        <tbody>
+          {% for oc in pagina.object_list %}
+          <tr>
+            <td class="mono whitespace-nowrap"><a href="{% url 'operacao:detalhe' oc.pk %}" class="font-semibold">{{ oc.protocolo }}</a><br><span class="text-xs suave" style="font-family: var(--fonte)">{{ oc.criado_em|data }}</span></td>
+            <td><strong>{{ oc.cliente.nome|default:"Cliente" }}</strong>{% if oc.cliente.empresa %}<br><span class="text-[13px] suave">{{ oc.cliente.empresa.nome }}</span>{% endif %}</td>
+            <td>{{ oc.tipo|tipo_label }}{% if oc.referencia %}<br><span class="mono text-[13px] suave">{{ oc|referencia }}</span>{% endif %}</td>
+            <td>{% status_badge oc.status %}</td>
+            <td><span class="rounded-full px-2 py-0.5 text-xs font-medium {{ oc.prioridade|prioridade_badge }}">{{ oc.prioridade|prioridade_label }}</span></td>
+            <td>{% if oc.atribuido_a_id %}{% if oc.atribuido_a_id == user.pk %}Você{% else %}{{ oc.atribuido_a.nome }}{% endif %}{% else %}<span class="suave">—</span>{% endif %}</td>
+            <td>{% sla_badge oc %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Celular: cartões #}
+  <ul class="flex flex-col gap-3 md:hidden">
     {% for oc in pagina.object_list %}
     <li>
-      <a href="{% url 'operacao:detalhe' oc.pk %}" class="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50">
-        <div class="flex items-start justify-between gap-4">
-          <div class="min-w-0">
-            <p class="truncate font-medium tabular-nums text-zinc-900 dark:text-white">{{ oc.protocolo }}</p>
-            <p class="mt-0.5 text-sm text-zinc-500">{{ oc.cliente.nome|default:"Cliente" }}{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %} · {{ oc.tipo|tipo_label }}</p>
-            {% if oc.descricao %}<p class="mt-1 truncate text-sm text-zinc-600 dark:text-zinc-400">{{ oc.descricao }}</p>{% endif %}
-          </div>
-          <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {% sla_badge oc %}
-            <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ oc.prioridade|prioridade_badge }}">{{ oc.prioridade|prioridade_label }}</span>
-            {% status_badge oc.status %}
-          </div>
-        </div>
-        <p class="mt-3 text-xs text-zinc-500">{{ oc.criado_em|data }}</p>
+      <a href="{% url 'operacao:detalhe' oc.pk %}" class="mcard">
+        <div class="flex items-center gap-2"><span class="mono text-[13px] suave">{{ oc.protocolo }}</span><span class="ml-auto">{% status_badge oc.status %}</span></div>
+        <strong class="text-[17px]">{{ oc.tipo|tipo_label }}</strong>
+        <span class="text-sm suave">{{ oc.cliente.nome|default:"Cliente" }}{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</span>
+        <div class="flex flex-wrap items-center gap-2">{% sla_badge oc %}<span class="rounded-full px-2 py-0.5 text-xs font-medium {{ oc.prioridade|prioridade_badge }}">{{ oc.prioridade|prioridade_label }}</span>{% if oc.atribuido_a_id %}<span class="text-xs suave">· {% if oc.atribuido_a_id == user.pk %}com você{% else %}{{ oc.atribuido_a.nome }}{% endif %}</span>{% endif %}</div>
       </a>
     </li>
     {% endfor %}

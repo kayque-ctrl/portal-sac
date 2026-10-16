@@ -1,6 +1,6 @@
 {% load ocorrencias_tags %}
 <form method="post" action="{% url 'portal:reabrir' oc.pk %}" x-data="confirmar" @submit="interceptar">
   {% csrf_token %}
-  <button type="submit" class="flex h-10 items-center justify-center gap-1.5 rounded-lg border border-zinc-300 px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">{% icone "rotate-ccw" 16 %} Reabrir</button>
+  <button type="submit" class="btn btn-linha">{% icone "rotate-ccw" 16 %} Reabrir</button>
   {% include "partials/modal.html" with titulo="Reabrir a ocorrência?" mensagem="Ela volta para 'Em tratativa' e você poderá enviar mensagens novamente." rotulo="Reabrir" %}
 </form>

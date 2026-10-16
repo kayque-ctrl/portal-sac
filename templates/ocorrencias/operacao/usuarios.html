@@ -3,102 +3,103 @@
 {% block title %}Usuários · Operação{% endblock %}
 
 {% block conteudo %}
-<div x-data="{ aberto: {{ form_aberto|yesno:'true,false' }}, papel: '{{ valores.papel|default:'cliente' }}' }">
-  <div class="flex items-start justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold text-zinc-900 dark:text-white">Usuários</h1>
-      <p class="mt-1 text-sm text-zinc-500">{{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"usuário,usuários" }}{% if tem_filtro %} (filtrado){% endif %}</p>
+<div x-data="{ aberto: {{ form_aberto|yesno:'true,false' }}, papel: '{{ valores.papel|default:'cliente' }}' }" class="flex flex-col gap-4">
+  <div class="topo">
+    <div class="titulo">
+      <h1>Usuários</h1>
+      <p class="subtitulo">{{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"usuário,usuários" }}{% if tem_filtro %} (filtrado){% endif %}</p>
     </div>
-    <div x-show="!aberto" class="flex flex-col items-end gap-2">
-      <button @click="aberto = true" class="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">{% icone "plus" 16 %} Novo usuário</button>
-      {% for m in messages %}{% if 'usuario' in m.tags %}<p class="max-w-sm text-right text-sm text-green-600 dark:text-green-400">{{ m }}</p>{% endif %}{% endfor %}
-    </div>
+    <button x-show="!aberto" @click="aberto = true" class="btn btn-primario">{% icone "plus" 16 %} Novo usuário</button>
   </div>
+  {% for m in messages %}{% if 'usuario' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
 
-  <form x-show="aberto" x-cloak method="post" x-data="enviando" @submit="enviando = true" class="mt-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+  <form x-show="aberto" x-cloak method="post" x-data="enviando" @submit="enviando = true" class="card flex flex-col gap-4">
     {% csrf_token %}
-    <h2 class="text-sm font-semibold text-zinc-900 dark:text-white">Novo usuário</h2>
-    <p class="mt-1 text-xs text-zinc-500">Um convite será enviado por e-mail para o usuário definir a senha.</p>
-    <div class="mt-4 grid gap-4 sm:grid-cols-2">
-      <div>
-        <label for="nome" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Nome *</label>
-        <input id="nome" name="nome" required value="{{ valores.nome|default:'' }}" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+    <div>
+      <h2>Novo usuário</h2>
+      <p class="ajuda">Um convite será enviado por e-mail para o usuário definir a senha.</p>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="campo">
+        <label for="nome">Nome <span class="obg" aria-hidden="true">*</span></label>
+        <input id="nome" name="nome" required value="{{ valores.nome|default:'' }}" placeholder="Ex.: Ana Souza" class="in">
       </div>
-      <div>
-        <label for="email" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">E-mail *</label>
-        <input id="email" name="email" type="email" required value="{{ valores.email|default:'' }}" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+      <div class="campo">
+        <label for="email">E-mail <span class="obg" aria-hidden="true">*</span></label>
+        <input id="email" name="email" type="email" required value="{{ valores.email|default:'' }}" placeholder="Ex.: ana@empresa.com.br" class="in">
       </div>
       {% include "ocorrencias/operacao/partials/campos_usuario.html" with v=valores pode_admin=user.eh_admin %}
     </div>
-    {% if erro %}<p role="alert" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ erro }}</p>{% endif %}
-    <div class="mt-4 flex gap-2">
-      <button type="submit" :disabled="enviando" class="flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-        x-text="enviando ? 'Enviando convite…' : 'Enviar convite'">Enviar convite</button>
-      <button type="button" @click="aberto = false" class="flex h-10 items-center justify-center rounded-lg border border-zinc-300 px-5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Cancelar</button>
+    {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
+    <div class="flex gap-2">
+      <button type="submit" :disabled="enviando" class="btn btn-primario" x-text="enviando ? 'Enviando convite…' : 'Enviar convite'">Enviar convite</button>
+      <button type="button" @click="aberto = false" class="btn btn-linha">Cancelar</button>
     </div>
   </form>
 </div>
 
 {# Busca e filtros #}
-<form method="get" class="mt-6 flex flex-wrap items-center gap-2">
-  <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nome ou e-mail…" class="min-w-56 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-  <select name="papel" class="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-    <option value="">Todos os papéis</option>
-    <option value="cliente" {% if papel_f == "cliente" %}selected{% endif %}>Cliente</option>
-    <option value="operador" {% if papel_f == "operador" %}selected{% endif %}>Operador</option>
-    <option value="admin" {% if papel_f == "admin" %}selected{% endif %}>Admin</option>
-  </select>
-  <select name="empresa" class="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-    <option value="">Todas as empresas</option>
-    {% for e in empresas %}<option value="{{ e.pk }}" {% if e.pk|stringformat:'s' == empresa_f %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
-  </select>
-  <button type="submit" class="rounded-lg bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Buscar</button>
-  {% if tem_filtro %}<a href="{% url 'operacao:usuarios' %}" class="px-2 py-1.5 text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-800 dark:hover:text-zinc-200">Limpar</a>{% endif %}
+<form method="get" class="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+  <label class="busca sm:min-w-72 sm:flex-1">
+    {% icone "search" 18 %}<span class="sr">Buscar</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nome ou e-mail">
+  </label>
+  <div class="grid grid-cols-2 gap-2 sm:flex">
+    <label class="sr" for="f-papel">Papel</label>
+    <select id="f-papel" name="papel" class="in sm:w-44">
+      <option value="">Todos os papéis</option>
+      <option value="cliente" {% if papel_f == "cliente" %}selected{% endif %}>Cliente</option>
+      <option value="operador" {% if papel_f == "operador" %}selected{% endif %}>Operador</option>
+      <option value="admin" {% if papel_f == "admin" %}selected{% endif %}>Admin</option>
+    </select>
+    <label class="sr" for="f-empresa">Empresa</label>
+    <select id="f-empresa" name="empresa" class="in sm:w-52">
+      <option value="">Todas as empresas</option>
+      {% for e in empresas %}<option value="{{ e.pk }}" {% if e.pk|stringformat:'s' == empresa_f %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex items-center gap-2">
+    <button type="submit" class="btn btn-primario">Buscar</button>
+    {% if tem_filtro %}<a href="{% url 'operacao:usuarios' %}" class="link px-2">Limpar</a>{% endif %}
+  </div>
 </form>
 
 {% if not pagina.object_list %}
-<div class="mt-6 rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">Nenhum usuário encontrado.</div>
+<div class="card card-tracejado">Nenhum usuário encontrado.</div>
 {% else %}
-<div class="mt-4 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-  <table class="w-full text-sm">
-    <thead class="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-900">
-      <tr>
-        <th class="px-4 py-2 font-medium">Nome</th>
-        <th class="px-4 py-2 font-medium">E-mail</th>
-        <th class="px-4 py-2 font-medium">Papel</th>
-        <th class="px-4 py-2 font-medium">Empresa</th>
-        <th class="px-4 py-2 font-medium">Status</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
-      {% for u in pagina.object_list %}
-      <tr class="bg-white hover:bg-zinc-50 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/50">
-        <td class="px-4 py-2.5 font-medium text-zinc-900 dark:text-zinc-100">
-          <a href="{% url 'operacao:usuario_detalhe' u.pk %}" class="inline-flex items-center gap-1 hover:underline">{{ u.nome }} <span class="text-zinc-500">{% icone "chevron-right" 14 %}</span></a>
-        </td>
-        <td class="px-4 py-2.5 text-zinc-600 dark:text-zinc-400">{{ u.email|default:"—" }}</td>
-        <td class="px-4 py-2.5"><span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ u.papel|papel_badge }}">{{ u.get_papel_display }}</span></td>
-        <td class="px-4 py-2.5 text-zinc-600 dark:text-zinc-400">{{ u.empresa.nome|default:"—" }}</td>
-        <td class="px-4 py-2.5">
-          {% if u.ativado_em %}
-          <span class="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950/40 dark:text-green-300">Ativo</span>
-          {% else %}
-          <div class="flex flex-col items-start gap-1" x-data="reenviar('{% url 'operacao:usuario_reenviar' u.pk %}')">
-            <span class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">Pendente</span>
-            <span x-show="mensagem" x-cloak class="text-xs text-green-600 dark:text-green-400" x-text="mensagem"></span>
-            <button x-show="!mensagem" type="button" @click="enviar()" :disabled="pendente"
-              class="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 underline underline-offset-2 hover:text-zinc-800 disabled:opacity-60 dark:hover:text-zinc-200">
-              <span :class="pendente ? 'animate-spin' : ''" class="inline-flex">{% icone "refresh-cw" 12 %}</span>
-              <span x-text="pendente ? 'Reenviando…' : 'Reenviar convite'">Reenviar convite</span>
-            </button>
-            <span x-show="erro" x-cloak class="text-xs text-red-600 dark:text-red-400" x-text="erro"></span>
-          </div>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="tbl-box">
+  <div class="tbl-rola">
+    <table class="tbl">
+      <thead><tr><th scope="col">Nome</th><th scope="col">Papel</th><th scope="col">Empresa</th><th scope="col">Status</th></tr></thead>
+      <tbody>
+        {% for u in pagina.object_list %}
+        <tr>
+          <td>
+            <a href="{% url 'operacao:usuario_detalhe' u.pk %}" class="inline-flex items-center gap-1 font-bold">{{ u.nome }} <span class="suave">{% icone "chevron-right" 14 %}</span></a>
+            <br><span class="text-[13px] suave">{{ u.email|default:"—" }}</span>
+          </td>
+          <td><span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ u.papel|papel_badge }}">{{ u.get_papel_display }}</span></td>
+          <td class="suave">{{ u.empresa.nome|default:"—" }}</td>
+          <td>
+            {% if u.ativado_em %}
+            <span class="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950/40 dark:text-green-300">Ativo</span>
+            {% else %}
+            <div class="flex flex-wrap items-center gap-2" x-data="reenviar('{% url 'operacao:usuario_reenviar' u.pk %}')">
+              <span class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">Pendente</span>
+              <span x-show="mensagem" x-cloak class="text-xs text-green-700 dark:text-green-400" x-text="mensagem"></span>
+              <button x-show="!mensagem" type="button" @click="enviar()" :disabled="pendente" class="btn btn-linha btn-peq">
+                <span :class="pendente ? 'animate-spin' : ''" class="inline-flex">{% icone "refresh-cw" 13 %}</span>
+                <span x-text="pendente ? 'Reenviando…' : 'Reenviar convite'">Reenviar convite</span>
+              </button>
+              <span x-show="erro" x-cloak class="text-xs erro" x-text="erro"></span>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endif %}
 

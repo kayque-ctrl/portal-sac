@@ -3,55 +3,51 @@
 {% block title %}Contatos de encaminhamento · Operação{% endblock %}
 
 {% block conteudo %}
-<div x-data="abrivel({{ erro|yesno:'true,false' }})">
-  <div class="flex items-start justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold text-zinc-900 dark:text-white">Contatos de encaminhamento</h1>
-      <p class="mt-1 text-sm text-zinc-500">E-mails avisados automaticamente quando uma reclamação/sugestão é aberta.</p>
+<div x-data="abrivel({{ erro|yesno:'true,false' }})" class="flex flex-col gap-4">
+  <div class="topo">
+    <div class="titulo">
+      <h1>Contatos de encaminhamento</h1>
+      <p class="subtitulo">E-mails avisados automaticamente quando uma reclamação/sugestão é aberta.</p>
     </div>
-    <button x-show="!aberto" @click="aberto = true" class="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">{% icone "plus" 16 %} Novo contato</button>
+    <button x-show="!aberto" @click="aberto = true" class="btn btn-primario">{% icone "plus" 16 %} Novo contato</button>
   </div>
 
-  <form x-show="aberto" x-cloak method="post" class="mt-4 max-w-xl rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+  <form x-show="aberto" x-cloak method="post" class="card flex max-w-xl flex-col gap-4">
     {% csrf_token %}
-    <h2 class="text-sm font-semibold text-zinc-900 dark:text-white">Novo contato</h2>
-    <div class="mt-4 space-y-4">
-      <div>
-        <label for="email" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">E-mail</label>
-        <input id="email" name="email" type="email" required value="{{ valores.email|default:'' }}" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-      </div>
-      <div>
-        <label for="setor" class="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Setor <span class="font-normal">(opcional)</span></label>
-        <input id="setor" name="setor" placeholder="Ex.: Qualidade, Comercial…" value="{{ valores.setor|default:'' }}" class="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-      </div>
+    <h2>Novo contato</h2>
+    <div class="campo">
+      <label for="email">E-mail <span class="obg" aria-hidden="true">*</span></label>
+      <input id="email" name="email" type="email" required value="{{ valores.email|default:'' }}" placeholder="Ex.: qualidade@empresa.com.br" class="in">
     </div>
-    {% if erro %}<p role="alert" class="mt-3 text-sm text-red-600 dark:text-red-400">{{ erro }}</p>{% endif %}
-    <div class="mt-4 flex gap-2">
-      <button type="submit" class="flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">Adicionar contato</button>
-      <button type="button" @click="aberto = false" class="flex h-10 items-center justify-center rounded-lg border border-zinc-300 px-5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Cancelar</button>
+    <div class="campo">
+      <label for="setor">Setor <span class="font-normal suave">(opcional)</span></label>
+      <input id="setor" name="setor" placeholder="Ex.: Qualidade, Comercial…" value="{{ valores.setor|default:'' }}" class="in">
+    </div>
+    {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-primario">Adicionar contato</button>
+      <button type="button" @click="aberto = false" class="btn btn-linha">Cancelar</button>
     </div>
   </form>
 </div>
 
 {% if not contatos %}
-<div class="mt-8 rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">Nenhum contato cadastrado ainda. Clique em <strong>Novo contato</strong>.</div>
+<div class="card card-tracejado">Nenhum contato cadastrado ainda. Clique em <strong>Novo contato</strong>.</div>
 {% else %}
-<ul class="mt-6 space-y-3">
+<ul class="flex flex-col gap-2">
   {% for c in contatos %}
-  <li class="flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-    <div class="min-w-0">
-      <div class="flex flex-wrap items-center gap-2">
-        <p class="truncate font-medium text-zinc-900 dark:text-white">{{ c.email }}</p>
-        {% if c.setor %}<span class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{{ c.setor }}</span>{% endif %}
-        {% if not c.ativo %}<span class="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800">Inativo</span>{% endif %}
-      </div>
+  <li class="mcard" style="flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px; {% if not c.ativo %}opacity: .7{% endif %}">
+    <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <p class="mono truncate font-medium">{{ c.email }}</p>
+      {% if c.setor %}<span class="st st-neutro">{{ c.setor }}</span>{% endif %}
+      {% if not c.ativo %}<span class="st st-neutro">Inativo</span>{% endif %}
     </div>
-    <div class="flex shrink-0 items-center gap-3">
+    <div class="flex shrink-0 items-center gap-2">
       <form method="post" action="{% url 'operacao:contato_acao' c.pk 'alternar' %}">{% csrf_token %}
-        <button type="submit" class="text-xs font-medium text-zinc-600 hover:underline dark:text-zinc-300">{% if c.ativo %}Desativar{% else %}Ativar{% endif %}</button>
+        <button type="submit" class="btn btn-linha btn-peq">{% if c.ativo %}Desativar{% else %}Ativar{% endif %}</button>
       </form>
       <form method="post" action="{% url 'operacao:contato_acao' c.pk 'excluir' %}" x-data="confirmar" @submit="interceptar">{% csrf_token %}
-        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Excluir</button>
+        <button type="submit" class="btn btn-perigo btn-peq">Excluir</button>
         {% include "partials/modal.html" with titulo="Excluir contato?" mensagem="Ele deixa de receber os avisos de reclamação/sugestão." rotulo="Excluir" perigo=True %}
       </form>
     </div>

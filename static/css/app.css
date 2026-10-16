@@ -14,10 +14,6 @@
   --skeleton-sheen: rgba(255, 255, 255, 0.06);
 }
 
-body {
-  font-family: "Geist", Arial, Helvetica, sans-serif;
-}
-
 /* Fade-in suave de conteúdo */
 @keyframes fadein {
   from {

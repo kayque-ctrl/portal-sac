@@ -3,36 +3,27 @@
 {% block title %}Entrar · Portal de Ocorrências{% endblock %}
 
 {% block conteudo %}
-<div class="text-center">
-  <a href="{% url 'publico:inicio' %}" class="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
-    {% icone "arrow-left" 16 %} Portal de Ocorrências
-  </a>
-  <h1 class="mt-4 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Entrar</h1>
-  <p class="mt-1 text-sm text-zinc-500">Acesse com o e-mail cadastrado pela operação.</p>
+<div>
+  <h1>Entrar</h1>
+  <p class="mt-1 suave">Acesse com o e-mail cadastrado pela operação.</p>
 </div>
 
-<form method="post" class="mt-8 space-y-4" x-data="enviando" @submit="enviando = true">
+<form method="post" class="flex flex-col gap-4" x-data="enviando" @submit="enviando = true">
   {% csrf_token %}
-  <div>
-    <label for="email" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">E-mail</label>
-    <div class="relative mt-1">
-      <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">{% icone "mail" 16 %}</span>
-      <input id="email" name="email" type="email" autocomplete="email" required value="{{ request.POST.email|default:'' }}"
-        class="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-3 text-zinc-900 outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-400">
-    </div>
+  <div class="campo">
+    <label for="email">E-mail</label>
+    <input id="email" name="email" type="email" autocomplete="email" required value="{{ request.POST.email|default:'' }}" placeholder="Ex.: ana@suaempresa.com.br" class="in">
   </div>
 
+  {% url 'contas:esqueci_senha' as url_esqueci %}
   {% include "partials/campo_senha.html" with id="password" name="password" label="Senha" autocomplete="current-password" %}
-
-  <div class="text-right">
-    <a href="{% url 'contas:esqueci_senha' %}" class="text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">Esqueceu sua senha?</a>
-  </div>
+  <div class="-mt-2 text-right"><a href="{{ url_esqueci }}" class="link text-sm">Esqueceu sua senha?</a></div>
 
   {% include "partials/erro.html" %}
 
-  <button type="submit" :disabled="enviando"
-    class="flex h-11 w-full items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
+  <button type="submit" :disabled="enviando" class="btn btn-primario btn-grande btn-bloco">
     <span x-text="enviando ? 'Entrando…' : 'Entrar'">Entrar</span>
   </button>
 </form>
+<p class="text-sm suave">Não tem acesso? O cadastro é feito por convite da operação. <a href="{% url 'publico:inicio' %}" class="link">Início</a></p>
 {% endblock %}

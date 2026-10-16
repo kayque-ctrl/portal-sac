@@ -78,6 +78,17 @@ def dia(dt):
 
 
 @register.filter
+def iniciais(nome) -> str:
+    """Até duas iniciais para o avatar: "Ana Souza" → "AS"."""
+    # "Ana Souza · ACME" → usa só o nome da pessoa.
+    partes = [p for p in str(nome or "").split("·")[0].split() if p]
+    if not partes:
+        return "?"
+    letras = partes[0][0] + (partes[-1][0] if len(partes) > 1 else "")
+    return letras.upper()
+
+
+@register.filter
 def hora(dt):
     return formato.formatar_hora(dt)
 
@@ -163,7 +174,7 @@ def sla_badge(oc):
 def notif_icone(mensagem, tamanho=16):
     nome, cor = notificacoes.icone(mensagem)
     return format_html(
-        '<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 {}">{}</span>',
+        '<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 {}">{}</span>',
         cor,
         icone(nome, tamanho),
     )

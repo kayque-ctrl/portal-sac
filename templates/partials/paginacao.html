@@ -1,18 +1,18 @@
 {% load ocorrencias_tags %}
 {% comment %}Paginação server-side. Preserva os filtros da URL e troca só a página.{% endcomment %}
 {% if pagina.paginator.num_pages > 1 %}
-<div class="mt-4 flex items-center justify-between">
-  <span class="text-sm text-zinc-500">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"item,itens" }}</span>
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <span class="text-sm suave">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"item,itens" }}</span>
   <div class="flex gap-2">
     {% if pagina.has_previous %}
-      <a href="{% url_com p=pagina.previous_page_number %}" class="flex h-9 items-center gap-1 rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">{% icone "chevron-left" 16 %} Anterior</a>
+      <a href="{% url_com p=pagina.previous_page_number %}" class="btn btn-linha btn-peq">{% icone "chevron-left" 16 %} Anterior</a>
     {% else %}
-      <span class="flex h-9 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-sm font-medium text-zinc-300 dark:border-zinc-800 dark:text-zinc-600">{% icone "chevron-left" 16 %} Anterior</span>
+      <span class="btn btn-linha btn-peq" aria-disabled="true">{% icone "chevron-left" 16 %} Anterior</span>
     {% endif %}
     {% if pagina.has_next %}
-      <a href="{% url_com p=pagina.next_page_number %}" class="flex h-9 items-center gap-1 rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">Próxima {% icone "chevron-right" 16 %}</a>
+      <a href="{% url_com p=pagina.next_page_number %}" class="btn btn-linha btn-peq">Próxima {% icone "chevron-right" 16 %}</a>
     {% else %}
-      <span class="flex h-9 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-sm font-medium text-zinc-300 dark:border-zinc-800 dark:text-zinc-600">Próxima {% icone "chevron-right" 16 %}</span>
+      <span class="btn btn-linha btn-peq" aria-disabled="true">Próxima {% icone "chevron-right" 16 %}</span>
     {% endif %}
   </div>
 </div>

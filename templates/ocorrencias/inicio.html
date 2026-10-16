@@ -2,57 +2,38 @@
 {% load ocorrencias_tags %}
 
 {% block body %}
-<main class="relative flex flex-1 flex-col lg:flex-row">
-  {% include "partials/tema.html" with classe="absolute right-4 top-4 z-10" %}
-
+<div class="dividida">
   {# Painel de apresentação #}
-  <section class="flex flex-col justify-between gap-10 bg-zinc-900 px-8 py-12 text-white lg:w-1/2 lg:px-14 lg:py-16">
-    <span class="inline-flex w-fit items-center rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-zinc-200">Logística · Atendimento</span>
+  <aside class="lado-marca">
+    <div class="flex items-center gap-3">
+      <span class="marca"><span class="logo" aria-hidden="true">SAC</span><span><strong>Portal SAC</strong><span>Logística · Atendimento</span></span></span>
+      {% include "partials/tema.html" with classe="ico-sb ml-auto" %}
+    </div>
 
-    <div>
-      <h1 class="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-        Um problema na entrega?<br>A gente resolve junto.
-      </h1>
-      <p class="mt-4 max-w-md text-zinc-300">
-        Abra e acompanhe ocorrências de entrega num só lugar — com histórico, anexos e respostas do time de operações.
-      </p>
-
-      <ul class="mt-8 space-y-4">
-        <li class="flex items-start gap-3">
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">{% icone "package-check" 16 %}</span>
-          <span class="text-sm text-zinc-200">Registre avarias, faltas e trocas — com fotos e planilha.</span>
-        </li>
-        <li class="flex items-start gap-3">
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">{% icone "clock" 16 %}</span>
-          <span class="text-sm text-zinc-200">Acompanhe o status em tempo real, da abertura à resolução.</span>
-        </li>
-        <li class="flex items-start gap-3">
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">{% icone "message-square" 16 %}</span>
-          <span class="text-sm text-zinc-200">Converse com a operação e aprove a resolução.</span>
-        </li>
+    <div class="mt-auto flex flex-col gap-4">
+      <h1 class="frase">Um problema na entrega?<br>A gente resolve junto.</h1>
+      <p class="max-w-md">Abra e acompanhe ocorrências de entrega num só lugar — com histórico, anexos e respostas do time de operações.</p>
+      <ul class="so-pc mt-4 flex-col gap-4">
+        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: var(--marca-2)">{% icone "package-check" 17 %}</span><span class="pt-1.5">Registre avarias, faltas e trocas — com fotos e planilha.</span></li>
+        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: var(--marca-2)">{% icone "clock" 17 %}</span><span class="pt-1.5">Acompanhe o status em tempo real, da abertura à resolução.</span></li>
+        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: var(--marca-2)">{% icone "message-square" 17 %}</span><span class="pt-1.5">Converse com a operação e aprove a resolução.</span></li>
       </ul>
     </div>
-
-    <p class="text-xs text-zinc-500">Portal de Ocorrências</p>
-  </section>
+  </aside>
 
   {# Ações #}
-  <section class="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
-    <div class="w-full max-w-sm">
-      <h2 class="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Bem-vindo(a)</h2>
-      <p class="mt-1 text-sm text-zinc-500">Entre para gerenciar suas ocorrências, ou consulte um protocolo sem precisar de login.</p>
-
-      <div class="mt-6 space-y-3">
-        <a href="{% url 'contas:login' %}" class="flex h-12 w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-6 text-base font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200">
-          Entrar {% icone "arrow-right" 18 %}
-        </a>
-        <a href="{% url 'publico:consulta' %}" class="flex h-12 w-full items-center justify-center rounded-lg border border-zinc-300 px-6 text-base font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
-          Consultar protocolo
-        </a>
+  <main class="lado-form">
+    <div class="form-box">
+      <div>
+        <h2 class="text-[26px] font-bold tracking-tight">Bem-vindo(a)</h2>
+        <p class="mt-1 suave">Entre para gerenciar suas ocorrências, ou consulte um protocolo sem precisar de login.</p>
       </div>
-
-      <p class="mt-6 text-center text-sm text-zinc-500">O acesso é criado pela equipe de operações.</p>
+      <div class="flex flex-col gap-3">
+        <a href="{% url 'contas:login' %}" class="btn btn-primario btn-grande btn-bloco">Entrar {% icone "arrow-right" 18 %}</a>
+        <a href="{% url 'publico:consulta' %}" class="btn btn-linha btn-grande btn-bloco">Consultar protocolo</a>
+      </div>
+      <p class="text-center text-sm suave">O acesso é criado pela equipe de operações.</p>
     </div>
-  </section>
-</main>
+  </main>
+</div>
 {% endblock %}

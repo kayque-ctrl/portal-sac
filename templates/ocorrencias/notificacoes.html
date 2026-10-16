@@ -3,26 +3,31 @@
 {% block title %}Notificações · Portal de Ocorrências{% endblock %}
 
 {% block conteudo %}
-<a href="{{ voltar }}" class="inline-flex items-center gap-1 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">{% icone "arrow-left" 16 %} Voltar</a>
-<h1 class="mt-3 text-2xl font-semibold text-zinc-900 dark:text-white">Notificações</h1>
+<nav class="migalha" aria-label="Caminho"><a href="{{ voltar }}">{% icone "arrow-left" 15 %} Voltar</a></nav>
+<div class="topo">
+  <div class="titulo">
+    <h1>Notificações</h1>
+    <p class="subtitulo">As mais recentes primeiro. Abrir esta página marca todas como lidas.</p>
+  </div>
+</div>
 
 {% if not notificacoes %}
-<div class="mt-6 flex flex-col items-center gap-2 rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-  <span class="text-zinc-300 dark:text-zinc-600">{% icone "bell" 24 %}</span>
-  <p class="text-sm text-zinc-500">Nenhuma notificação.</p>
+<div class="card flex flex-col items-center gap-3 py-10 text-center">
+  <span class="flex h-12 w-12 items-center justify-center rounded-full" style="background: var(--sup-2)">{% icone "bell" 22 %}</span>
+  <p class="suave">Nenhuma notificação.</p>
 </div>
 {% else %}
-<ul class="mt-6 divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+<ul class="tbl-box max-w-3xl">
   {% for n in notificacoes %}
-  <li class="bg-white transition-colors hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50">
-    {% if n.ocorrencia_id %}<a href="{{ area_base }}/{{ n.ocorrencia_id }}" class="block">{% endif %}
-    <div class="flex items-start gap-3 px-4 py-3">
+  <li class="border-b last:border-0" style="border-color: var(--linha-2){% if not n.lida %}; background: var(--sup-2){% endif %}">
+    {% if n.ocorrencia_id %}<a href="{{ area_base }}/{{ n.ocorrencia_id }}" class="block hover:bg-[var(--sup-2)]">{% endif %}
+    <div class="flex items-start gap-3 px-4 py-3.5 sm:px-5">
       {% notif_icone n.mensagem %}
       <div class="min-w-0 flex-1">
-        <p class="text-sm {% if n.lida %}text-zinc-600 dark:text-zinc-400{% else %}font-medium text-zinc-900 dark:text-white{% endif %}">{{ n.mensagem }}</p>
-        <p class="mt-0.5 text-xs text-zinc-500">{{ n.criado_em|relativo }}</p>
+        <p class="text-[15px] {% if not n.lida %}font-bold{% endif %}">{{ n.mensagem }}</p>
+        <p class="mt-0.5 text-[13px] suave">{{ n.criado_em|relativo }}</p>
       </div>
-      {% if not n.lida %}<span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500"></span>{% endif %}
+      {% if not n.lida %}<span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full" style="background: var(--tinta)" aria-label="Não lida"></span>{% endif %}
     </div>
     {% if n.ocorrencia_id %}</a>{% endif %}
   </li>

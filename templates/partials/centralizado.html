@@ -1,10 +1,25 @@
 {% extends "base.html" %}
-{% comment %}Layout das telas públicas centralizadas (login, consulta, senha).{% endcomment %}
+{% comment %}
+Layout das telas públicas (login, consulta, senha): faixa da marca à
+esquerda e o formulário num cartão à direita (spec 022). No celular a faixa
+encolhe para a marca e a frase curta.
+{% endcomment %}
 {% block body %}
-<main class="relative flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-zinc-950">
-  {% include "partials/tema.html" with classe="absolute right-4 top-4" %}
-  <div class="w-full {% block largura %}max-w-sm{% endblock %}">
-    {% block conteudo %}{% endblock %}
-  </div>
-</main>
+<div class="dividida">
+  <aside class="lado-marca">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'publico:inicio' %}" class="marca"><span class="logo" aria-hidden="true">SAC</span><span><strong>Portal SAC</strong><span>Ocorrências de entrega</span></span></a>
+      {% include "partials/tema.html" with classe="ico-sb ml-auto" %}
+    </div>
+    <div class="so-pc mt-auto flex-col gap-4">
+      <p class="frase">{% block frase %}Cada ocorrência,<br>do registro à solução.{% endblock %}</p>
+      <p>Abra, acompanhe, converse com a operação e confirme quando estiver resolvido.</p>
+    </div>
+  </aside>
+  <main class="lado-form">
+    <div class="form-box {% block largura %}{% endblock %}">
+      {% block conteudo %}{% endblock %}
+    </div>
+  </main>
+</div>
 {% endblock %}

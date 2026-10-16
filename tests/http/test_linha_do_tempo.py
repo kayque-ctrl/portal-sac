@@ -54,7 +54,7 @@ def test_operacao_ve_a_historia_inteira_em_ordem(atendida, operador, entrar):
 
 def test_operacao_ve_o_nome_de_quem_respondeu(atendida, operador, admin, entrar):
     html = corpo(entrar(admin).get(f"/operacao/{atendida.pk}"))
-    assert f"<strong class=\"font-medium text-zinc-700 dark:text-zinc-300\">{operador.nome}</strong>" in html
+    assert f"<strong>{operador.nome}</strong>" in html
 
 
 def test_cliente_ve_abertura_mensagens_e_status(atendida, cliente, entrar):
@@ -62,7 +62,7 @@ def test_cliente_ve_abertura_mensagens_e_status(atendida, cliente, entrar):
     assert 'data-item="abertura"' in html and "Você</strong> abriu a ocorrência" in html
     assert "Olá, vamos verificar." in html
     assert "Status: Aberta → Em tratativa" in html
-    assert "<strong class=\"font-medium text-zinc-700 dark:text-zinc-300\">Operação</strong>" in html
+    assert "<strong>Operação</strong>" in html
 
 
 def test_abertura_vem_primeiro_e_o_mais_novo_por_ultimo(atendida, cliente, entrar):

@@ -1,171 +1,81 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
-{% block title %}Minhas ocorrências · Portal de Ocorrências{% endblock %}
+{% block title %}Início · Portal de Ocorrências{% endblock %}
 
 {% block conteudo %}
-{{ meta|json_script:"ocorrencias-meta" }}
-{{ rotulos_tipo|json_script:"rotulos-tipo" }}
-<div class="flex flex-col gap-4" x-data="portalLista(JSON.parse(document.getElementById('ocorrencias-meta').textContent), '{{ filtro_inicial }}', JSON.parse(document.getElementById('rotulos-tipo').textContent))">
-
-  <div class="topo">
-    <div class="titulo">
-      <h1>{% if user.primeiro_nome %}Olá, {{ user.primeiro_nome }}{% else %}Minhas ocorrências{% endif %}</h1>
-      <p class="subtitulo">Suas ocorrências{% if tem_colegas %} e as da sua empresa{% endif %}</p>
-    </div>
-    {% if ocorrencias %}
-    <label class="busca w-full md:w-[420px]">
-      {% icone "search" 18 %}<span class="sr">Buscar</span>
-      <input type="search" x-model="q" aria-label="Buscar por protocolo ou descrição" placeholder="Buscar por protocolo, referência ou texto">
-    </label>
-    {% endif %}
-  </div>
-
-  {% if nova %}
-  <p class="caixa-ok flex items-center gap-2">{% icone "check-circle-2" 18 %}<span>Ocorrência aberta com sucesso! Protocolo <strong class="mono">{{ nova }}</strong>.</span></p>
-  {% endif %}
-
-  {% if anexos_falha %}
-  <p class="caixa-erro flex items-center gap-2" style="color: var(--interna-tinta); background: var(--interna-fundo)">{% icone "triangle-alert" 18 %}<span>{% if anexos_falha == 1 %}1 anexo não pôde ser enviado.{% else %}{{ anexos_falha }} anexos não puderam ser enviados.{% endif %} Abra a ocorrência e envie os arquivos novamente pela conversa.</span></p>
-  {% endif %}
-
-  {# ---------- Avisos da operação ---------- #}
-  {% if avisos %}
-  {{ avisos_meta|json_script:"avisos-meta" }}
-  <div x-data="avisosPainel(JSON.parse(document.getElementById('avisos-meta').textContent))">
-    <p x-show="visiveis.length === 0" x-cloak class="text-sm suave">
-      <span x-text="escondidos === 1 ? '1 aviso dispensado' : escondidos + ' avisos dispensados'"></span> ·
-      <button type="button" @click="restaurar()" class="link">Mostrar de novo</button>
-    </p>
-    <section x-show="visiveis.length > 0" aria-label="Avisos da operação" class="tbl-box">
-      <div class="flex items-center gap-2 border-b px-4 py-3" style="border-color: var(--linha-2)">
-        <h2 class="card-titulo flex items-center gap-2">{% icone "megaphone" 17 %} Avisos da operação</h2>
-        <span x-show="alertas > 0" class="st ml-auto" style="background: var(--interna-fundo); color: var(--interna-tinta)" x-text="alertas === 1 ? '1 alerta' : alertas + ' alertas'"></span>
-      </div>
-      <ul>
-        {% for a in avisos %}
-        <li x-show="mostrar('{{ a.id }}')" class="border-b last:border-0" style="border-color: var(--linha-2)">{% include "ocorrencias/partials/aviso_linha.html" with dispensavel=True %}</li>
-        {% endfor %}
-      </ul>
-      <div x-show="visiveis.length > 3 || escondidos > 0" class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-4 py-2 text-sm" style="border-color: var(--linha-2)">
-        <button type="button" x-show="visiveis.length > 3" @click="todos = !todos" :aria-expanded="todos" class="link inline-flex items-center gap-1">
-          <span x-text="todos ? 'Mostrar menos' : 'Ver todos (' + visiveis.length + ')'"></span>
-          <span :class="todos ? 'rotate-180' : ''" class="inline-flex">{% icone "chevron-down" 14 %}</span>
-        </button>
-        <button type="button" x-show="escondidos > 0" @click="restaurar()" class="link text-xs suave"
-          x-text="escondidos === 1 ? '1 aviso dispensado · mostrar' : escondidos + ' avisos dispensados · mostrar'"></button>
-      </div>
-    </section>
-  </div>
-  {% endif %}
-
-  {# Padrão de abertura (recolhível: não rouba espaço de quem já usa) #}
-  <details class="card group" style="padding: 14px 18px">
-    <summary class="flex cursor-pointer list-none items-center gap-2 font-bold">
-      {% icone "clipboard-check" 18 %} Como abrir uma ocorrência
-      <span class="ml-auto suave transition-transform group-open:rotate-180">{% icone "chevron-down" 16 %}</span>
-    </summary>
-    <div class="mt-3 text-[15px] suave">
-      <p>Para abertura de ocorrência é necessário:</p>
-      <ul class="mt-2 list-disc space-y-1 pl-5">
-        <li>Número da nota fiscal e/ou pedido</li>
-        <li>Ficar atento aos prazos para geração da ocorrência</li>
-        <li>Foto com o registro da etiqueta de embalagem, avaria da caixa e/ou produto</li>
-        <li>Relato sucinto do ocorrido</li>
-      </ul>
-    </div>
-  </details>
-
-  {# Destaque: aguardando a MINHA aprovação #}
-  {% if pendentes %}
-  <section class="card card-aguarda flex flex-wrap items-center gap-3" style="padding: 14px 18px">
-    <div class="min-w-0 flex-1">
-      <h2>Você tem {{ pendentes }} {{ pendentes|plural:"ocorrência,ocorrências" }} aguardando sua aprovação.</h2>
-      <p class="text-sm suave">A operação marcou como resolvida. Confirme ou reabra.</p>
-    </div>
-    <button type="button" @click="verPendentes()" class="btn btn-primario">Ver</button>
-  </section>
-  {% endif %}
-
-  {% if ocorrencias %}
-  <div class="flex flex-col gap-3 md:flex-row md:items-center">
-    {# Chips de status (com contagem) #}
-    <nav aria-label="Filtrar por situação" class="pills">
-      {% for chave, label in chips %}
-      <button type="button" class="pill" @click="status = '{{ chave }}'" :aria-pressed="status === '{{ chave }}'">
-        {% if chave != "todas" %}<span aria-hidden="true" class="h-2 w-2 rounded-full {{ chave|status_dot }}"></span>{% endif %}
-        {{ label }} <span class="tabular-nums opacity-70" x-text="contagem('{{ chave }}')"></span>
-      </button>
-      {% endfor %}
-    </nav>
-
-    <div class="flex items-center gap-2 md:ml-auto">
-      {# Escopo: da empresa toda ou só as que eu abri #}
-      {% if tem_colegas %}
-      <div role="group" aria-label="Mostrar ocorrências" class="seg">
-        {% for chave, rotulo in escopos %}
-        <button type="button" :aria-pressed="escopo === '{{ chave }}'" @click="escopo = '{{ chave }}'">{{ rotulo }}</button>
-        {% endfor %}
-      </div>
-      {% endif %}
-      <button type="button" @click="filtrosAbertos = !filtrosAbertos" :aria-expanded="filtrosAbertos" class="btn btn-linha btn-peq" :style="nAvancados > 0 && 'border-color: var(--tinta)'">
-        {% icone "filter" 15 %} Filtros
-        <span x-show="nAvancados > 0" x-cloak x-text="nAvancados" class="qtd" style="margin-left: 0; background: var(--tinta); color: var(--sup)"></span>
-      </button>
-    </div>
-  </div>
-
-  {# Painel de filtros avançados #}
-  <div x-show="filtrosAbertos" x-cloak class="card grid gap-3 sm:grid-cols-3" style="padding: 14px">
-    <div class="campo">
-      <label for="f-cat">Categoria</label>
-      <select id="f-cat" x-model="cat" aria-label="Filtrar por categoria" class="in">
-        <option value="">Todas</option>
-        {% for v, l in tipos_form %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
-      </select>
-    </div>
-    <div class="campo"><label for="f-de">De</label><input id="f-de" type="date" x-model="de" aria-label="Data inicial" class="in"></div>
-    <div class="campo"><label for="f-ate">Até</label><input id="f-ate" type="date" x-model="ate" aria-label="Data final" class="in"></div>
-  </div>
-
-  {# Chips de filtros ativos #}
-  <div x-show="temFiltro" x-cloak class="flex flex-wrap items-center gap-2 text-sm">
-    <span class="suave">Filtros:</span>
-    <span x-show="cat" class="st st-neutro"><span x-text="'Categoria: ' + (rotulosTipo[cat] || '')"></span><button type="button" @click="cat = ''" aria-label="Remover filtro de categoria">{% icone "x" 13 %}</button></span>
-    <span x-show="de" class="st st-neutro"><span x-text="'De ' + (de ? diaBonito(de) : '')"></span><button type="button" @click="de = ''" aria-label="Remover filtro de data inicial">{% icone "x" 13 %}</button></span>
-    <span x-show="ate" class="st st-neutro"><span x-text="'Até ' + (ate ? diaBonito(ate) : '')"></span><button type="button" @click="ate = ''" aria-label="Remover filtro de data final">{% icone "x" 13 %}</button></span>
-    <button type="button" @click="limpar()" class="link">Limpar tudo</button>
-  </div>
-  {% endif %}
-
-  {# Lista #}
-  {% if not ocorrencias %}
-  <div class="card flex flex-col items-center gap-3 py-10 text-center">
-    <span class="flex h-12 w-12 items-center justify-center rounded-full" style="background: var(--sup-2)">{% icone "clipboard-list" 22 %}</span>
-    <p class="text-lg font-bold">Nenhuma ocorrência por aqui ainda</p>
-    <p class="max-w-md suave">Abra uma ocorrência para registrar um problema de entrega e acompanhar a resposta da operação.</p>
-    <a href="{% url 'portal:nova' %}" class="btn btn-primario mt-2">{% icone "plus" 16 %} Abrir minha primeira ocorrência</a>
-  </div>
-  {% else %}
-  <div x-show="exibidas.size === 0" x-cloak class="card card-tracejado">Nenhuma ocorrência para esse filtro.</div>
-  <div x-show="exibidas.size > 0">
-    <div class="lista-cab" aria-hidden="true"><span>Protocolo</span><span>Ocorrência</span><span>Referência</span><span>Situação</span><span>Prazo</span><span></span></div>
-    <ul class="lista-oc">
-      {% for oc in ocorrencias %}
-      {% with aguardando=oc.aguardando %}
-      <li x-show="exibidas.has('{{ oc.id }}')">
-        <a href="{% url 'portal:detalhe' oc.pk %}" class="linha {% if aguardando %}aguarda{% endif %}">
-          <span class="c-prot">{{ oc.protocolo }}</span>
-          <span class="c-sit">{% if aguardando %}<span class="st st-aguarda">Aguarda você</span>{% else %}{% status_badge oc.status %}{% endif %}</span>
-          <span class="c-tit">{{ oc.tipo|tipo_label }}</span>
-          <span class="c-sub">{% if oc.referencia %}<span class="mono">{{ oc|referencia }}</span> · {% endif %}{{ oc.criado_em|dia }}{% if tem_colegas %} · {{ oc.responsavel_nome }}{% endif %}</span>
-          <span class="c-prazo">{% sla_badge oc %}</span>
-          <span class="c-ir" aria-hidden="true">{% icone "chevron-right" 16 %}</span>
-        </a>
-      </li>
-      {% endwith %}
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
+<div class="flex flex-col gap-1.5">
+  <h1 class="ola">{% if user.primeiro_nome %}Olá, {{ user.primeiro_nome }}. {% endif %}O que aconteceu?</h1>
+  <p class="sub">Escolha o tipo e a gente te guia, campo a campo. Leva uns 2 minutos.</p>
 </div>
+
+{% if nova %}
+<p class="caixa-ok flex items-center gap-2">{% icone "check-circle-2" 18 %}<span>Ocorrência aberta com sucesso! Protocolo <strong class="mono">{{ nova }}</strong>. Você recebe as respostas por aqui e por e-mail.</span></p>
+{% endif %}
+{% if anexos_falha %}
+<p class="caixa-erro flex items-center gap-2" style="color: var(--aviso-tinta); background: var(--aviso)">{% icone "triangle-alert" 18 %}<span>{% if anexos_falha == 1 %}1 anexo não pôde ser enviado.{% else %}{{ anexos_falha }} anexos não puderam ser enviados.{% endif %} Abra a ocorrência e envie os arquivos de novo pela conversa.</span></p>
+{% endif %}
+
+<nav aria-label="Abrir ocorrência por tipo" class="tipos">
+  {% for valor, rotulo, ico, desc in tipos %}
+  <a href="{% url 'portal:nova' %}?tipo={{ valor }}" class="tipo" data-tipo="{{ valor }}">
+    <span class="circ">{% icone ico 24 %}</span>
+    <span class="txt"><strong>{{ rotulo }}</strong><span class="desc">{{ desc }}</span></span>
+    <span class="ir">Começar {% icone "arrow-right" 16 %}</span>
+    <span class="seta-cel fraco">{% icone "chevron-right" 18 %}</span>
+  </a>
+  {% endfor %}
+</nav>
+
+{# ---------- Avisos da operação ---------- #}
+{% if avisos %}
+{{ avisos_meta|json_script:"avisos-meta" }}
+<div x-data="avisosPainel(JSON.parse(document.getElementById('avisos-meta').textContent))" class="flex flex-col gap-2">
+  <ul x-show="visiveis.length > 0" class="flex flex-col gap-2" aria-label="Avisos da operação">
+    {% for a in avisos %}
+    <li x-show="mostrar('{{ a.id }}')">{% include "ocorrencias/partials/aviso_linha.html" with dispensavel=True %}</li>
+    {% endfor %}
+  </ul>
+  <p x-show="escondidos > 0" x-cloak class="text-sm fraco">
+    <span x-text="escondidos === 1 ? '1 aviso dispensado' : escondidos + ' avisos dispensados'"></span> ·
+    <button type="button" @click="restaurar()" class="link">Mostrar de novo</button>
+  </p>
+</div>
+{% endif %}
+
+{# ---------- Aguardando a confirmação do cliente ---------- #}
+{% for o in pendentes|slice:":1" %}
+<section class="card card-destaque flex flex-wrap items-center gap-4" style="padding: 16px 20px" aria-labelledby="t-pend">
+  <span class="av preto so-pc" aria-hidden="true">{% icone "check" 18 %}</span>
+  <div class="min-w-0 flex-1 basis-full sm:basis-0">
+    <h2 id="t-pend" class="h2" style="font-size: 16px">{% if pendentes|length == 1 %}1 ocorrência aguarda sua confirmação{% else %}{{ pendentes|length }} ocorrências aguardam sua confirmação{% endif %}</h2>
+    <p class="text-sm suave"><span class="mono">{{ o.protocolo }}</span> · {{ o.tipo|tipo_label }} · a operação resolveu {{ o.atualizado_em|relativo }}</p>
+  </div>
+  <a href="{% if pendentes|length == 1 %}{% url 'portal:detalhe' o.pk %}{% else %}{% url 'portal:lista' %}?filtro=aprovar{% endif %}" class="btn btn-preto w-full sm:w-auto">Ver e confirmar</a>
+</section>
+{% endfor %}
+
+{# ---------- Em andamento ---------- #}
+<section aria-labelledby="t-and" class="flex flex-col gap-3">
+  <div class="flex items-center gap-2">
+    <h2 id="t-and" class="h2">Em andamento</h2>
+    {% if andamento %}<span class="etq">{{ andamento|length }}</span>{% endif %}
+    {% if total %}<a href="{% url 'portal:lista' %}" class="link ml-auto text-sm">Ver todas as ocorrências</a>{% endif %}
+  </div>
+  {% if not andamento %}
+  <div class="card-vazio">{% if total %}Nada em andamento agora. Tudo resolvido por aqui.{% else %}Você ainda não abriu nenhuma ocorrência. Escolha um tipo acima para começar.{% endif %}</div>
+  {% else %}
+  {% include "ocorrencias/portal/partials/tabela.html" with ocorrencias=andamento %}
+  {% endif %}
+</section>
+
+{# ---------- Como abrir ---------- #}
+<details class="card-plano" id="como-abrir">
+  <summary class="flex cursor-pointer list-none items-center gap-2 font-bold">{% icone "info" 18 %} Como abrir uma ocorrência <span class="ml-auto fraco">{% icone "chevron-down" 16 %}</span></summary>
+  <ul class="mt-3 list-disc space-y-1 pl-5 suave">
+    <li>Número da nota fiscal, do pedido ou do picking</li>
+    <li>Fique atento aos prazos para abrir a ocorrência</li>
+    <li>Foto da etiqueta da embalagem, da avaria da caixa e/ou do produto</li>
+    <li>Um relato curto do que aconteceu</li>
+  </ul>
+</details>
 {% endblock %}

@@ -2,37 +2,36 @@
 {% load ocorrencias_tags %}
 
 {% block body %}
-<div class="dividida">
-  {# Painel de apresentação #}
-  <aside class="lado-marca">
+<div class="publica">
+  {# Apresentação #}
+  <aside class="pub-marca">
     <div class="flex items-center gap-3">
-      <span class="marca"><span class="logo" aria-hidden="true">SAC</span><span><strong>Portal SAC</strong><span>Logística · Atendimento</span></span></span>
-      {% include "partials/tema.html" with classe="ico-sb ml-auto" %}
+      <span class="marca"><span class="logo" aria-hidden="true">SAC</span>Portal SAC</span>
+      <span class="ml-auto">{% include "partials/tema.html" with classe="ico-escuro" %}</span>
     </div>
-
-    <div class="mt-auto flex flex-col gap-4">
-      <h1 class="frase">Um problema na entrega?<br>A gente resolve junto.</h1>
-      <p class="max-w-md">Abra e acompanhe ocorrências de entrega num só lugar — com histórico, anexos e respostas do time de operações.</p>
-      <ul class="so-pc mt-4 flex-col gap-4">
-        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: var(--marca-2)">{% icone "package-check" 17 %}</span><span class="pt-1.5">Registre avarias, faltas e trocas — com fotos e planilha.</span></li>
-        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: var(--marca-2)">{% icone "clock" 17 %}</span><span class="pt-1.5">Acompanhe o status em tempo real, da abertura à resolução.</span></li>
-        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: var(--marca-2)">{% icone "message-square" 17 %}</span><span class="pt-1.5">Converse com a operação e aprove a resolução.</span></li>
+    <div class="mt-auto flex flex-col gap-3.5">
+      <h1 class="frase" style="font-size: clamp(28px, 4vw, 40px)">Um problema na entrega?<br>A gente resolve junto.</h1>
+      <p class="max-w-md">Abra e acompanhe ocorrências de entrega num só lugar — com histórico, fotos e respostas do time de operações.</p>
+      <ul class="so-grande mt-4 flex-col gap-4">
+        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: #2b2b2b">{% icone "package-check" 17 %}</span><span class="pt-1.5">Registre avarias, faltas e trocas, com fotos e planilha.</span></li>
+        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: #2b2b2b">{% icone "clock" 17 %}</span><span class="pt-1.5">Acompanhe cada passo, da abertura à solução.</span></li>
+        <li class="flex items-start gap-3"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style="background: #2b2b2b">{% icone "message-circle" 17 %}</span><span class="pt-1.5">Converse com a operação e confirme quando estiver resolvido.</span></li>
       </ul>
     </div>
   </aside>
 
   {# Ações #}
-  <main class="lado-form">
-    <div class="form-box">
+  <main class="pub-form">
+    <div class="card">
       <div>
-        <h2 class="text-[26px] font-bold tracking-tight">Bem-vindo(a)</h2>
-        <p class="mt-1 suave">Entre para gerenciar suas ocorrências, ou consulte um protocolo sem precisar de login.</p>
+        <h2 class="titulo" style="font-size: 28px">Bem-vindo(a)</h2>
+        <p class="mt-1 suave">Entre para abrir e acompanhar suas ocorrências, ou consulte um protocolo sem login.</p>
       </div>
       <div class="flex flex-col gap-3">
-        <a href="{% url 'contas:login' %}" class="btn btn-primario btn-grande btn-bloco">Entrar {% icone "arrow-right" 18 %}</a>
+        <a href="{% url 'contas:login' %}" class="btn btn-preto btn-grande btn-bloco">Entrar {% icone "arrow-right" 18 %}</a>
         <a href="{% url 'publico:consulta' %}" class="btn btn-linha btn-grande btn-bloco">Consultar protocolo</a>
       </div>
-      <p class="text-center text-sm suave">O acesso é criado pela equipe de operações.</p>
+      <p class="text-center text-sm fraco">O acesso é criado pela equipe de operações.</p>
     </div>
   </main>
 </div>

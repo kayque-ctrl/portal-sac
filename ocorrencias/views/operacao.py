@@ -45,24 +45,8 @@ SITUACOES = [
 ]
 
 
-# Atalhos da aba Ativas (spec 020). "Vencidas" deixa de fora quem aguarda o
-# cliente: nesse status o relógio do SLA está pausado.
-ATALHOS_FILA = [
-    ("", "Todas"),
-    ("minhas", "Minhas"),
-    ("sem_responsavel", "Sem responsável"),
-    ("vencidas", "Vencidas"),
-]
-
-
-def _atalho(qs, chave: str, user):
-    if chave == "minhas":
-        return qs.filter(atribuido_a=user)
-    if chave == "sem_responsavel":
-        return qs.filter(atribuido_a__isnull=True)
-    if chave == "vencidas":
-        return qs.filter(status__in=STATUS_ATIVOS, sla_prazo__lt=timezone.now())
-    return qs
+# Filtro de responsável (spec 023): além de um operador, "eu" e "ninguém".
+RESPONSAVEL_EU, RESPONSAVEL_NINGUEM = "eu", "ninguem"
 
 
 def sanitizar_busca(q: str | None) -> str:
@@ -82,7 +66,9 @@ def lista(request):
     status, tipo = sp.get("status", ""), sp.get("tipo", "")
     empresa = (uuids_validos([sp.get("empresa")]) or [""])[0]
     cliente = (uuids_validos([sp.get("cliente")]) or [""])[0]
-    responsavel = (uuids_validos([sp.get("responsavel")]) or [""])[0]
+    responsavel = sp.get("responsavel", "")
+    if responsavel not in (RESPONSAVEL_EU, RESPONSAVEL_NINGUEM):
+        responsavel = (uuids_validos([responsavel]) or [""])[0]
     q = sanitizar_busca(sp.get("q"))
 
     # Lixeira (exclusão definitiva) é restrita a admin — nem a aba aparece,
@@ -117,7 +103,11 @@ def lista(request):
         qs = qs.filter(cliente__empresa_id=empresa)
     if cliente:
         qs = qs.filter(cliente_id=cliente)
-    if responsavel:
+    if responsavel == RESPONSAVEL_EU:
+        qs = qs.filter(atribuido_a=request.user)
+    elif responsavel == RESPONSAVEL_NINGUEM:
+        qs = qs.filter(atribuido_a__isnull=True)
+    elif responsavel:
         qs = qs.filter(atribuido_a_id=responsavel)
     if q:
         qs = qs.filter(
@@ -127,15 +117,10 @@ def lista(request):
             | Q(cliente__nome__icontains=q, cliente__papel=Papel.CLIENTE)
         )
 
-    # Atalhos só fazem sentido entre as ativas; a contagem de cada um respeita
-    # os outros filtros já aplicados.
-    fila = sp.get("fila", "") if situacao == "ativas" and sp.get("fila") in dict(ATALHOS_FILA) else ""
-    atalhos = (
-        [{"chave": c, "label": l, "qtd": _atalho(qs, c, request.user).count()} for c, l in ATALHOS_FILA]
-        if situacao == "ativas"
-        else []
+    # Quantas ativas estão com o prazo vencido (aviso no topo).
+    vencidas = (
+        qs.filter(status__in=STATUS_ATIVOS, sla_prazo__lt=timezone.now()).count() if situacao == "ativas" else 0
     )
-    qs = _atalho(qs, fila, request.user)
 
     pagina = paginar(request, qs)
     abas = []
@@ -145,7 +130,7 @@ def lista(request):
         params["situacao"] = chave
         abas.append({"chave": chave, "label": label, "params": params})
 
-    escolhidos = Usuario.objects.filter(pk__in=[u for u in (cliente, responsavel) if u])
+    escolhidos = Usuario.objects.filter(pk__in=uuids_validos([cliente, responsavel]))
     nomes = {str(pk): nome for pk, nome in escolhidos.values_list("pk", "nome")}
 
     return render(
@@ -164,10 +149,11 @@ def lista(request):
             "cliente_nome": nomes.get(cliente),
             "responsavel": responsavel,
             "responsavel_nome": nomes.get(responsavel),
-            "fila": fila,
-            "atalhos": atalhos,
+            "responsaveis": Usuario.objects.filter(papel__in=[Papel.OPERADOR, Papel.ADMIN]).order_by("nome"),
+            "empresas": Empresa.objects.order_by("nome").values_list("pk", "nome"),
+            "vencidas": vencidas,
             "q": sp.get("q", ""),
-            "tem_filtro": bool(status or tipo or empresa or cliente or responsavel or fila or q),
+            "tem_filtro": bool(status or tipo or empresa or cliente or responsavel or q),
             "status_opcoes": [(s, STATUS_LABEL[s]) for s in status_opcoes],
             "tipos": list(TIPO_LABEL.items()),
         },
@@ -204,6 +190,17 @@ def _ocorrencia(pk) -> Ocorrencia:
     return get_object_or_404(Ocorrencia.objects.select_related("cliente__empresa", "aprovada_por__empresa"), pk=pk)
 
 
+def _outras_da_empresa(oc, limite: int = 5) -> list:
+    """Outras ocorrências da empresa do cliente (coluna da direita do atendimento)."""
+    if not oc.cliente.empresa_id:
+        return list(Ocorrencia.objects.filter(cliente=oc.cliente, excluida_em__isnull=True).exclude(pk=oc.pk)[:limite])
+    return list(
+        Ocorrencia.objects.filter(cliente__empresa_id=oc.cliente.empresa_id, excluida_em__isnull=True)
+        .exclude(pk=oc.pk)
+        .order_by("-criado_em")[:limite]
+    )
+
+
 def _render_detalhe(request, oc, **extra):
     mensagens = list(oc.mensagens.select_related("autor"))
     cliente = oc.cliente
@@ -225,6 +222,7 @@ def _render_detalhe(request, oc, **extra):
         "accept": ACCEPT_ATTR,
         "max_anexos": MAX_ANEXOS,
         "abas_celular": ABAS_ATENDIMENTO,
+        "outras_da_empresa": _outras_da_empresa(oc),
         **extra,
     }
     return render(request, "ocorrencias/operacao/detalhe.html", contexto)
@@ -378,6 +376,12 @@ def painel(request):
         "porEmpresa": [{"label": e["nome"], "valor": e["total"]} for e in empresas_ordenadas if e["id"]][:8],
     }
 
+    # Barras simples (spec 023): cada série com a % em relação ao maior valor.
+    for serie in graficos.values():
+        maior = max((p["valor"] for p in serie), default=0) or 1
+        for p in serie:
+            p["pct"] = round(p["valor"] / maior * 100)
+
     query = "&".join(f"{k}={v}" for k, v in f.items() if v)
     return render(
         request,
@@ -398,12 +402,6 @@ def painel(request):
                 {"label": "Recusadas", "valor": cont_status.get("recusada", 0)},
             ],
             "graficos": graficos,
-            "graficos_titulos": [
-                ("g-status", "Ocorrências por status"),
-                ("g-tipo", "Por categoria"),
-                ("g-tempo", "Evolução no tempo"),
-                ("g-empresa", "Top empresas"),
-            ],
             "empresas_ordenadas": empresas_ordenadas,
             "export_href": f"/operacao/painel/export{'?' + query if query else ''}",
         },

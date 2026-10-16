@@ -1,11 +1,11 @@
 {% load ocorrencias_tags %}
 {% comment %}
-Formulário de mensagem. Parâmetros: action, permite_nota_interna, avisa_bump,
-msg_erro, msg_conteudo, msg_interna, accept, max_anexos.
+Formulário de mensagem (rodapé da linha do tempo). Parâmetros: action,
+permite_nota_interna, avisa_bump, msg_erro, msg_conteudo, msg_interna, accept, max_anexos.
 Para a operação, o padrão é comentário interno: esquecer de trocar o modo só
 deixa de avisar o cliente (dá para reenviar), nunca vaza um comentário.
 {% endcomment %}
-<form method="post" action="{{ action }}" enctype="multipart/form-data" class="flex flex-col gap-3"
+<form method="post" action="{{ action }}" enctype="multipart/form-data" class="compositor" :class="interna && 'interno'"
   x-data="mensagemForm({ permiteNotaInterna: {{ permite_nota_interna|yesno:'true,false' }}, avisaBump: {{ avisa_bump|yesno:'true,false' }}, interna: {% if permite_nota_interna %}{% if msg_erro %}{{ msg_interna|yesno:'true,false' }}{% else %}true{% endif %}{% else %}false{% endif %} })"
   @submit="onSubmit" @envio-cancelado="enviando = false" data-anexos-limite="{% limite_upload %}">
   {% csrf_token %}
@@ -13,40 +13,40 @@ deixa de avisar o cliente (dá para reenviar), nunca vaza um comentário.
   {% if permite_nota_interna %}
   <input type="hidden" name="interna" :value="interna ? 'on' : ''">
   <div class="flex flex-wrap items-center gap-2">
-    <div role="tablist" aria-label="Tipo de mensagem" class="seg interno">
+    <div role="tablist" aria-label="Tipo de mensagem" class="seg">
       <button type="button" role="tab" :aria-selected="interna" @click="interna = true" class="modo-interno">{% icone "lock" 14 %} Comentário interno</button>
       <button type="button" role="tab" :aria-selected="!interna" @click="interna = false">{% icone "eye" 14 %} Responder ao cliente</button>
     </div>
-    <span class="ml-auto text-[13px] font-bold" :style="interna ? 'color: var(--interna-tinta)' : 'color: var(--suave)'">
+    <span class="ml-auto text-[13px] font-bold" :style="interna ? 'color: var(--laranja-tinta)' : 'color: var(--suave)'">
       <span x-show="interna">Só a operação vê</span>
-      <span x-show="!interna" x-cloak>Visível para o cliente</span>
+      <span x-show="!interna" x-cloak>O cliente vê e recebe por e-mail</span>
     </span>
   </div>
   {% endif %}
 
   <label class="sr" for="conteudo-{{ action|slugify }}">Mensagem</label>
-  <textarea id="conteudo-{{ action|slugify }}" name="conteudo" rows="3" class="in" :class="interna && 'interno'"
-    :placeholder="interna ? 'Escreva um comentário interno (só a operação vê)…' : 'Escreva uma resposta…'">{{ msg_conteudo|default:'' }}</textarea>
+  <textarea id="conteudo-{{ action|slugify }}" name="conteudo" rows="2" class="in" :class="interna && 'interno'" style="min-height: 64px"
+    :placeholder="interna ? 'Escreva um comentário interno (só a operação vê)…' : '{% if permite_nota_interna %}Escreva a resposta para o cliente…{% else %}Escreva uma mensagem para a operação…{% endif %}'">{{ msg_conteudo|default:'' }}</textarea>
 
-  {% include "partials/lista_anexos.html" with id_campo="anexos-mensagem" %}
+  {% include "partials/lista_anexos.html" with id_campo="anexos-mensagem" compacto=True %}
 
   {% if msg_erro %}<p role="alert" class="caixa-erro">{{ msg_erro }}</p>{% endif %}
   <p data-erro-upload hidden role="alert" class="caixa-erro"></p>
-  {% for m in messages %}{% if 'mensagem' in m.tags %}<p role="alert" class="caixa-erro" style="color: var(--interna-tinta); background: var(--interna-fundo)">{{ m }}</p>{% endif %}{% endfor %}
+  {% for m in messages %}{% if 'mensagem' in m.tags %}<p role="alert" class="caixa-erro" style="color: var(--aviso-tinta); background: var(--aviso)">{{ m }}</p>{% endif %}{% endfor %}
 
   <div class="flex justify-end">
-    <button type="submit" :disabled="enviando" class="btn" :class="interna ? 'btn-interno' : 'btn-primario'"
+    <button type="submit" :disabled="enviando" class="btn" :class="interna ? 'btn-laranja' : 'btn-preto'"
       x-text="enviando ? 'Enviando…' : (interna ? 'Salvar comentário interno' : (permiteNotaInterna ? 'Enviar ao cliente' : 'Enviar'))">Enviar</button>
   </div>
 
   <template x-teleport="body">
     <div x-show="modalBump" x-cloak class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 animate-fadein sm:items-center" @click.self="modalBump = false" @keydown.escape.window="modalBump = false">
       <div class="card w-full max-w-md shadow-xl" role="dialog" aria-modal="true">
-        <h3 class="text-lg font-bold">Mover para Em tratativa?</h3>
-        <p class="mt-2 text-[15px] suave">Ao enviar esta mensagem, a ocorrência sairá de <strong>Aberta</strong> e passará para <strong>Em tratativa</strong>.</p>
+        <h3 class="text-lg font-extrabold">Mover para Em tratativa?</h3>
+        <p class="mt-2 suave">Ao enviar esta mensagem, a ocorrência sai de <strong>Aberta</strong> e passa para <strong>Em tratativa</strong>.</p>
         <div class="mt-5 flex justify-end gap-2">
           <button type="button" @click="modalBump = false" class="btn btn-linha">Cancelar</button>
-          <button type="button" @click="confirmarEnvio()" class="btn btn-primario">Enviar</button>
+          <button type="button" @click="confirmarEnvio()" class="btn btn-preto">Enviar</button>
         </div>
       </div>
     </div>

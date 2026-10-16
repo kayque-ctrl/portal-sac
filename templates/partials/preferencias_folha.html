@@ -1,0 +1,9 @@
+{% load ocorrencias_tags %}
+{# Tema e sair, nas folhas do celular e no menu do avatar do cliente. #}
+<span class="menu-grupo">Preferências</span>
+<div x-data="tema"><button type="button" class="menu-item" @click="alternar()">{% icone "moon" 20 %}<span x-text="escuro ? 'Tema claro' : 'Tema escuro'">Tema escuro</span></button></div>
+<form method="post" action="{% url 'contas:logout' %}" x-data="confirmar" @submit="interceptar">
+  {% csrf_token %}
+  <button type="submit" class="menu-item perigo">{% icone "log-out" 20 %}Sair</button>
+  {% include "partials/modal.html" with titulo="Sair da conta?" mensagem="Você precisará entrar novamente para acessar o sistema." rotulo="Sair" %}
+</form>

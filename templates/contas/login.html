@@ -4,7 +4,7 @@
 
 {% block conteudo %}
 <div>
-  <h1>Entrar</h1>
+  <h1 class="titulo">Entrar</h1>
   <p class="mt-1 suave">Acesse com o e-mail cadastrado pela operação.</p>
 </div>
 
@@ -21,7 +21,7 @@
 
   {% include "partials/erro.html" %}
 
-  <button type="submit" :disabled="enviando" class="btn btn-primario btn-grande btn-bloco">
+  <button type="submit" :disabled="enviando" class="btn btn-preto btn-grande btn-bloco">
     <span x-text="enviando ? 'Entrando…' : 'Entrar'">Entrar</span>
   </button>
 </form>

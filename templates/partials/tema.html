@@ -1,5 +1,5 @@
 {% load ocorrencias_tags %}
-{# Botão claro/escuro. `classe` troca o visual (ex.: "ico-sb" no menu lateral, "ico" nas telas públicas). #}
+{# Botão claro/escuro. `classe` troca o visual (ex.: "x" no menu, "ico-escuro" nas telas públicas). #}
 <button type="button" x-data="tema" @click="alternar()" aria-label="Alternar tema claro/escuro" title="Alternar tema" class="{{ classe|default:'ico' }}">
   <span x-show="escuro" x-cloak>{% icone "sun" 17 %}</span>
   <span x-show="!escuro" x-cloak>{% icone "moon" 17 %}</span>

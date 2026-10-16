@@ -18,6 +18,7 @@ from ..labels import (
     CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
     CATEGORIAS_EXIGEM_FOTO,
     ITEM_CATEGORIA_LABEL,
+    ITEM_BADGE,
     ITEM_CATEGORIAS,
     ITEM_TEXTO,
     ITEM_TEXTO_PADRAO,
@@ -43,11 +44,57 @@ def _responsaveis(user) -> dict:
     return mapa
 
 
-@cliente_required
-def inicio(request):
-    user = request.user
+def _ocorrencias_do_cliente(user) -> list:
+    """Visíveis ao cliente (as dele e as da empresa), anotadas para a tela."""
     ocorrencias = list(ocorrencias_visiveis(user).filter(excluida_em__isnull=True).order_by("-criado_em"))
     responsaveis = _responsaveis(user)
+    for o in ocorrencias:
+        o.minha = o.cliente_id == user.pk
+        # Só quem abriu é o responsável e o único que pode aprovar.
+        o.aguardando = o.minha and o.status == "resolvida"
+        o.responsavel_nome = "Você" if o.minha else responsaveis.get(str(o.cliente_id), "Colega")
+    return ocorrencias
+
+
+# Tipos de ocorrência como cartões da tela inicial (spec 023): ícone e texto curto.
+CARTOES_TIPO = [
+    ("produtos", "package", "Avaria, falta, sobra, vencido ou troca de volume."),
+    ("atraso", "clock", "O pedido não chegou no prazo combinado."),
+    ("reclamacao_sugestao", "message-circle", "Conte o que podemos melhorar."),
+]
+
+
+@cliente_required
+def inicio(request):
+    """Início do portal (spec 023): "O que aconteceu?", avisos e o que está em andamento."""
+    ocorrencias = _ocorrencias_do_cliente(request.user)
+    andamento = [o for o in ocorrencias if o.status in ("aberta", "em_analise", "resolvida")]
+    # Primeiro o que espera o cliente; depois a mais recente.
+    andamento.sort(key=lambda o: not o.aguardando)
+    avisos = sorted(Aviso.vigentes(), key=lambda a: a.tipo != "alerta")
+    anexos_falha = request.GET.get("anexosFalha")
+    return render(
+        request,
+        "ocorrencias/portal/inicio.html",
+        {
+            "tipos": [(t, TIPO_LABEL[t], ico, desc) for t, ico, desc in CARTOES_TIPO],
+            "andamento": andamento[:8],
+            "pendentes": [o for o in ocorrencias if o.aguardando],
+            "tem_colegas": any(not o.minha for o in ocorrencias),
+            "total": len(ocorrencias),
+            "avisos": avisos,
+            "avisos_meta": [{"id": str(a.id), "tipo": a.tipo} for a in avisos],
+            "nova": request.GET.get("nova"),
+            "anexos_falha": int(anexos_falha) if (anexos_falha or "").isdigit() else 0,
+        },
+    )
+
+
+@cliente_required
+def lista(request):
+    """Minhas ocorrências: todas, com filtros no navegador."""
+    user = request.user
+    ocorrencias = _ocorrencias_do_cliente(user)
 
     # Metadados para o filtro no navegador (Alpine); as linhas são renderizadas aqui.
     meta = [
@@ -61,28 +108,14 @@ def inicio(request):
         }
         for o in ocorrencias
     ]
-    for o in ocorrencias:
-        o.minha = o.cliente_id == user.pk
-        # Só quem abriu é o responsável e o único que pode aprovar.
-        o.aguardando = o.minha and o.status == "resolvida"
-        o.responsavel_nome = "Você" if o.minha else responsaveis.get(str(o.cliente_id), "Colega")
-
-    # Avisos: alertas primeiro.
-    avisos = sorted(Aviso.vigentes(), key=lambda a: a.tipo != "alerta")
-
-    anexos_falha = request.GET.get("anexosFalha")
     return render(
         request,
-        "ocorrencias/portal/inicio.html",
+        "ocorrencias/portal/lista.html",
         {
             "ocorrencias": ocorrencias,
             "meta": meta,
             "tem_colegas": any(not o.minha for o in ocorrencias),
             "pendentes": sum(1 for o in ocorrencias if o.aguardando),
-            "avisos": avisos,
-            "avisos_meta": [{"id": str(a.id), "tipo": a.tipo} for a in avisos],
-            "nova": request.GET.get("nova"),
-            "anexos_falha": int(anexos_falha) if (anexos_falha or "").isdigit() else 0,
             "filtro_inicial": "aprovar" if request.GET.get("filtro") == "aprovar" else "",
             "escopos": [("empresa", "Da empresa"), ("minhas", "Minhas")],
             "chips": [("todas", "Todas")] + [(s, STATUS_LABEL[s]) for s in STATUS_ORDEM],
@@ -304,6 +337,7 @@ def _config_formulario() -> dict:
         "referencias": REFERENCIA_FORM,
         "referenciaLabel": dict(ReferenciaTipo.choices),
         "categoriaTexto": ITEM_TEXTO,
+        "categoriaBadge": ITEM_BADGE,
         "textoPadrao": ITEM_TEXTO_PADRAO,
         "sinaisVolume": [{"valor": v, "label": label} for v, label in SinalVolume.choices],
     }
@@ -317,6 +351,8 @@ def nova(request):
         "accept": ACCEPT_ATTR,
         "max_anexos": MAX_ANEXOS,
         "inicial": None,
+        # O tipo pode vir do cartão escolhido no início (?tipo=produtos).
+        "tipo_inicial": request.GET.get("tipo") if request.GET.get("tipo") in TIPOS_FORM else "",
     }
 
     if request.method == "POST":

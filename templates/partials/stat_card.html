@@ -1,8 +1,6 @@
 {% comment %}Parâmetros: label, valor, destaque (bool), sub, tom (neutro|bom|ruim|alerta){% endcomment %}
-<div class="kpi {% if destaque %}alerta{% endif %}">
+<div class="kpi {% if destaque or tom == 'alerta' %}dest{% endif %}">
   <span class="r">{{ label }}</span>
   <span class="v">{{ valor }}</span>
-  {% if sub %}
-  <span class="text-xs {% if tom == 'bom' %}text-green-700 dark:text-green-400{% elif tom == 'ruim' %}text-red-700 dark:text-red-400{% elif tom == 'alerta' %}text-amber-700 dark:text-amber-400{% else %}suave{% endif %}">{{ sub }}</span>
-  {% endif %}
+  {% if sub %}<span class="text-[13px] {% if tom == 'bom' %}text-green-700 dark:text-green-400{% elif tom == 'ruim' %}text-red-700 dark:text-red-400{% else %}fraco{% endif %}">{{ sub }}</span>{% endif %}
 </div>

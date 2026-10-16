@@ -1,88 +1,77 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
-{% block title %}SLA · Operação{% endblock %}
+{% block title %}Prazos (SLA) · Operação{% endblock %}
+{% block titulo_celular_op %}Prazos (SLA){% endblock %}
 
 {% block conteudo %}
 <div class="topo">
-  <div class="titulo">
-    <h1>Prazos (SLA)</h1>
-    <p class="subtitulo">Defina o prazo de resolução por categoria e/ou prioridade. O relógio pausa enquanto a ocorrência aguarda o cliente.</p>
+  <div>
+    <h1 class="titulo">Prazos (SLA)</h1>
+    <p class="suave">Quanto tempo a operação tem para resolver. A regra mais específica vale, e o relógio pausa enquanto aguarda o cliente.</p>
   </div>
-  <span class="st st-neutro">Só administradores</span>
+  <div class="acoes"><span class="etq borda">Só administradores</span></div>
 </div>
 
 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-  {# Regras existentes #}
-  {% if not regras %}
-  <div class="card card-tracejado">Nenhuma regra de SLA. Adicione a primeira ao lado.</div>
-  {% else %}
-  <div class="tbl-box">
-    <div class="tbl-rola">
-      <table class="tbl">
-        <thead><tr><th scope="col">Categoria</th><th scope="col">Prioridade</th><th scope="col">Prazo</th><th scope="col"><span class="sr">Ações</span></th></tr></thead>
-        <tbody>
-          {% for r in regras %}
-          <tr>
-            <td>{% if r.categoria %}{{ r.categoria|tipo_label }}{% else %}<span class="suave">Qualquer</span>{% endif %}</td>
-            <td>{% if r.prioridade %}{{ r.prioridade|prioridade_label }}{% else %}<span class="suave">Qualquer</span>{% endif %}</td>
-            <td class="mono whitespace-nowrap font-bold">{{ r.horas }} h</td>
-            <td class="text-right">
-              <form method="post" action="{% url 'operacao:sla_excluir' r.pk %}" x-data="confirmar" @submit="interceptar">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-perigo btn-peq" aria-label="Excluir regra">{% icone "trash-2" 14 %}<span class="hidden sm:inline">Excluir</span></button>
-                {% include "partials/modal.html" with titulo="Excluir regra de SLA?" mensagem="Ocorrências futuras deixarão de usar esta regra." rotulo="Excluir" %}
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-
-  <div class="flex flex-col gap-4">
-    {# Nova regra #}
-    <form method="post" class="card flex flex-col gap-3">
-      {% csrf_token %}
-      <div>
-        <h2>Nova regra</h2>
-        <p class="ajuda">Deixe categoria ou prioridade em <strong>Qualquer</strong> para uma regra mais ampla. A regra mais específica vence.</p>
+  <div class="flex flex-col gap-3">
+    {% if not regras %}
+    <div class="card-vazio">Nenhuma regra de prazo. Adicione a primeira ao lado.</div>
+    {% else %}
+    <section class="tbl-box">
+      <div class="tbl-rola">
+        <table class="tabela">
+          <thead><tr><th scope="col">Categoria</th><th scope="col">Prioridade</th><th scope="col">Prazo</th><th scope="col"><span class="sr">Ações</span></th></tr></thead>
+          <tbody>
+            {% for r in regras %}
+            <tr>
+              <td>{% if r.categoria %}{{ r.categoria|tipo_label }}{% else %}<span class="suave">Qualquer</span>{% endif %}</td>
+              <td>{% if r.prioridade %}<span class="etq {% if r.prioridade == 'alta' %}alta{% endif %}">{{ r.prioridade|prioridade_label }}</span>{% else %}<span class="suave">Qualquer</span>{% endif %}</td>
+              <td class="mono whitespace-nowrap"><strong>{{ r.horas }} h</strong></td>
+              <td class="ir">
+                <form method="post" action="{% url 'operacao:sla_excluir' r.pk %}" x-data="confirmar" @submit="interceptar">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-perigo btn-peq" aria-label="Excluir regra">{% icone "trash-2" 14 %}<span class="hidden sm:inline">Excluir</span></button>
+                  {% include "partials/modal.html" with titulo="Excluir regra de SLA?" mensagem="Ocorrências futuras deixarão de usar esta regra." rotulo="Excluir" %}
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      <div class="campo">
-        <label for="categoria">Categoria</label>
-        <select id="categoria" name="categoria" class="in">
-          <option value="">Qualquer</option>
-          {% for v, l in tipos_form %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="campo">
-        <label for="prioridade">Prioridade</label>
-        <select id="prioridade" name="prioridade" class="in">
-          <option value="">Qualquer</option>
-          {% for v, l in prioridades %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="campo">
-        <label for="horas">Prazo (horas) <span class="obg" aria-hidden="true">*</span></label>
-        <input id="horas" name="horas" type="number" min="1" required placeholder="Ex.: 48" class="in mono">
-        <span class="ajuda">Conta a partir da abertura. 24 = um dia.</span>
-      </div>
-      {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
-      {% for m in messages %}{% if 'sla' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
-      <button type="submit" class="btn btn-primario">{% icone "plus" 16 %} Salvar</button>
-    </form>
-
-    <section aria-labelledby="t-como" class="card flex flex-col gap-2" style="background: var(--sup-2)">
-      <h2 id="t-como">Como o prazo é escolhido</h2>
-      <ol class="list-decimal space-y-1 pl-5 text-sm">
-        <li>Categoria e prioridade iguais</li>
-        <li>Só a prioridade igual</li>
-        <li>Só a categoria igual</li>
-        <li>A regra “Qualquer / Qualquer”</li>
-        <li>Nenhuma regra: a ocorrência fica sem prazo</li>
-      </ol>
+    </section>
+    {% endif %}
+    <section class="card-plano flex flex-col gap-1.5 text-sm" aria-labelledby="t-como">
+      <strong id="t-como">Como o prazo é escolhido</strong>
+      <span class="suave">1. Categoria e prioridade iguais · 2. Só a prioridade · 3. Só a categoria · 4. Qualquer / Qualquer · sem regra: a ocorrência fica sem prazo</span>
     </section>
   </div>
+
+  <form method="post" class="card flex flex-col gap-3.5">
+    {% csrf_token %}
+    <div><h2 class="h2">Nova regra</h2><p class="ajuda">Deixe categoria ou prioridade em <strong>Qualquer</strong> para uma regra mais ampla.</p></div>
+    <div class="campo">
+      <label for="categoria">Categoria</label>
+      <select id="categoria" name="categoria" class="in">
+        <option value="">Qualquer</option>
+        {% for v, l in tipos_form %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo">
+      <label for="prioridade">Prioridade</label>
+      <select id="prioridade" name="prioridade" class="in">
+        <option value="">Qualquer</option>
+        {% for v, l in prioridades %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo">
+      <label for="horas">Prazo (horas) <span class="obg" aria-hidden="true">*</span></label>
+      <input id="horas" name="horas" type="number" min="1" required placeholder="Ex.: 24" class="in mono">
+      <span class="ajuda">Conta a partir da abertura. 24 = um dia.</span>
+    </div>
+    {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
+    {% for m in messages %}{% if 'sla' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
+    <button type="submit" class="btn btn-preto">Salvar regra</button>
+  </form>
 </div>
 {% endblock %}

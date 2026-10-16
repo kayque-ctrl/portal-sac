@@ -1,112 +1,100 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Abrir ocorrência · Portal de Ocorrências{% endblock %}
+{% block titulo_celular %}Abrir ocorrência{% endblock %}
+{% block largura %}estreito{% endblock %}
 
 {% block conteudo %}
 {{ config|json_script:"config-nova" }}
 {{ inicial|json_script:"inicial-nova" }}
-<div x-data="novaOcorrencia(JSON.parse(document.getElementById('config-nova').textContent), JSON.parse(document.getElementById('inicial-nova').textContent))"
-  class="flex w-full flex-col gap-4" :class="mostrarExtrato ? 'max-w-6xl' : 'max-w-3xl'">
+<div x-data="novaOcorrencia(JSON.parse(document.getElementById('config-nova').textContent), JSON.parse(document.getElementById('inicial-nova').textContent), '{{ tipo_inicial }}')" class="flex flex-col gap-4">
 
-  <nav class="migalha" aria-label="Caminho"><a href="{% url 'portal:inicio' %}">{% icone "arrow-left" 15 %} Voltar</a></nav>
-  <div class="topo">
-    <div class="titulo">
-      <h1>Abrir ocorrência</h1>
-      <p class="subtitulo">É rápido, em dois passos. Campos com <span class="obg" aria-hidden="true">*</span> são obrigatórios.</p>
-    </div>
+  <div class="flex flex-col gap-1.5">
+    <a href="{% url 'portal:inicio' %}" class="voltar">{% icone "arrow-left" 16 %} Início</a>
+    <h1 class="titulo md:text-[30px]" x-text="tipo ? config.tipoLabel[tipo] : 'Abrir ocorrência'">Abrir ocorrência</h1>
+    <p class="sub">Preencha os campos abaixo. Os marcados com <span class="obg" aria-hidden="true">*</span> são obrigatórios.</p>
+    <button type="button" x-show="tipo" x-cloak @click="trocarCategoria('')" class="link self-start text-sm">Trocar o tipo de ocorrência</button>
   </div>
 
   {# Rascunho salvo #}
   <div x-show="rascunho" x-cloak class="card flex flex-wrap items-center gap-3" style="padding: 12px 16px">
-    <span class="text-[15px]">Você tem um rascunho não enviado. Deseja retomar? <span class="suave">(fotos precisam ser anexadas de novo)</span></span>
+    <span>Você tem um rascunho não enviado. Deseja retomar? <span class="suave">(fotos precisam ser anexadas de novo)</span></span>
     <div class="ml-auto flex gap-2">
-      <button type="button" @click="aplicarRascunho()" class="btn btn-primario btn-peq">Retomar</button>
+      <button type="button" @click="aplicarRascunho()" class="btn btn-preto btn-peq">Retomar</button>
       <button type="button" @click="descartarRascunho()" class="btn btn-linha btn-peq">Descartar</button>
     </div>
   </div>
 
-  <div :class="mostrarExtrato ? 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start' : ''">
-    <form method="post" enctype="multipart/form-data" @submit="onEnviar" @envio-cancelado="enviando = false" data-anexos-limite="{% limite_upload %}" class="flex flex-col gap-4">
-      {% csrf_token %}
-      <input type="hidden" name="tipo" :value="tipo">
-      <input type="hidden" name="referencia_tipo" :value="refTipo">
-      <input type="hidden" name="itens_json" :value="itensJson">
+  <form method="post" enctype="multipart/form-data" @submit="onEnviar" @envio-cancelado="enviando = false" data-anexos-limite="{% limite_upload %}" class="flex flex-col gap-4">
+    {% csrf_token %}
+    <input type="hidden" name="tipo" :value="tipo">
+    <input type="hidden" name="referencia_tipo" :value="refTipo">
+    <input type="hidden" name="itens_json" :value="itensJson">
 
-      {# Barra de progresso #}
-      <ol class="passos" aria-label="Etapas" style="font-size: 13px">
-        <li :class="passo === 1 ? 'atual' : 'feito'" :aria-current="passo === 1 ? 'step' : null"><span class="tr" aria-hidden="true"></span>1. O que aconteceu</li>
-        <li :class="passo === 2 ? 'atual' : ''" :aria-current="passo === 2 ? 'step' : null"><span class="tr" aria-hidden="true"></span>2. Detalhes e envio</li>
-      </ol>
+    {# ---------- 0. Tipo (só se não veio do cartão) ---------- #}
+    <section x-show="tipo === ''" class="card flex flex-col gap-3" aria-labelledby="t-tipo">
+      <div><h2 id="t-tipo" class="secao-num">O que aconteceu? <span class="obg" aria-hidden="true">*</span></h2><p class="ajuda">Escolha uma opção.</p></div>
+      <div class="tipos" style="grid-template-columns: 1fr">
+        {% for t in config.tipos %}
+        <button type="button" @click="trocarCategoria('{{ t.valor }}')" :aria-pressed="tipo === '{{ t.valor }}'" class="tipo" style="flex-direction: row; align-items: center; padding: 14px">
+          <span class="circ">{% icone t.icone 22 %}</span>
+          <span class="txt"><strong>{{ t.label }}</strong><span class="desc">{{ t.ajuda }}</span></span>
+        </button>
+        {% endfor %}
+      </div>
+    </section>
 
-      {# ---------------- Passo 1 ---------------- #}
-      <div x-show="passo === 1" class="flex flex-col gap-4">
-        <section class="card flex flex-col gap-3">
+    <template x-if="tipo !== ''">
+      <div class="flex flex-col gap-4">
+        {# ---------- 1. Referência ---------- #}
+        <section class="card flex flex-col gap-3.5" aria-labelledby="t-ref">
           <div>
-            <p class="font-bold">1. O que aconteceu? <span class="obg" aria-hidden="true">*</span></p>
-            <p class="ajuda">Escolha uma opção.</p>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-3">
-            {% for t in config.tipos %}
-            <button type="button" @click="trocarCategoria('{{ t.valor }}')" :aria-pressed="tipo === '{{ t.valor }}'" class="tipo flex-col">
-              <span>{% icone t.icone 22 %}</span>
-              <span><strong>{{ t.label }}</strong><span class="desc">{{ t.ajuda }}</span></span>
-            </button>
-            {% endfor %}
-          </div>
-        </section>
-
-        <section class="card flex flex-col gap-3">
-          <div>
-            <p class="font-bold">
-              Referência (Nota Fiscal, Pedido ou Picking)
-              <span x-show="exigeReferencia" x-cloak><span class="obg" aria-hidden="true">*</span></span>
-              <span x-show="tipo !== '' && !exigeReferencia" x-cloak class="font-normal suave">(opcional)</span>
-            </p>
-            <p class="ajuda">Escolha uma opção e informe o número que está no documento.</p>
+            <h2 id="t-ref" class="secao-num">1. Referência (Nota Fiscal, Pedido ou Picking)
+              <span x-show="exigeReferencia"><span class="obg" aria-hidden="true">*</span></span>
+              <span x-show="!exigeReferencia" class="text-base font-medium suave">(opcional)</span>
+            </h2>
+            <p class="ajuda">Escolha uma opção e digite o número que está no documento.</p>
           </div>
           <div class="escolhas">
             {% for rt, rotulo in referencias %}
-            <button type="button" @click="escolherRefTipo('{{ rt }}')" :aria-pressed="refTipo === '{{ rt }}'" class="escolha">{{ rotulo }}</button>
+            <button type="button" @click="escolherRefTipo('{{ rt }}')" :aria-pressed="refTipo === '{{ rt }}'" class="escolha"><span x-show="refTipo === '{{ rt }}'">{% icone "check" 16 %}</span>{{ rotulo }}</button>
             {% endfor %}
           </div>
           <template x-if="refTipo !== ''">
             <div class="campo">
               <label for="referencia"><span x-text="config.referencias[refTipo].campo"></span> <span x-show="exigeReferencia" class="obg" aria-hidden="true">*</span></label>
-              <input id="referencia" name="referencia" x-model="referencia" x-init="$el.focus()" maxlength="80" :placeholder="config.referencias[refTipo].exemplo" class="in mono">
+              <input id="referencia" name="referencia" x-model="referencia" x-init="$el.focus()" @change="checarDuplicata()" maxlength="80" :placeholder="config.referencias[refTipo].exemplo" class="in mono">
             </div>
           </template>
+          <div x-show="duplicata" x-cloak class="card card-aviso flex items-start gap-2" style="padding: 12px 14px">
+            <span class="mt-0.5">{% icone "message-square-warning" 17 %}</span>
+            <span>Já existe uma ocorrência aberta (<strong x-text="duplicata?.protocolo"></strong><span x-text="duplicata?.abertaPor ? ', aberta por ' + duplicata.abertaPor : ''"></span>) para esta referência. Você pode continuar mesmo assim, se for um novo problema.</span>
+          </div>
         </section>
-      </div>
 
-      {# ---------------- Passo 2 ---------------- #}
-      <div x-show="passo === 2" x-cloak class="flex flex-col gap-4">
-        <p class="text-[15px] suave">2. Preencha os detalhes abaixo e confira o resumo antes de enviar.</p>
-        {# Aviso de possível duplicidade #}
-        <div x-show="duplicata" x-cloak class="card flex items-start gap-2 text-[15px]" style="background: var(--interna-fundo); color: var(--interna-tinta); border-color: var(--interna-borda)">
-          <span class="mt-0.5">{% icone "message-square-warning" 17 %}</span>
-          <span>
-            Já existe uma ocorrência aberta (<strong x-text="duplicata?.protocolo"></strong><span x-text="duplicata?.abertaPor ? ', aberta por ' + duplicata.abertaPor : ''"></span>)
-            para esta referência. Você pode continuar mesmo assim, se for um novo problema.
-          </span>
-        </div>
+        {# ---------- 2. Produtos ---------- #}
+        <section x-show="categoriaComProduto" class="card flex flex-col gap-3.5" aria-labelledby="t-prod">
+          <div>
+            <h2 id="t-prod" class="secao-num">2. Quais produtos tiveram problema? <span class="obg" aria-hidden="true">*</span></h2>
+            <p class="ajuda">Adicione um de cada vez. Se forem muitos, importe uma planilha.</p>
+          </div>
+          <p x-show="!podeLancarProdutos" class="motivo">{% icone "info" 16 %} <span>Informe a referência (Nota Fiscal, Pedido ou Picking) acima para lançar os produtos.</span></p>
 
-        {# Produtos: controles de adicionar #}
-        <section x-show="categoriaComProduto" class="card flex flex-col gap-3">
-          <p class="font-bold" x-text="editandoIndex !== null ? 'Editar produto' : 'Adicionar produto'"></p>
+          <ul x-show="itens.length > 0" class="flex flex-col gap-2">
+            <template x-for="(it, i) in itens" :key="i">
+              <li class="produto" :style="editandoIndex === i ? 'border-color: var(--preto)' : ''">
+                <span class="cat" :class="config.categoriaBadge[it.categoria] || ''" x-text="rotuloItem(it)"></span>
+                <span x-show="it.codigo" class="mono text-sm suave" x-text="it.codigo"></span>
+                <strong class="min-w-0 flex-1 truncate" :class="config.categoriaTexto[it.categoria] || config.textoPadrao" x-text="it.descricao"></strong>
+                <span class="mono font-bold" :class="sinal(it) === 'pos' ? 'text-green-700 dark:text-green-400' : sinal(it) === 'neg' ? 'text-red-700 dark:text-red-400' : ''" x-text="(sinal(it) === 'pos' ? '+' : sinal(it) === 'neg' ? '−' : '') + it.quantidade"></span>
+                <button type="button" @click="editarProduto(i)" class="x" :aria-label="'Editar ' + it.descricao">{% icone "pencil" 16 %}</button>
+                <button type="button" @click="removerProduto(i)" class="x" :aria-label="'Remover ' + it.descricao">{% icone "trash-2" 16 %}</button>
+              </li>
+            </template>
+          </ul>
 
-          <p x-show="!podeLancarProdutos" class="text-[15px] suave">Informe a referência (Nota Fiscal, Pedido ou Picking) acima para lançar produtos.</p>
-
-          <div x-show="podeLancarProdutos" class="flex flex-col gap-4">
-            <div class="flex flex-wrap items-center gap-2">
-              <button type="button" @click="$refs.importar.click()" :disabled="importando" class="btn btn-linha btn-peq">
-                {% icone "upload" 15 %} <span x-text="importando ? 'Importando…' : 'Importar planilha'"></span>
-              </button>
-              <button type="button" @click="baixarModelo()" class="link inline-flex items-center gap-1.5 text-sm">{% icone "download" 15 %} Baixar modelo</button>
-              {# Fora do <form> de envio: a planilha não vai junto com a ocorrência. #}
-              <input x-ref="importar" type="file" accept=".xlsx,.xls,.csv" class="hidden" form="sem-form" @change="importarPlanilha">
-            </div>
-            <p x-show="importMsg" class="ajuda" x-text="importMsg"></p>
-
+          <div x-show="podeLancarProdutos" class="card-plano flex flex-col gap-3">
+            <strong x-text="editandoIndex !== null ? 'Editar produto' : 'Adicionar produto'">Adicionar produto</strong>
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="campo">
                 <label for="categoria-produto">Categoria do produto <span class="obg" aria-hidden="true">*</span></label>
@@ -116,23 +104,21 @@
                 </select>
               </div>
               <div class="campo">
-                <label for="quantidade-produto">Quantidade <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-normal suave">(opcional, padrão 1)</span></label>
+                <label for="quantidade-produto">Quantidade <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional, padrão 1)</span></label>
                 <input id="quantidade-produto" x-model="quantidade" type="number" min="1" placeholder="Ex.: 2" class="in">
               </div>
-            </div>
-            <div class="grid gap-3 sm:grid-cols-[1fr_2fr]">
               <div class="campo">
-                <label for="codigo-produto">Código do produto <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-normal suave">(opcional)</span></label>
+                <label for="codigo-produto">Código do produto <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional)</span></label>
                 <input id="codigo-produto" x-model="codigo" placeholder="Ex.: 7891234" class="in mono">
               </div>
               <div class="campo">
-                <label for="descricao-produto">Descrição do produto <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-normal suave">(opcional)</span></label>
+                <label for="descricao-produto">Descrição do produto <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional)</span></label>
                 <input id="descricao-produto" x-model="descricao" placeholder="Ex.: Camisa polo azul M" class="in">
               </div>
             </div>
             {# Troca de volume: o volume falta ou sobra? (spec 004) #}
             <fieldset x-show="pedeSinalVolume" x-cloak class="flex flex-col gap-2">
-              <legend class="text-sm font-semibold">O volume está faltando ou sobrando? <span class="obg" aria-hidden="true">*</span></legend>
+              <legend class="rot">O volume está faltando ou sobrando? <span class="obg" aria-hidden="true">*</span></legend>
               <p class="ajuda">Escolha uma opção.</p>
               <div class="escolhas">
                 {% for s in config.sinaisVolume %}
@@ -144,119 +130,77 @@
               </div>
             </fieldset>
             <p x-show="dispensaDadosProduto" class="ajuda">Em troca de volume, o importante é a foto do volume — código, descrição e quantidade são opcionais.</p>
-
             <p x-show="produtoErro" role="alert" class="caixa-erro" x-text="produtoErro"></p>
-
-            <div class="flex gap-2">
-              <button type="button" @click="salvarProduto()" class="btn btn-primario">
-                {% icone "plus" 16 %} <span x-text="editandoIndex !== null ? 'Salvar alterações' : 'Adicionar produto'"></span>
-              </button>
-              <button type="button" x-show="editandoIndex !== null" @click="limparProduto()" class="btn btn-linha">Cancelar</button>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" @click="salvarProduto()" class="btn btn-preto btn-peq">{% icone "plus" 16 %} <span x-text="editandoIndex !== null ? 'Salvar alterações' : 'Adicionar produto'"></span></button>
+              <button type="button" x-show="editandoIndex !== null" @click="limparProduto()" class="btn btn-linha btn-peq">Cancelar</button>
+              <button type="button" @click="$refs.importar.click()" :disabled="importando" class="btn btn-linha btn-peq">{% icone "upload" 15 %} <span x-text="importando ? 'Importando…' : 'Importar planilha'"></span></button>
+              <button type="button" @click="baixarModelo()" class="link text-sm">Baixar modelo</button>
+              {# Fora do <form> de envio: a planilha não vai junto com a ocorrência. #}
+              <input x-ref="importar" type="file" accept=".xlsx,.xls,.csv" class="hidden" form="sem-form" @change="importarPlanilha">
             </div>
+            <p x-show="importMsg" class="ajuda" x-text="importMsg"></p>
           </div>
         </section>
 
-        {# Descrição #}
-        <section class="card flex flex-col gap-2">
-          <label for="descricao" class="font-bold">
-            Descrição <span x-show="!categoriaComProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="categoriaComProduto" class="font-normal suave">(opcional)</span>
-          </label>
-          <p class="ajuda">Descreva o que aconteceu, quando e como<span x-show="!categoriaComProduto"> (mínimo de 10 caracteres)</span>.</p>
-          <textarea id="descricao" name="descricao" x-model="descricaoGeral" @input="descricaoErro = null" rows="5" placeholder="Ex.: A entrega estava prevista para segunda e chegou na quarta, com duas caixas amassadas."
-            class="in" :style="descricaoErro ? 'border-color: var(--perigo)' : ''"></textarea>
-          <p x-show="!categoriaComProduto" class="text-right text-xs" :class="descricaoGeral.trim().length >= 10 ? 'text-green-700 dark:text-green-400' : 'suave'"
-            x-text="descricaoGeral.trim().length + ' de 10 caracteres mínimos'"></p>
-          <p x-show="descricaoErro" role="alert" class="erro" x-text="descricaoErro"></p>
-        </section>
-
-        {# Anexos (spec 017: lista que acumula e permite remover) #}
-        <section class="card flex flex-col gap-2" @anexos-mudaram="anexosFotos = $event.detail.fotos; if (anexosFotos > 0) anexoErro = null">
-          <label for="anexos" class="font-bold">
-            Anexos
-            <span x-show="precisaFoto" class="font-normal" :class="anexosFotos > 0 ? 'text-green-700 dark:text-green-400' : 'obg'"
-              x-text="'(' + (anexosFotos > 0 ? anexosFotos + (anexosFotos > 1 ? ' fotos anexadas' : ' foto anexada') : 'mínimo 1 foto obrigatória') + ')'"></span>
-            <span x-show="!precisaFoto" class="font-normal suave">(opcional)</span>
-          </label>
-          <p class="ajuda">
-            <span x-show="precisaFoto" class="inline-flex items-center gap-1">{% icone "camera" 12 %} Inclua ao menos uma foto mostrando a avaria/produto vencido/volume trocado — pode cobrir vários itens de uma vez.</span>
-            Aceita foto, planilha (Excel/CSV) e PDF. Adicione um ou vários de cada vez; fotos são reduzidas automaticamente.
-          </p>
+        {# ---------- 3. Fotos e documentos ---------- #}
+        <section class="card flex flex-col gap-3" aria-labelledby="t-anexos" @anexos-mudaram="anexosFotos = $event.detail.fotos; if (anexosFotos > 0) anexoErro = null">
+          <div>
+            <h2 id="t-anexos" class="secao-num"><span x-text="categoriaComProduto ? '3.' : '2.'">3.</span> Fotos e documentos
+              <span x-show="precisaFoto"><span class="obg" aria-hidden="true">*</span></span>
+              <span x-show="!precisaFoto" class="text-base font-medium suave">(opcional)</span>
+            </h2>
+            <p class="ajuda">
+              <span x-show="precisaFoto">Pelo menos 1 foto da avaria, do produto vencido ou do volume trocado. A mesma foto pode mostrar vários produtos.</span>
+              Aceita foto, PDF e planilha. Você pode adicionar mais de uma vez e remover o que não quiser; as fotos são reduzidas automaticamente.
+            </p>
+          </div>
+          <label for="anexos" class="sr">Anexos</label>
           {% include "partials/lista_anexos.html" with id_campo="anexos" %}
+          <p x-show="precisaFoto" class="text-sm font-bold" :class="anexosFotos > 0 ? 'text-green-700 dark:text-green-400' : 'obg'"
+            x-text="anexosFotos > 0 ? (anexosFotos + (anexosFotos > 1 ? ' fotos anexadas' : ' foto anexada')) : 'mínimo 1 foto obrigatória'"></p>
           <p x-show="anexoErro" role="alert" class="erro" x-text="anexoErro"></p>
           <p data-erro-upload hidden role="alert" class="erro"></p>
         </section>
 
-        {# Revisão antes de enviar #}
-        <section class="card flex flex-col gap-2" style="background: var(--sup-2)">
-          <p class="text-xs font-bold uppercase tracking-wide suave">Confira antes de enviar</p>
-          <dl class="dados">
-            <dt>Categoria:</dt><dd x-text="tipo ? config.tipoLabel[tipo] : '—'"></dd>
-            <template x-if="referenciaOk"><dt x-text="config.referenciaLabel[refTipo] + ':'"></dt></template>
-            <template x-if="referenciaOk"><dd class="mono" x-text="referencia"></dd></template>
-            <template x-if="categoriaComProduto"><dt>Produtos:</dt></template>
+        {# ---------- 4. Descrição ---------- #}
+        <section class="card flex flex-col gap-2" aria-labelledby="t-desc">
+          <label id="t-desc" for="descricao" class="secao-num">
+            <span x-text="categoriaComProduto ? '4.' : '3.'">4.</span> Conte o que aconteceu
+            <span x-show="!categoriaComProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="categoriaComProduto" class="text-base font-medium suave">(opcional)</span>
+          </label>
+          <p class="ajuda">Descreva o que aconteceu, quando e como<span x-show="!categoriaComProduto"> (mínimo de 10 caracteres)</span>.</p>
+          <textarea id="descricao" name="descricao" x-model="descricaoGeral" @input="descricaoErro = null" rows="4" placeholder="Ex.: A entrega estava prevista para segunda e chegou na quarta, com duas caixas amassadas."
+            class="in" :style="descricaoErro ? 'border-color: var(--perigo)' : ''"></textarea>
+          <p x-show="!categoriaComProduto" class="text-right text-xs" :class="descricaoGeral.trim().length >= 10 ? 'text-green-700 dark:text-green-400' : 'fraco'" x-text="descricaoGeral.trim().length + ' de 10 caracteres mínimos'"></p>
+          <p x-show="descricaoErro" role="alert" class="erro" x-text="descricaoErro"></p>
+        </section>
+
+        {# ---------- Confira ---------- #}
+        <section class="card-plano flex flex-col gap-2" aria-labelledby="t-conf">
+          <strong id="t-conf">Confira antes de enviar</strong>
+          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[14.5px]">
+            <dt class="fraco">Tipo</dt><dd x-text="tipo ? config.tipoLabel[tipo] : '—'"></dd>
+            <dt class="fraco">Referência</dt><dd class="mono" x-text="referenciaOk ? config.referenciaLabel[refTipo] + ' ' + referencia : '—'"></dd>
+            <template x-if="categoriaComProduto"><dt class="fraco">Produtos</dt></template>
             <template x-if="categoriaComProduto"><dd x-text="itens.length + (itens.length === 1 ? ' produto' : ' produtos')"></dd></template>
-            <template x-if="precisaFoto"><dt>Fotos:</dt></template>
-            <template x-if="precisaFoto"><dd :class="anexosFotos > 0 ? '' : 'obg'" x-text="anexosFotos > 0 ? anexosFotos + (anexosFotos > 1 ? ' anexadas' : ' anexada') : 'nenhuma anexada ainda'"></dd></template>
-            <dt>Descrição:</dt><dd x-text="descricaoGeral.trim() ? 'preenchida' : 'não preenchida'"></dd>
+            <dt class="fraco">Fotos</dt><dd :class="precisaFoto && anexosFotos === 0 ? 'obg' : ''" x-text="anexosFotos > 0 ? anexosFotos + (anexosFotos > 1 ? ' anexadas' : ' anexada') : 'nenhuma ainda'"></dd>
+            <dt class="fraco">Descrição</dt><dd x-text="descricaoGeral.trim() ? 'preenchida' : 'não preenchida'"></dd>
           </dl>
         </section>
       </div>
+    </template>
 
-      {% include "partials/erro.html" %}
+    {% include "partials/erro.html" %}
 
-      <p x-show="passo === 1 && !podeAvancar" class="flex items-center gap-1.5 text-[15px] suave" data-motivo-bloqueio>
-        <i data-lucide="info" style="width:16px;height:16px"></i> <span x-text="motivoBloqueio"></span>
-      </p>
-      <div class="flex flex-wrap gap-3">
-        <template x-if="passo === 1">
-          <div class="flex w-full flex-wrap gap-3 sm:w-auto">
-            <button type="button" @click="continuar()" :disabled="!podeAvancar" :title="motivoBloqueio" class="btn btn-primario btn-grande flex-1 sm:flex-none">
-              Continuar <i data-lucide="arrow-right" style="width:17px;height:17px"></i>
-            </button>
-            <a href="{% url 'portal:inicio' %}" class="btn btn-linha btn-grande">Cancelar</a>
-          </div>
-        </template>
-        <template x-if="passo === 2">
-          <div class="flex w-full flex-wrap gap-3 sm:w-auto">
-            <button type="button" @click="passo = 1" class="btn btn-linha btn-grande">
-              <i data-lucide="arrow-left" style="width:17px;height:17px"></i> Voltar
-            </button>
-            <button type="submit" :disabled="enviando || tipo === ''" class="btn btn-primario btn-grande flex-1 sm:flex-none" x-text="enviando ? 'Enviando…' : 'Abrir ocorrência'"></button>
-          </div>
-        </template>
-      </div>
-    </form>
-
-    {# Extrato de produtos: à direita (só no passo de detalhes) #}
-    <aside x-show="mostrarExtrato" x-cloak class="mt-4 lg:mt-0">
-      <div class="card lg:sticky lg:top-6">
-        <div class="flex items-center justify-between">
-          <h3 class="card-titulo">Produtos</h3>
-          <span class="text-sm suave" x-text="itens.length + (itens.length === 1 ? ' item' : ' itens')"></span>
-        </div>
-        <p x-show="itens.length === 0" class="mt-4 text-sm suave">Nenhum produto adicionado ainda.</p>
-        <ul x-show="itens.length > 0" class="mt-4 flex flex-col gap-2">
-          <template x-for="(it, i) in itens" :key="i">
-            <li class="rounded-xl border p-3 text-sm" :style="editandoIndex === i ? 'border-color: var(--tinta)' : 'border-color: var(--linha-2)'">
-              <div class="flex items-center justify-between gap-2">
-                <span class="st st-neutro" style="font-size: 12px; padding: 2px 8px" x-text="rotuloItem(it)"></span>
-                <span class="font-bold tabular-nums"
-                  :class="sinal(it) === 'pos' ? 'text-green-700 dark:text-green-400' : sinal(it) === 'neg' ? 'text-red-700 dark:text-red-400' : ''"
-                  x-text="(sinal(it) === 'pos' ? '+' : sinal(it) === 'neg' ? '-' : '') + it.quantidade"></span>
-              </div>
-              <dl class="mt-2 space-y-1">
-                <div class="flex gap-1.5"><dt class="shrink-0 text-xs font-semibold suave">Nome:</dt><dd class="truncate" :class="config.categoriaTexto[it.categoria] || config.textoPadrao" x-text="it.descricao"></dd></div>
-                <div x-show="it.codigo" class="flex gap-1.5"><dt class="shrink-0 text-xs font-semibold suave">Código:</dt><dd class="mono truncate" x-text="it.codigo"></dd></div>
-              </dl>
-              <div class="mt-2 flex items-center gap-3">
-                <button type="button" @click="editarProduto(i)" class="link inline-flex items-center gap-1 text-xs"><i data-lucide="pencil" style="width:12px;height:12px"></i> Editar</button>
-                <button type="button" @click="removerProduto(i)" class="link link-perigo inline-flex items-center gap-1 text-xs"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Remover</button>
-              </div>
-            </li>
-          </template>
-        </ul>
-      </div>
-    </aside>
-  </div>
+    <p x-show="!podeAvancar" class="motivo" data-motivo-bloqueio>
+      <i data-lucide="info" style="width:16px;height:16px"></i> <span x-text="motivoBloqueio"></span>
+    </p>
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" :disabled="enviando || !podeAvancar" :title="motivoBloqueio" class="btn btn-preto btn-grande flex-1 sm:flex-none sm:min-w-60" x-text="enviando ? 'Enviando…' : 'Enviar ocorrência'">Enviar ocorrência</button>
+      <a href="{% url 'portal:inicio' %}" class="btn btn-linha btn-grande">Cancelar</a>
+    </div>
+    <p class="text-[13.5px] fraco">Rascunho salvo neste aparelho. Você recebe o protocolo na hora.</p>
+  </form>
 </div>
 {% endblock %}

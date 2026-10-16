@@ -105,17 +105,16 @@ Princípios:
   notificações, modais. Equivale aos componentes `"use client"` do React.
 - `templates/partials/` tem os blocos reutilizáveis (modal, paginação,
   stat card, campo de senha, tema claro/escuro).
-- **Sistema visual "Balcão"** em `static/css/sac.css` (spec 022): tokens de
-  cor no `:root` (e em `.dark`) e os componentes (`.btn`, `.card`, `.in`,
-  `.campo`, `.pill`, `.seg`, `.tbl`, `.tl-*` da linha do tempo, `.sb` do menu
-  lateral, `.tb` da barra de baixo do celular). As cores da marca estão em
-  preto e branco; a paleta verde e cobre do desenho entra trocando só os
-  valores marcados com "verde e cobre:". Fontes: Bricolage Grotesque e DM
-  Mono. Tailwind fica para layout (grid, espaçamento, `md:`).
-- **Casca** (`templates/area.html`): menu lateral no computador e, no
-  celular, cabeçalho + barra de baixo com "Mais"/"Conta" numa folha. O menu
-  vem de `context_processors.cabecalho`. Telas públicas usam
-  `partials/centralizado.html` (faixa da marca + cartão do formulário).
+- **Sistema visual "Portal + Mesa"** em `static/css/sac.css` (spec 023), em
+  preto e branco: tokens no `:root` (e em `.dark`) e os componentes (`.btn`,
+  `.card`, `.in`, `.campo`, `.tipo`, `.sit`, `.tabela`, `.tl`/`.msg`/`.ev`/`.doc`
+  da linha do tempo, `.mesa` do atendimento em 3 colunas). Fontes: Figtree e
+  DM Mono. Tailwind fica para layout (grid, espaçamento, `md:`/`lg:`).
+- **Casca** (`templates/area.html`): o cliente navega por um cabeçalho no topo
+  (Início, Minhas ocorrências, Painel) e, no celular, por uma barra de baixo
+  com "Abrir" no meio; a operação tem um menu lateral claro e, no celular,
+  barra de baixo com "Mais". O menu vem de `context_processors.cabecalho`.
+  Telas públicas usam `partials/centralizado.html`.
 - Classes de cor de status, prioridade e categoria vêm de `labels.py` via
   template tags; não escreva essas classes à mão nos templates.
 - Tema claro/escuro por classe `dark`, com a preferência guardada no

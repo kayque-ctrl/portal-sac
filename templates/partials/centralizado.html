@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% comment %}
-Layout das telas públicas (login, consulta, senha): faixa da marca à
-esquerda e o formulário num cartão à direita (spec 022). No celular a faixa
-encolhe para a marca e a frase curta.
+Telas públicas (login, consulta, senha): faixa preta da marca à esquerda e o
+formulário num cartão à direita (spec 023). No celular a faixa vira o
+cabeçalho e a frase some.
 {% endcomment %}
 {% block body %}
-<div class="dividida">
-  <aside class="lado-marca">
+<div class="publica">
+  <aside class="pub-marca">
     <div class="flex items-center gap-3">
-      <a href="{% url 'publico:inicio' %}" class="marca"><span class="logo" aria-hidden="true">SAC</span><span><strong>Portal SAC</strong><span>Ocorrências de entrega</span></span></a>
-      {% include "partials/tema.html" with classe="ico-sb ml-auto" %}
+      <a href="{% url 'publico:inicio' %}" class="marca"><span class="logo" aria-hidden="true">SAC</span>Portal SAC</a>
+      <span class="ml-auto">{% include "partials/tema.html" with classe="ico-escuro" %}</span>
     </div>
-    <div class="so-pc mt-auto flex-col gap-4">
+    <div class="so-grande mt-auto flex-col gap-3.5">
       <p class="frase">{% block frase %}Cada ocorrência,<br>do registro à solução.{% endblock %}</p>
       <p>Abra, acompanhe, converse com a operação e confirme quando estiver resolvido.</p>
     </div>
   </aside>
-  <main class="lado-form">
-    <div class="form-box {% block largura %}{% endblock %}">
+  <main class="pub-form">
+    <div class="card {% block largura %}{% endblock %}">
       {% block conteudo %}{% endblock %}
     </div>
   </main>

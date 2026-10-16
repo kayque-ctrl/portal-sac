@@ -97,7 +97,7 @@ ocorrencias/
   management/        comandos: popular_demo, arquivar_concluidas
 tests/               pytest: unit, regras, http e regressao (docs/05-testes.md)
 templates/           HTML (Django templates + Alpine.js)
-static/              sac.css (sistema visual e tokens de cor), app.css e app.js
+static/              sac.css (sistema visual Portal + Mesa e tokens), app.css e app.js
 docs/                documentação viva (visão, arquitetura, domínio, processo)
 ```
 

@@ -1,7 +1,7 @@
 {% load ocorrencias_tags %}
 {% comment %}Parâmetros: id, name, label, autocomplete, minlength, hint, model (x-model opcional), extra_rotulo (link ao lado do rótulo){% endcomment %}
 <div x-data="campoSenha" class="campo">
-  <div class="flex items-center gap-2">
+  <div class="linha-rot">
     <label for="{{ id }}">{{ label }}</label>
     {% if extra_rotulo %}<span class="ml-auto text-sm">{{ extra_rotulo|safe }}</span>{% endif %}
   </div>

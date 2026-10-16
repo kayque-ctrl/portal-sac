@@ -41,12 +41,20 @@ def test_operacao_mostra_quantas_ocorrencias_estao_ativas(abrir, operador, entra
     ],
 )
 def test_item_ativo_do_menu_da_operacao(caminho, esperado):
-    assert _atual(caminho, MENU_OPERACAO + [MENU_ADMIN]) == esperado
+    assert _atual(caminho, MENU_OPERACAO + [MENU_ADMIN], "/operacao/") == esperado
 
 
-@pytest.mark.parametrize(("caminho", "esperado"), [("/portal/", "/portal/"), ("/portal/nova", "/portal/"), ("/portal/dashboard", "/portal/dashboard")])
+@pytest.mark.parametrize(
+    ("caminho", "esperado"),
+    [
+        ("/portal/", "/portal/"),
+        ("/portal/ocorrencias", "/portal/ocorrencias"),
+        ("/portal/0b6c8a3e-0000-0000-0000-000000000000", "/portal/ocorrencias"),  # detalhe
+        ("/portal/dashboard", "/portal/dashboard"),
+    ],
+)
 def test_item_ativo_do_menu_do_cliente(caminho, esperado):
-    assert _atual(caminho, MENU_CLIENTE) == esperado
+    assert _atual(caminho, MENU_CLIENTE, "/portal/ocorrencias") == esperado
 
 
 def test_item_ativo_marcado_na_pagina(operador, entrar):

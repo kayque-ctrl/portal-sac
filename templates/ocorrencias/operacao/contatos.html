@@ -1,58 +1,63 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Contatos de encaminhamento · Operação{% endblock %}
+{% block titulo_celular_op %}Contatos{% endblock %}
 
 {% block conteudo %}
-<div x-data="abrivel({{ erro|yesno:'true,false' }})" class="flex flex-col gap-4">
-  <div class="topo">
-    <div class="titulo">
-      <h1>Contatos de encaminhamento</h1>
-      <p class="subtitulo">E-mails avisados automaticamente quando uma reclamação/sugestão é aberta.</p>
-    </div>
-    <button x-show="!aberto" @click="aberto = true" class="btn btn-primario">{% icone "plus" 16 %} Novo contato</button>
+<div class="topo">
+  <div>
+    <h1 class="titulo">Contatos de encaminhamento</h1>
+    <p class="suave">Recebem um aviso quando uma reclamação ou sugestão é aberta.</p>
   </div>
+</div>
 
-  <form x-show="aberto" x-cloak method="post" class="card flex max-w-xl flex-col gap-4">
+<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+  {% if not contatos %}
+  <div class="card-vazio">Nenhum contato cadastrado ainda. Use o formulário ao lado.</div>
+  {% else %}
+  <section class="tbl-box">
+    <div class="tbl-rola">
+      <table class="tabela">
+        <thead><tr><th scope="col">E-mail</th><th scope="col">Setor</th><th scope="col">Situação</th><th scope="col"><span class="sr">Ações</span></th></tr></thead>
+        <tbody>
+          {% for c in contatos %}
+          <tr {% if not c.ativo %}style="opacity: .65"{% endif %}>
+            <td class="mono">{{ c.email }}</td>
+            <td>{{ c.setor|default:"—" }}</td>
+            <td>{% if c.ativo %}{% situacao "concluida" "Ativo" %}{% else %}{% situacao "recusada" "Inativo" %}{% endif %}</td>
+            <td class="ir">
+              <div class="flex justify-end gap-2">
+                <form method="post" action="{% url 'operacao:contato_acao' c.pk 'alternar' %}">{% csrf_token %}
+                  <button type="submit" class="btn btn-linha btn-peq">{% if c.ativo %}Desativar{% else %}Ativar{% endif %}</button>
+                </form>
+                <form method="post" action="{% url 'operacao:contato_acao' c.pk 'excluir' %}" x-data="confirmar" @submit="interceptar">{% csrf_token %}
+                  <button type="submit" class="btn btn-perigo btn-peq">Excluir</button>
+                  {% include "partials/modal.html" with titulo="Excluir contato?" mensagem="Ele deixa de receber os avisos de reclamação/sugestão." rotulo="Excluir" perigo=True %}
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <form method="post" class="card flex flex-col gap-3.5">
     {% csrf_token %}
-    <h2>Novo contato</h2>
+    <h2 class="h2">Novo contato</h2>
     <div class="campo">
       <label for="email">E-mail <span class="obg" aria-hidden="true">*</span></label>
       <input id="email" name="email" type="email" required value="{{ valores.email|default:'' }}" placeholder="Ex.: qualidade@empresa.com.br" class="in">
     </div>
     <div class="campo">
-      <label for="setor">Setor <span class="font-normal suave">(opcional)</span></label>
-      <input id="setor" name="setor" placeholder="Ex.: Qualidade, Comercial…" value="{{ valores.setor|default:'' }}" class="in">
+      <label for="setor">Setor <span class="font-medium suave">(opcional)</span></label>
+      <input id="setor" name="setor" value="{{ valores.setor|default:'' }}" placeholder="Ex.: Qualidade" class="in">
+      <span class="ajuda">Ajuda a identificar quem recebe.</span>
     </div>
     {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
-    <div class="flex gap-2">
-      <button type="submit" class="btn btn-primario">Adicionar contato</button>
-      <button type="button" @click="aberto = false" class="btn btn-linha">Cancelar</button>
-    </div>
+    <button type="submit" class="btn btn-preto">Adicionar contato</button>
   </form>
 </div>
-
-{% if not contatos %}
-<div class="card card-tracejado">Nenhum contato cadastrado ainda. Clique em <strong>Novo contato</strong>.</div>
-{% else %}
-<ul class="flex flex-col gap-2">
-  {% for c in contatos %}
-  <li class="mcard" style="flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px; {% if not c.ativo %}opacity: .7{% endif %}">
-    <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-      <p class="mono truncate font-medium">{{ c.email }}</p>
-      {% if c.setor %}<span class="st st-neutro">{{ c.setor }}</span>{% endif %}
-      {% if not c.ativo %}<span class="st st-neutro">Inativo</span>{% endif %}
-    </div>
-    <div class="flex shrink-0 items-center gap-2">
-      <form method="post" action="{% url 'operacao:contato_acao' c.pk 'alternar' %}">{% csrf_token %}
-        <button type="submit" class="btn btn-linha btn-peq">{% if c.ativo %}Desativar{% else %}Ativar{% endif %}</button>
-      </form>
-      <form method="post" action="{% url 'operacao:contato_acao' c.pk 'excluir' %}" x-data="confirmar" @submit="interceptar">{% csrf_token %}
-        <button type="submit" class="btn btn-perigo btn-peq">Excluir</button>
-        {% include "partials/modal.html" with titulo="Excluir contato?" mensagem="Ele deixa de receber os avisos de reclamação/sugestão." rotulo="Excluir" perigo=True %}
-      </form>
-    </div>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
 {% endblock %}

@@ -15,6 +15,7 @@ publico_urls = [
 portal_urls = (
     [
         path("", portal.inicio, name="inicio"),
+        path("ocorrencias", portal.lista, name="lista"),
         path("dashboard", portal.dashboard, name="dashboard"),
         path("notificacoes", portal.notificacoes, name="notificacoes"),
         path("nova", portal.nova, name="nova"),

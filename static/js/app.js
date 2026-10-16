@@ -510,11 +510,14 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
-  /** Wizard de nova ocorrência (2 passos, rascunho no navegador). */
-  Alpine.data("novaOcorrencia", (config, inicial) => ({
+  /**
+   * Abertura de ocorrência numa página só (spec 023), com rascunho no navegador.
+   * O tipo pode vir do cartão escolhido no início (`tipoInicial`).
+   */
+  Alpine.data("novaOcorrencia", (config, inicial, tipoInicial) => ({
     config,
-    passo: inicial ? 2 : 1,
-    tipo: inicial?.tipo || "",
+    passo: 2, // página única: todos os blocos aparecem quando o tipo está escolhido
+    tipo: inicial?.tipo || tipoInicial || "",
     refTipo: inicial?.refTipo || "",
     referencia: inicial?.referencia || "",
     itens: inicial?.itens || [],
@@ -654,9 +657,9 @@ document.addEventListener("alpine:init", () => {
         this.refTipo = rt;
       }
     },
-    async continuar() {
-      if (!this.podeAvancar) return;
-      this.passo = 2;
+    /** Avisa se já existe ocorrência aberta para a referência (ao sair do campo). */
+    async checarDuplicata() {
+      this.duplicata = null;
       if (this.referencia.trim()) {
         try {
           const r = await fetch(`/portal/nova/duplicata?referencia=${encodeURIComponent(this.referencia)}`, {
@@ -771,6 +774,10 @@ document.addEventListener("alpine:init", () => {
 
     // ----- anexos e envio -----
     onEnviar(e) {
+      if (!this.podeAvancar) {
+        e.preventDefault();
+        return;
+      }
       if (!this.categoriaComProduto && this.descricaoGeral.trim().length < 10) {
         e.preventDefault();
         this.descricaoErro = "Descreva a ocorrência com pelo menos 10 caracteres.";

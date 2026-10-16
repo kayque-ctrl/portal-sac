@@ -1,14 +1,21 @@
 {% load ocorrencias_tags %}
 {% comment %}
-Trilha do andamento. Caminho feliz: aberta → em tratativa → aguardando
-aprovação → resolvida. "Recusada" é desfecho alternativo.
-Parâmetro: passos = [{label, estado, numero, ultimo}] (ver tag andamento).
+Andamento da ocorrência. Caminho feliz: aberta → em tratativa → confirmação →
+resolvida. "Recusada" é desfecho alternativo. `horizontal`: barrinhas (celular);
+senão, lista numerada (quadro de situação do computador).
 {% endcomment %}
+{% if horizontal %}
+<ol aria-label="Andamento da ocorrência" class="passos-h">
+  {% for p in passos %}
+  <li class="{% if p.estado == 'feito' %}feito{% elif p.estado == 'atual' %}atual{% elif p.estado == 'recusado' %}recusado{% endif %}" {% if p.estado == 'atual' or p.estado == 'recusado' %}aria-current="step"{% endif %}><span class="tr" aria-hidden="true"></span><span class="truncate">{{ p.label }}</span></li>
+  {% endfor %}
+</ol>
+{% else %}
 <ol aria-label="Andamento da ocorrência" class="passos">
   {% for p in passos %}
-  <li class="{% if p.estado == 'feito' %}feito{% elif p.estado == 'atual' %}atual{% elif p.estado == 'recusado' %}atual{% endif %}" {% if p.estado == 'atual' or p.estado == 'recusado' %}aria-current="step"{% endif %} {% if p.estado == 'recusado' %}style="color: var(--perigo)"{% endif %}>
-    <span class="tr" aria-hidden="true" {% if p.estado == 'recusado' %}style="background: var(--perigo)"{% endif %}></span>
-    <span class="flex items-center gap-1">{% if p.estado == 'feito' %}{% icone "check" 12 %}{% elif p.estado == 'recusado' %}{% icone "x" 12 %}{% endif %}{{ p.label }}</span>
+  <li class="{% if p.estado == 'feito' %}feito{% elif p.estado == 'atual' %}atual{% elif p.estado == 'recusado' %}recusado{% endif %}" {% if p.estado == 'atual' or p.estado == 'recusado' %}aria-current="step"{% endif %}>
+    <span class="num" aria-hidden="true">{% if p.estado == 'feito' %}{% icone "check" 14 %}{% elif p.estado == 'recusado' %}{% icone "x" 14 %}{% else %}{{ p.numero }}{% endif %}</span>{{ p.label }}
   </li>
   {% endfor %}
 </ol>
+{% endif %}

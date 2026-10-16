@@ -1,131 +1,142 @@
 {% extends "base.html" %}
 {% load ocorrencias_tags %}
 {% comment %}
-Casca das áreas internas (spec 022): menu lateral no computador; cabeçalho e
-barra de baixo no celular. O menu vem de context_processors.cabecalho.
+Casca das áreas internas (spec 023).
+- Cliente: cabeçalho no topo (computador); no celular, cabeçalho simples e
+  barra de baixo com "Abrir" no meio. Estilo portal (Zendesk / JSM).
+- Operação: menu lateral claro (computador); no celular, barra de baixo com
+  "Mais". Estilo mesa de atendimento (Zendesk Agent Workspace).
+O menu vem de context_processors.cabecalho. O título do celular vem do bloco
+`titulo_celular` (padrão: Portal SAC / Operação).
 {% endcomment %}
 
 {% block body %}
-<div class="casca">
-  {# ---------- Menu lateral (computador) ---------- #}
-  <aside class="sb" aria-label="Menu">
-    <a href="{{ area_base }}/" class="marca">
-      <span class="logo" aria-hidden="true">SAC</span>
-      <span><strong>Portal SAC</strong><span>{% if user.eh_operacao %}Operação{% else %}{{ user.empresa.nome|default:"Meu portal" }}{% endif %}</span></span>
-    </a>
-
-    {% if not user.eh_operacao %}
-    <a href="{% url 'portal:nova' %}" class="btn btn-destaque btn-grande" data-abrir-ocorrencia>{% icone "plus" 18 %} Abrir ocorrência</a>
-    {% endif %}
-
-    <nav aria-label="Principal">
+{% if user.eh_operacao %}
+{# ======================================================== OPERAÇÃO #}
+<div class="casca-op">
+  <aside class="lado" aria-label="Menu">
+    <div class="flex items-center gap-2.5 px-1.5 pb-3">
+      <a href="/operacao/" class="marca"><span class="logo" aria-hidden="true">SAC</span>Operação</a>
+      <div class="ml-auto">{% include "partials/sino.html" with lado="lateral" %}</div>
+    </div>
+    <a href="/operacao/#busca" class="btn btn-linha btn-peq mx-1 mb-1.5" style="justify-content: flex-start; color: var(--suave); font-weight: 500">{% icone "search" 16 %} Buscar protocolo, NF…</a>
+    <nav aria-label="Principal" class="flex flex-col gap-0.5">
       {% for grupo, links in menu %}
-        {% if grupo %}<span class="grupo">{{ grupo }}</span>{% endif %}
-        {% for href, rotulo, ico in links %}
-        <a href="{{ href }}" class="item" {% if href == menu_atual %}aria-current="page"{% endif %}>
-          {% icone ico 18 %}{{ rotulo }}
-          {% if href == "/operacao/" and qtd_ativas %}<span class="qtd" title="Ocorrências ativas">{{ qtd_ativas }}</span>{% endif %}
-        </a>
-        {% endfor %}
-        {% if forloop.first %}
-        {# Sino: abre a lista das recentes; "Ver todas" leva à página. #}
-        <div x-data="sino({{ notif_nao_lidas|default:0 }})" class="relative" @click.outside="aberto = false" @keydown.escape="aberto = false">
-          <button type="button" @click="alternar()" class="item" :aria-expanded="aberto" aria-haspopup="true" {% if na_notificacoes %}aria-current="page"{% endif %} data-sino>
-            {% icone "bell" 18 %}Notificações
-            <span x-show="naoLidas > 0" x-cloak class="qtd" x-text="naoLidas > 9 ? '9+' : naoLidas"></span>
-          </button>
-          <div x-show="aberto" x-cloak class="fixed left-[264px] top-6 z-50 w-[22rem] overflow-hidden rounded-2xl border animate-fadein" style="background: var(--sup); border-color: var(--linha); color: var(--tinta); box-shadow: 0 18px 40px rgba(0,0,0,.18)">
-            <div class="flex items-center justify-between gap-2 border-b px-4 py-3" style="border-color: var(--linha-2)">
-              <span class="text-sm font-bold">Notificações</span>
-              <button type="button" x-show="temNaoLidas" x-cloak @click="marcarTodas()" data-marcar-todas class="link text-xs">Marcar todas como lidas</button>
-            </div>
-            <p x-show="carregado && itens.length === 0" class="px-4 py-6 text-center text-sm suave">Nenhuma notificação.</p>
-            <p x-show="!carregado" class="px-4 py-6 text-center text-sm suave">Carregando…</p>
-            <ul x-show="itens.length > 0" class="max-h-96 overflow-y-auto">
-              <template x-for="n in itens" :key="n.id">
-                <li class="border-b last:border-0" style="border-color: var(--linha-2)">
-                  <a :href="n.href || '#'" class="flex items-start gap-3 px-4 py-3 hover:bg-[var(--sup-2)]" @click="if (!n.href) $event.preventDefault(); aberto = false">
-                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style="background: var(--sup-2)" :class="n.cor"><i :data-lucide="n.icone" style="width:15px;height:15px"></i></span>
-                    <span class="min-w-0 flex-1">
-                      <span class="block text-sm" :class="n.lida ? 'suave' : 'font-semibold'" x-text="n.mensagem"></span>
-                      <span class="mt-0.5 block text-xs suave" x-text="n.quando"></span>
-                    </span>
-                    <span x-show="!n.lida" class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background: var(--tinta)"></span>
-                  </a>
-                </li>
-              </template>
-            </ul>
-            <a href="{{ area_base }}/notificacoes" @click="aberto = false" class="block border-t px-4 py-3 text-center text-sm font-semibold hover:bg-[var(--sup-2)]" style="border-color: var(--linha-2)">Ver todas</a>
-          </div>
-        </div>
-        {% endif %}
+      <span class="grupo">{{ grupo }}</span>
+      {% for href, rotulo, ico in links %}
+      <a href="{{ href }}" class="item" {% if href == menu_atual %}aria-current="page"{% endif %}>
+        {% icone ico 18 %} {{ rotulo }}
+        {% if href == "/operacao/" and qtd_ativas %}<span class="n" title="Ocorrências ativas">{{ qtd_ativas }}</span>{% endif %}
+      </a>
+      {% endfor %}
       {% endfor %}
     </nav>
-
     <div class="eu">
       <span class="av" aria-hidden="true">{{ user.nome|iniciais }}</span>
-      <span class="min-w-0 flex-1"><strong class="truncate">{{ user.nome }}</strong><span class="papel">{{ user.get_papel_display }}</span></span>
-      {% include "partials/tema.html" with classe="ico-sb" %}
+      <span class="min-w-0 flex-1"><strong class="block truncate text-sm">{{ user.nome }}</strong><span class="block text-xs fraco">{{ user.get_papel_display }}</span></span>
+      {% include "partials/tema.html" with classe="x" %}
       <form method="post" action="{% url 'contas:logout' %}" x-data="confirmar" @submit="interceptar">
         {% csrf_token %}
-        <button type="submit" class="ico-sb" aria-label="Sair" title="Sair">{% icone "log-out" 17 %}</button>
+        <button type="submit" class="x" aria-label="Sair" title="Sair">{% icone "log-out" 17 %}</button>
         {% include "partials/modal.html" with titulo="Sair da conta?" mensagem="Você precisará entrar novamente para acessar o sistema." rotulo="Sair" %}
       </form>
     </div>
   </aside>
 
-  {# ---------- Cabeçalho (celular) ---------- #}
-  <header class="mtopo">
-    <a href="{{ area_base }}/" class="marca">
-      <span class="logo" aria-hidden="true">SAC</span>
-      <span><strong>Portal SAC</strong><span>{% if user.eh_operacao %}Operação{% else %}{{ user.empresa.nome|default:"Meu portal" }}{% endif %}</span></span>
-    </a>
-    <span class="av ml-auto" aria-hidden="true">{{ user.nome|iniciais }}</span>
+  <header class="mcab">
+    <span class="logo" aria-hidden="true">SAC</span>
+    <strong class="min-w-0 flex-1 truncate">{% block titulo_celular_op %}Operação{% endblock %}</strong>
+    <span class="av" aria-hidden="true">{{ user.nome|iniciais }}</span>
   </header>
 
-  <main class="principal" id="conteudo">
-    <div class="principal-limite">
-      {% block conteudo %}{% endblock %}
+  <main class="principal-op" id="conteudo">
+{% else %}
+{# ======================================================== CLIENTE (abertura) #}
+<div class="casca" x-data="{ conta: false, menuConta: false }">
+  <header class="cab">
+    <a href="/portal/" class="marca"><span class="logo" aria-hidden="true">SAC</span>Portal SAC</a>
+    <nav aria-label="Principal">
+      {% for grupo, links in menu %}{% for href, rotulo, ico in links %}
+      <a href="{{ href }}" {% if href == menu_atual %}aria-current="page"{% endif %}>{{ rotulo }}</a>
+      {% endfor %}{% endfor %}
+    </nav>
+    <div class="direita">
+      <a href="{% url 'portal:nova' %}" class="btn btn-preto btn-peq" data-abrir-ocorrencia>{% icone "plus" 16 %} Abrir ocorrência</a>
+      {% include "partials/sino.html" with lado="direita" %}
+      <div class="relative" @click.outside="menuConta = false" @keydown.escape="menuConta = false">
+        <button type="button" @click="menuConta = !menuConta" :aria-expanded="menuConta" aria-haspopup="true" class="flex items-center gap-2 rounded-full pr-1 text-left">
+          <span class="av" aria-hidden="true">{{ user.nome|iniciais }}</span>
+          <span class="hidden text-sm leading-tight lg:block"><strong class="block">{{ user.nome }}</strong><span class="fraco">{{ user.empresa.nome|default:"Cliente" }}</span></span>
+        </button>
+        <div x-show="menuConta" x-cloak class="pop animate-fadein right-0 top-12 w-64 p-2">
+          <p class="px-2 pb-1 pt-1 text-sm fraco">{{ user.email }}</p>
+          {% include "partials/preferencias_folha.html" %}
+        </div>
+      </div>
     </div>
+  </header>
+
+  <header class="mcab">
+    <span class="logo" aria-hidden="true">SAC</span>
+    <strong class="min-w-0 flex-1 truncate">{% block titulo_celular %}Portal SAC{% endblock %}</strong>
+    <span class="av" aria-hidden="true">{{ user.nome|iniciais }}</span>
+  </header>
+  <main class="conteudo" id="conteudo">
+    <div class="limite {% block largura %}{% endblock %}">
+{% endif %}
+
+{% block conteudo %}{% endblock %}
+
+{% if user.eh_operacao %}
   </main>
 
-  {# ---------- Barra de baixo (celular) ---------- #}
   <div x-data="{ mais: false }">
-    <nav aria-label="Principal no celular" class="tb">
-      {% if user.eh_operacao %}
-      <a href="/operacao/" {% if menu_atual == "/operacao/" %}aria-current="page"{% endif %}>{% icone "clipboard-list" 22 %}Fila{% if qtd_ativas %}<span class="ponto">{{ qtd_ativas }}</span>{% endif %}</a>
+    <nav aria-label="Principal no celular" class="mbarra">
+      <a href="/operacao/" {% if menu_atual == "/operacao/" %}aria-current="page"{% endif %}>{% icone "inbox" 22 %}Ocorrências{% if qtd_ativas %}<span class="ponto">{{ qtd_ativas }}</span>{% endif %}</a>
       <a href="/operacao/painel" {% if menu_atual == "/operacao/painel" %}aria-current="page"{% endif %}>{% icone "bar-chart-3" 22 %}Painel</a>
-      {% else %}
-      <a href="/portal/" {% if menu_atual == "/portal/" %}aria-current="page"{% endif %}>{% icone "clipboard-list" 22 %}Ocorrências</a>
-      <a href="/portal/dashboard" {% if menu_atual == "/portal/dashboard" %}aria-current="page"{% endif %}>{% icone "bar-chart-3" 22 %}Painel</a>
-      <a href="{% url 'portal:nova' %}" class="abrir"><span>{% icone "plus" 26 %}</span>Abrir</a>
-      {% endif %}
-      <a href="{{ area_base }}/notificacoes" {% if na_notificacoes %}aria-current="page"{% endif %}>{% icone "bell" 22 %}Notificações{% if notif_nao_lidas %}<span class="ponto" aria-label="{{ notif_nao_lidas }} não lidas">{{ notif_nao_lidas }}</span>{% endif %}</a>
-      <button type="button" @click="mais = true" :aria-expanded="mais">{% if user.eh_operacao %}{% icone "menu" 22 %}Mais{% else %}{% icone "user-round" 22 %}Conta{% endif %}</button>
+      <a href="/operacao/notificacoes" {% if na_notificacoes %}aria-current="page"{% endif %}>{% icone "bell" 22 %}Avisos{% if notif_nao_lidas %}<span class="ponto" aria-label="{{ notif_nao_lidas }} não lidas">{{ notif_nao_lidas }}</span>{% endif %}</a>
+      <button type="button" @click="mais = true" :aria-expanded="mais">{% icone "menu" 22 %}Mais</button>
     </nav>
-
     <div x-show="mais" x-cloak class="folha-fundo md:hidden" @click.self="mais = false" @keydown.escape.window="mais = false">
-      <div class="folha animate-fadein" role="dialog" aria-label="{% if user.eh_operacao %}Mais opções{% else %}Conta{% endif %}">
+      <div class="folha animate-fadein" role="dialog" aria-label="Mais opções">
         <span class="alca" aria-hidden="true"></span>
         <div class="flex items-center gap-3 px-2 pb-2">
-          <span class="av" aria-hidden="true" style="background: var(--linha); color: var(--tinta)">{{ user.nome|iniciais }}</span>
-          <span class="min-w-0"><strong class="block truncate">{{ user.nome }}</strong><span class="block text-sm suave">{{ user.email }}</span></span>
+          <span class="av grande" aria-hidden="true">{{ user.nome|iniciais }}</span>
+          <span class="min-w-0"><strong class="block truncate">{{ user.nome }}</strong><span class="block text-sm fraco">{{ user.get_papel_display }}</span></span>
         </div>
-        {% if user.eh_operacao %}
-          {% for grupo, links in menu %}{% if not forloop.first %}
-          <span class="grupo">{{ grupo }}</span>
-          {% for href, rotulo, ico in links %}<a href="{{ href }}" {% if href == menu_atual %}aria-current="page"{% endif %}>{% icone ico 20 %}{{ rotulo }}</a>{% endfor %}
-          {% endif %}{% endfor %}
-        {% endif %}
-        <span class="grupo">Preferências</span>
-        <div x-data="tema"><button type="button" class="linha-folha" @click="alternar()">{% icone "moon" 20 %}<span x-text="escuro ? 'Tema claro' : 'Tema escuro'">Tema escuro</span></button></div>
-        <form method="post" action="{% url 'contas:logout' %}" x-data="confirmar" @submit="interceptar">
-          {% csrf_token %}
-          <button type="submit" class="linha-folha" style="color: var(--perigo)">{% icone "log-out" 20 %}Sair</button>
-          {% include "partials/modal.html" with titulo="Sair da conta?" mensagem="Você precisará entrar novamente para acessar o sistema." rotulo="Sair" %}
-        </form>
+        {% for grupo, links in menu %}{% if not forloop.first %}
+        <span class="menu-grupo">{{ grupo }}</span>
+        {% for href, rotulo, ico in links %}<a href="{{ href }}" class="menu-item" {% if href == menu_atual %}aria-current="page"{% endif %}>{% icone ico 20 %}{{ rotulo }}</a>{% endfor %}
+        {% endif %}{% endfor %}
+        {% include "partials/preferencias_folha.html" %}
       </div>
     </div>
   </div>
 </div>
+
+{% else %}
+    </div>
+  </main>
+
+  <nav aria-label="Principal no celular" class="mbarra">
+    <a href="/portal/" {% if menu_atual == "/portal/" %}aria-current="page"{% endif %}>{% icone "house" 22 %}Início</a>
+    <a href="/portal/ocorrencias" {% if menu_atual == "/portal/ocorrencias" %}aria-current="page"{% endif %}>{% icone "inbox" 22 %}Ocorrências</a>
+    <a href="{% url 'portal:nova' %}" class="abrir"><span>{% icone "plus" 26 %}</span>Abrir</a>
+    <a href="/portal/notificacoes" {% if na_notificacoes %}aria-current="page"{% endif %}>{% icone "bell" 22 %}Avisos{% if notif_nao_lidas %}<span class="ponto" aria-label="{{ notif_nao_lidas }} não lidas">{{ notif_nao_lidas }}</span>{% endif %}</a>
+    <button type="button" @click="conta = true" :aria-expanded="conta">{% icone "user-round" 22 %}Conta</button>
+  </nav>
+  <div x-show="conta" x-cloak class="folha-fundo md:hidden" @click.self="conta = false" @keydown.escape.window="conta = false">
+    <div class="folha animate-fadein" role="dialog" aria-label="Conta">
+      <span class="alca" aria-hidden="true"></span>
+      <div class="flex items-center gap-3 px-2 pb-2">
+        <span class="av grande" aria-hidden="true">{{ user.nome|iniciais }}</span>
+        <span class="min-w-0"><strong class="block truncate">{{ user.nome }}</strong><span class="block text-sm fraco">{{ user.email }}{% if user.empresa %} · {{ user.empresa.nome }}{% endif %}</span></span>
+      </div>
+      <a href="/portal/dashboard" class="menu-item">{% icone "bar-chart-3" 20 %}Painel</a>
+      <a href="/portal/#como-abrir" class="menu-item" @click="conta = false">{% icone "info" 20 %}Como abrir uma ocorrência</a>
+      {% include "partials/preferencias_folha.html" %}
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

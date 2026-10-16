@@ -78,13 +78,16 @@ def test_categoria_comeca_sem_escolha(formulario):
 @pytest.mark.parametrize(
     "texto",
     [
-        "Campos com",  # legenda do obrigatório
-        "1. O que aconteceu?",
-        "2. Preencha os detalhes abaixo e confira o resumo antes de enviar.",
+        # Página única (spec 023): cada bloco diz o que fazer.
+        "Os marcados com",  # legenda do obrigatório
+        "O que aconteceu?",
         "Escolha uma opção.",
-        "Escolha uma opção e informe o número que está no documento.",
+        "Escolha uma opção e digite o número que está no documento.",
+        "Adicione um de cada vez.",
+        "Aceita foto, PDF e planilha.",
         "Descreva o que aconteceu, quando e como",
         "de 10 caracteres mínimos",
+        "Confira antes de enviar",
     ],
 )
 def test_instrucoes_das_etapas(formulario, texto):

@@ -1,23 +1,14 @@
 {% load ocorrencias_tags %}
 {% if itens %}
-<div>
-  <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Produtos</p>
-  <ul class="mt-2 space-y-2">
-    {% for it in itens %}
-    {% with s=it.sinal %}
-    <li class="flex items-start gap-3 text-sm">
-      <span class="flex min-w-0 flex-1 items-start gap-2">
-        {% if it.categoria %}
-        <span class="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium {{ it.categoria|item_badge }}">{{ it.rotulo_categoria }}</span>
-        {% endif %}
-        <span class="min-w-0 truncate {{ it.categoria|item_texto }}">
-          {{ it.descricao }}{% if it.codigo %}<span class="text-zinc-500"> · Cód. {{ it.codigo }}</span>{% endif %}
-        </span>
-      </span>
-      <span class="shrink-0 self-center font-medium tabular-nums {% if s == 'pos' %}text-green-600 dark:text-green-400{% elif s == 'neg' %}text-red-600 dark:text-red-400{% else %}text-zinc-700 dark:text-zinc-300{% endif %}">{% if s == 'pos' %}+{% elif s == 'neg' %}-{% endif %}{{ it.quantidade }}</span>
-    </li>
-    {% endwith %}
-    {% endfor %}
-  </ul>
-</div>
+<ul class="flex flex-col gap-1.5 text-sm" aria-label="Produtos">
+  {% for it in itens %}
+  {% with s=it.sinal %}
+  <li class="flex items-center gap-2">
+    {% if it.categoria %}<span class="cat {{ it.categoria|item_badge }}">{{ it.rotulo_categoria }}</span>{% endif %}
+    <span class="flex min-w-0 flex-1"><span class="min-w-0 truncate {{ it.categoria|item_texto }}">{{ it.descricao }}{% if it.codigo %}<span class="mono fraco"> · {{ it.codigo }}</span>{% endif %}</span></span>
+    <span class="mono shrink-0 font-bold {% if s == 'pos' %}text-green-700 dark:text-green-400{% elif s == 'neg' %}text-red-700 dark:text-red-400{% endif %}">{% if s == 'pos' %}+{% elif s == 'neg' %}-{% endif %}{{ it.quantidade }}</span>
+  </li>
+  {% endwith %}
+  {% endfor %}
+</ul>
 {% endif %}

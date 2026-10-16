@@ -32,9 +32,9 @@ def test_lista_conta_so_as_minhas_aguardando_aprovacao(abrir, operador, cliente,
         oc.status = "resolvida"
         oc.save(por=operador)
 
-    r = entrar(cliente).get("/portal/")
-
-    assert r.context["pendentes"] == 1
+    # Lista completa conta; o início mostra cada uma que espera o cliente.
+    assert entrar(cliente).get("/portal/ocorrencias").context["pendentes"] == 1
+    assert len(entrar(cliente).get("/portal/").context["pendentes"]) == 1
 
 
 def test_lista_ordena_alertas_antes_dos_avisos_informativos(cliente, entrar):
@@ -51,9 +51,12 @@ def test_lista_nao_mostra_avisos_vencidos(cliente, entrar):
     assert "Velho" not in corpo(entrar(cliente).get("/portal/"))
 
 
-def test_lista_aceita_filtro_inicial_e_parametros_de_retorno(cliente, entrar):
-    r = entrar(cliente).get("/portal/?filtro=aprovar&nova=2026-000001&anexosFalha=2")
-    assert r.context["filtro_inicial"] == "aprovar"
+def test_lista_aceita_filtro_inicial(cliente, entrar):
+    assert entrar(cliente).get("/portal/ocorrencias?filtro=aprovar").context["filtro_inicial"] == "aprovar"
+
+
+def test_inicio_mostra_o_retorno_da_abertura(cliente, entrar):
+    r = entrar(cliente).get("/portal/?nova=2026-000001&anexosFalha=2")
     assert r.context["nova"] == "2026-000001"
     assert r.context["anexos_falha"] == 2
 
@@ -272,3 +275,35 @@ def test_consulta_nao_vaza_dados_sensiveis(ocorrencia, client):
 def test_ocorrencia_inexistente_na_consulta(client, db):
     r = client.post("/consulta", {"protocolo": str(uuid.uuid4()), "documento": "1"})
     assert "Protocolo não encontrado" in corpo(r)
+
+
+# ---------------------------------------------------------------- spec 023: início e lista
+
+
+def test_inicio_tem_os_cartoes_de_tipo_que_levam_ao_formulario(cliente, entrar):
+    html = corpo(entrar(cliente).get("/portal/"))
+    for tipo in ("produtos", "atraso", "reclamacao_sugestao"):
+        assert f'href="/portal/nova?tipo={tipo}"' in html
+
+
+def test_inicio_mostra_so_o_que_esta_em_andamento(abrir, cliente, operador, entrar):
+    andamento, encerrada = abrir(), abrir()
+    encerrada.status = "recusada"
+    encerrada.motivo_recusa = "fora do prazo"
+    encerrada.save(por=operador)
+    r = entrar(cliente).get("/portal/")
+    assert [o.pk for o in r.context["andamento"]] == [andamento.pk]
+    assert encerrada.protocolo in corpo(entrar(cliente).get("/portal/ocorrencias"))
+
+
+def test_inicio_poe_primeiro_o_que_aguarda_o_cliente(abrir, cliente, operador, entrar):
+    abrir()
+    aguardando = abrir()
+    aguardando.status = "resolvida"
+    aguardando.save(por=operador)
+    assert entrar(cliente).get("/portal/").context["andamento"][0].pk == aguardando.pk
+
+
+def test_formulario_aceita_o_tipo_vindo_do_cartao(cliente, entrar):
+    assert entrar(cliente).get("/portal/nova?tipo=atraso").context["tipo_inicial"] == "atraso"
+    assert entrar(cliente).get("/portal/nova?tipo=inventado").context["tipo_inicial"] == ""

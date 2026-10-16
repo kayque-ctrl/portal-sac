@@ -11,7 +11,7 @@ Parâmetros: titulo, mensagem, rotulo (padrão "Confirmar"), perigo (bool).
       <p class="mt-2 text-[15px] suave">{{ mensagem|safe }}</p>
       <div class="mt-5 flex justify-end gap-2">
         <button type="button" @click="aberto = false" :disabled="enviando" class="btn btn-linha">Cancelar</button>
-        <button type="button" @click="confirmar()" :disabled="enviando" class="btn {% if perigo %}btn-perigo-cheio{% else %}btn-primario{% endif %}">
+        <button type="button" @click="confirmar()" :disabled="enviando" class="btn {% if perigo %}btn-perigo-cheio{% else %}btn-preto{% endif %}">
           <span x-text="enviando ? 'Aguarde…' : '{{ rotulo|default:'Confirmar'|escapejs }}'"></span>
         </button>
       </div>

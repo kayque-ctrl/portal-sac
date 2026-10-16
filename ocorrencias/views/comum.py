@@ -110,3 +110,11 @@ def marcar_lidas(request):
     if ids:
         request.user.notificacoes.filter(lida=False, pk__in=ids).update(lida=True)
     return JsonResponse({"ok": True})
+
+
+@login_required
+@require_POST
+def marcar_todas_lidas(request):
+    """Zera o sino: marca como lidas todas as notificações do próprio usuário."""
+    request.user.notificacoes.filter(lida=False).update(lida=True)
+    return JsonResponse({"ok": True, "naoLidas": 0})

@@ -37,7 +37,11 @@
 
           <div x-show="aberto" x-cloak
             class="absolute right-0 top-11 z-50 w-80 origin-top-right overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl animate-fadein dark:border-zinc-800 dark:bg-zinc-900">
-            <div class="border-b border-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-900 dark:border-zinc-800 dark:text-white">Notificações</div>
+            <div class="flex items-center justify-between gap-2 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
+              <span class="text-sm font-semibold text-zinc-900 dark:text-white">Notificações</span>
+              <button type="button" x-show="temNaoLidas" x-cloak @click="marcarTodas()" data-marcar-todas
+                class="rounded text-xs font-medium text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:text-zinc-300 dark:hover:text-white">Marcar todas como lidas</button>
+            </div>
             <p x-show="carregado && itens.length === 0" class="px-4 py-6 text-center text-sm text-zinc-500">Nenhuma notificação.</p>
             <p x-show="!carregado" class="px-4 py-6 text-center text-sm text-zinc-500">Carregando…</p>
             <ul x-show="itens.length > 0" class="max-h-80 divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800">

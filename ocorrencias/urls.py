@@ -8,6 +8,7 @@ publico_urls = [
     path("anexos/<uuid:pk>", comum.baixar_anexo, name="anexo"),
     path("notificacoes/recentes", comum.notificacoes_recentes, name="notificacoes_recentes"),
     path("notificacoes/marcar-lidas", comum.marcar_lidas, name="marcar_lidas"),
+    path("notificacoes/marcar-todas", comum.marcar_todas_lidas, name="marcar_todas_lidas"),
     path("cron/arquivar", cron.arquivar, name="cron_arquivar"),
 ]
 

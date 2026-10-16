@@ -30,6 +30,8 @@ def test_responsavel_malformado_pela_tela_mostra_o_erro(ocorrencia, operador, en
     "rota",
     [
         "/operacao/?empresa=lixo",
+        "/operacao/?cliente=lixo",
+        "/operacao/?responsavel=lixo",
         "/operacao/painel?empresa=lixo",
         "/operacao/painel/export?empresa=lixo",
         "/operacao/usuarios?empresa=lixo",

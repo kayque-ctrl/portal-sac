@@ -13,20 +13,37 @@
 {# Abas de situação #}
 <div class="mt-4 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
   {% for aba in abas %}
-  <a href="?{% query q=aba.params.q tipo=aba.params.tipo empresa=aba.params.empresa situacao=aba.chave %}"
+  <a href="?{% query q=aba.params.q tipo=aba.params.tipo empresa=aba.params.empresa cliente=aba.params.cliente responsavel=aba.params.responsavel situacao=aba.chave %}"
     class="-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors {% if situacao == aba.chave %}border-zinc-900 text-zinc-900 dark:border-white dark:text-white{% else %}border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200{% endif %}">{{ aba.label }}</a>
   {% endfor %}
 </div>
 
-{% if empresa %}
-<div class="mt-4 inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-  Empresa: <strong class="font-medium">{{ empresa_nome|default:empresa }}</strong>
+{% if empresa or cliente or responsavel %}
+<div class="mt-4 flex flex-wrap gap-2">
+  {% if empresa %}<span class="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Empresa: <strong class="font-medium">{{ empresa_nome|default:empresa }}</strong></span>{% endif %}
+  {% if cliente %}<span class="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Aberta por: <strong class="font-medium">{{ cliente_nome|default:"usuário removido" }}</strong></span>{% endif %}
+  {% if responsavel %}<span class="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">Responsável: <strong class="font-medium">{{ responsavel_nome|default:"usuário removido" }}</strong></span>{% endif %}
 </div>
+{% endif %}
+
+{# Atalhos da aba Ativas (spec 020) #}
+{% if atalhos %}
+<nav aria-label="Atalhos da fila" class="mt-4 flex gap-2 overflow-x-auto pb-1">
+  {% for a in atalhos %}
+  <a href="{% url_com fila=a.chave p='' %}" {% if a.chave == fila %}aria-current="true"{% endif %} data-atalho="{{ a.chave|default:'todas' }}"
+    class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 {% if a.chave == fila %}border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900{% elif a.chave == 'vencidas' and a.qtd %}border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300{% else %}border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800{% endif %}">
+    {{ a.label }} <span class="tabular-nums opacity-80">{{ a.qtd }}</span>
+  </a>
+  {% endfor %}
+</nav>
 {% endif %}
 
 {# Filtros #}
 <form method="get" class="mt-6 flex flex-wrap items-center gap-2">
   {% if empresa %}<input type="hidden" name="empresa" value="{{ empresa }}">{% endif %}
+  {% if cliente %}<input type="hidden" name="cliente" value="{{ cliente }}">{% endif %}
+  {% if responsavel %}<input type="hidden" name="responsavel" value="{{ responsavel }}">{% endif %}
+  {% if fila %}<input type="hidden" name="fila" value="{{ fila }}">{% endif %}
   <input type="hidden" name="situacao" value="{{ situacao }}">
   <input type="search" name="q" value="{{ q }}" placeholder="Buscar por protocolo, descrição ou cliente…"
     class="min-w-56 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
@@ -47,7 +64,7 @@
 {# Lista #}
 {% if not pagina.object_list %}
   <div class="mt-8 rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">
-    {% if situacao == "lixeira" %}A lixeira está vazia.{% else %}Nenhuma ocorrência{% if status or tipo or q %} com esse filtro{% endif %}.{% endif %}
+    {% if situacao == "lixeira" %}A lixeira está vazia.{% else %}Nenhuma ocorrência{% if tem_filtro %} com esse filtro{% endif %}.{% endif %}
   </div>
 
 {% elif situacao == "lixeira" %}

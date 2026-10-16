@@ -45,6 +45,26 @@ SITUACOES = [
 ]
 
 
+# Atalhos da aba Ativas (spec 020). "Vencidas" deixa de fora quem aguarda o
+# cliente: nesse status o relógio do SLA está pausado.
+ATALHOS_FILA = [
+    ("", "Todas"),
+    ("minhas", "Minhas"),
+    ("sem_responsavel", "Sem responsável"),
+    ("vencidas", "Vencidas"),
+]
+
+
+def _atalho(qs, chave: str, user):
+    if chave == "minhas":
+        return qs.filter(atribuido_a=user)
+    if chave == "sem_responsavel":
+        return qs.filter(atribuido_a__isnull=True)
+    if chave == "vencidas":
+        return qs.filter(status__in=STATUS_ATIVOS, sla_prazo__lt=timezone.now())
+    return qs
+
+
 def sanitizar_busca(q: str | None) -> str:
     return re.sub(r"[,()%*]", "", (q or "").strip())[:80]
 
@@ -61,6 +81,8 @@ def lista(request):
     sp = request.GET
     status, tipo = sp.get("status", ""), sp.get("tipo", "")
     empresa = (uuids_validos([sp.get("empresa")]) or [""])[0]
+    cliente = (uuids_validos([sp.get("cliente")]) or [""])[0]
+    responsavel = (uuids_validos([sp.get("responsavel")]) or [""])[0]
     q = sanitizar_busca(sp.get("q"))
 
     # Lixeira (exclusão definitiva) é restrita a admin — nem a aba aparece,
@@ -93,6 +115,10 @@ def lista(request):
         qs = qs.filter(tipo=tipo)
     if empresa:
         qs = qs.filter(cliente__empresa_id=empresa)
+    if cliente:
+        qs = qs.filter(cliente_id=cliente)
+    if responsavel:
+        qs = qs.filter(atribuido_a_id=responsavel)
     if q:
         qs = qs.filter(
             Q(protocolo__icontains=q)
@@ -101,12 +127,26 @@ def lista(request):
             | Q(cliente__nome__icontains=q, cliente__papel=Papel.CLIENTE)
         )
 
+    # Atalhos só fazem sentido entre as ativas; a contagem de cada um respeita
+    # os outros filtros já aplicados.
+    fila = sp.get("fila", "") if situacao == "ativas" and sp.get("fila") in dict(ATALHOS_FILA) else ""
+    atalhos = (
+        [{"chave": c, "label": l, "qtd": _atalho(qs, c, request.user).count()} for c, l in ATALHOS_FILA]
+        if situacao == "ativas"
+        else []
+    )
+    qs = _atalho(qs, fila, request.user)
+
     pagina = paginar(request, qs)
     abas = []
     for chave, label in situacoes:
-        params = {k: v for k, v in {"q": sp.get("q", ""), "tipo": tipo, "empresa": empresa}.items() if v}
+        base = {"q": sp.get("q", ""), "tipo": tipo, "empresa": empresa, "cliente": cliente, "responsavel": responsavel}
+        params = {k: v for k, v in base.items() if v}
         params["situacao"] = chave
         abas.append({"chave": chave, "label": label, "params": params})
+
+    escolhidos = Usuario.objects.filter(pk__in=[u for u in (cliente, responsavel) if u])
+    nomes = {str(pk): nome for pk, nome in escolhidos.values_list("pk", "nome")}
 
     return render(
         request,
@@ -120,8 +160,14 @@ def lista(request):
             "tipo": tipo,
             "empresa": empresa,
             "empresa_nome": Empresa.objects.filter(pk=empresa).values_list("nome", flat=True).first() if empresa else None,
+            "cliente": cliente,
+            "cliente_nome": nomes.get(cliente),
+            "responsavel": responsavel,
+            "responsavel_nome": nomes.get(responsavel),
+            "fila": fila,
+            "atalhos": atalhos,
             "q": sp.get("q", ""),
-            "tem_filtro": bool(status or tipo or empresa or q),
+            "tem_filtro": bool(status or tipo or empresa or cliente or responsavel or fila or q),
             "status_opcoes": [(s, STATUS_LABEL[s]) for s in status_opcoes],
             "tipos": list(TIPO_LABEL.items()),
         },
@@ -149,6 +195,10 @@ def excluir_selecionadas(request):
 # ---------------------------------------------------------------- detalhe
 
 
+# Abas do atendimento no celular (spec 020), na ordem em que aparecem.
+ABAS_ATENDIMENTO = [("conversa", "Conversa"), ("atender", "Atender"), ("detalhes", "Detalhes")]
+
+
 def _ocorrencia(pk) -> Ocorrencia:
     return get_object_or_404(Ocorrencia.objects.select_related("cliente__empresa", "aprovada_por__empresa"), pk=pk)
 
@@ -174,6 +224,7 @@ def _render_detalhe(request, oc, **extra):
         "avisa_bump": oc.status == "aberta",
         "accept": ACCEPT_ATTR,
         "max_anexos": MAX_ANEXOS,
+        "abas_celular": ABAS_ATENDIMENTO,
         **extra,
     }
     return render(request, "ocorrencias/operacao/detalhe.html", contexto)
@@ -540,6 +591,22 @@ def usuario_reenviar(request, pk):
     return JsonResponse({"mensagem": f"Convite reenviado para {user.email}."})
 
 
+def _atividade(usuario, qtd_abertas: int) -> dict:
+    """Quadro "Atividade" do usuário (spec 020): o que ele abriu ou atende agora."""
+    em_andamento = Ocorrencia.objects.filter(excluida_em__isnull=True, status__in=STATUS_ATIVOS)
+    if usuario.eh_cliente:
+        return {
+            "total": qtd_abertas,
+            "em_andamento": em_andamento.filter(cliente=usuario).count(),
+            "filtro": f"cliente={usuario.pk}",
+        }
+    return {
+        "total": None,
+        "em_andamento": em_andamento.filter(atribuido_a=usuario).count(),
+        "filtro": f"responsavel={usuario.pk}",
+    }
+
+
 @operacao_required
 def usuario_detalhe(request, pk):
     usuario = get_object_or_404(Usuario, pk=pk)
@@ -579,6 +646,7 @@ def usuario_detalhe(request, pk):
             "empresas": Empresa.objects.order_by("nome"),
             "tipos_pessoa": TipoPessoa.choices,
             "bloqueio_exclusao": bloqueio,
+            "atividade": _atividade(usuario, qtd),
             "pode_admin": request.user.eh_admin,
             "erro": erro,
         },

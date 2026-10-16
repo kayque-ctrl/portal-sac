@@ -224,6 +224,17 @@ document.addEventListener("alpine:init", () => {
       postForm("/notificacoes/marcar-lidas", { ids });
       this.naoLidas = Math.max(0, this.naoLidas - ids.length);
     },
+    /** Há não lidas no contador ou na lista (o contador inclui as fora da lista). */
+    get temNaoLidas() {
+      return this.naoLidas > 0 || this.itens.some((n) => !n.lida);
+    },
+    /** Marca todas como lidas, inclusive as que não aparecem na lista. */
+    async marcarTodas() {
+      const r = await postForm("/notificacoes/marcar-todas", {});
+      if (!r) return;
+      this.itens = this.itens.map((n) => ({ ...n, lida: true }));
+      this.naoLidas = 0;
+    },
   }));
 
   /** Lista de ocorrências do portal: filtros no navegador. */

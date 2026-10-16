@@ -177,8 +177,10 @@ def test_sino_tem_o_botao_marcar_todas(cliente, entrar):
 # ---------------------------------------------------------------- atendimento no celular
 
 
-def test_atendimento_tem_as_tres_abas_e_os_paineis(ocorrencia, operador, entrar):
+def test_atendimento_tem_as_abas_e_os_paineis(ocorrencia, operador, entrar):
+    # Desde a spec 021 a abertura é o 1º item da linha do tempo: sem aba "Detalhes".
     html = corpo(entrar(operador).get(f"/operacao/{ocorrencia.pk}"))
-    for chave, rotulo in (("conversa", "Conversa"), ("atender", "Atender"), ("detalhes", "Detalhes")):
+    for chave, rotulo in (("conversa", "Linha do tempo"), ("atender", "Atender")):
         assert f'id="aba-{chave}"' in html and f">{rotulo}</button>" in html
         assert f'id="painel-{chave}" role="tabpanel"' in html
+    assert 'id="aba-detalhes"' not in html

@@ -1,14 +1,26 @@
 {% load ocorrencias_tags %}
+{% comment %}
+Anexos de um item da linha do tempo: foto vira miniatura (abre em tamanho
+real ao clicar), outros arquivos viram etiqueta com nome e tamanho.
+O link passa por /anexos/<id>, que confere a permissão antes de servir.
+{% endcomment %}
 {% if anexos %}
-<ul class="flex flex-wrap gap-2">
+<ul class="flex flex-wrap gap-2 {% if alinhar_fim %}justify-end{% endif %}">
   {% for a in anexos %}
   <li>
-    <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer"
+    {% if a.tipo_mime|slice:":6" == "image/" %}
+    <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer" data-anexo="foto" title="{{ a.nome_arquivo }}"
+      class="block overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-800">
+      <img src="{% url 'publico:anexo' a.pk %}" alt="Foto {{ a.nome_arquivo }}" loading="lazy" width="128" height="96" class="h-24 w-32 object-cover">
+    </a>
+    {% else %}
+    <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer" data-anexo="arquivo"
       class="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-      <span class="text-zinc-500">{% icone "paperclip" 14 %}</span>
+      <span class="text-zinc-500">{% if a.tipo_mime == "application/pdf" %}{% icone "file-text" 14 %}{% else %}{% icone "paperclip" 14 %}{% endif %}</span>
       <span class="max-w-[200px] truncate">{{ a.nome_arquivo }}</span>
       {% if a.tamanho_bytes %}<span class="text-xs text-zinc-500">{{ a.tamanho_bytes|tamanho }}</span>{% endif %}
     </a>
+    {% endif %}
   </li>
   {% endfor %}
 </ul>

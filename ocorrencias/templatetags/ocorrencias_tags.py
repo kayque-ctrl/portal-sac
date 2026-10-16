@@ -78,6 +78,16 @@ def dia(dt):
 
 
 @register.filter
+def hora(dt):
+    return formato.formatar_hora(dt)
+
+
+@register.filter
+def dia_conversa(dt):
+    return formato.dia_da_conversa(dt)
+
+
+@register.filter
 def relativo(dt):
     return formato.tempo_relativo(dt)
 

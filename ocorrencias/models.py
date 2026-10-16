@@ -19,6 +19,7 @@ from django.utils import timezone
 from .labels import (
     STATUS_ATIVOS,
     AvisoTipo,
+    EventoTipo,
     ItemCategoria,
     OcorrenciaTipo,
     Prioridade,
@@ -71,6 +72,10 @@ class SlaRegra(models.Model):
             reverse=True,
         )
         return melhor[0].horas if melhor else None
+
+
+# Campos cuja mudança vira evento na linha do tempo (spec 021).
+CAMPOS_COM_EVENTO = ("atribuido_a_id", "prioridade", "arquivada_em", "excluida_em")
 
 
 class Ocorrencia(models.Model):
@@ -129,6 +134,7 @@ class Ocorrencia(models.Model):
         # **kwargs repassa o `fetch_mode` que o Django 6.1+ passa a enviar.
         obj = super().from_db(db, field_names, values, **kwargs)
         obj._status_original = obj.__dict__.get("status")
+        obj._originais = {c: obj.__dict__.get(c) for c in CAMPOS_COM_EVENTO}
         return obj
 
     @property
@@ -205,8 +211,36 @@ class Ocorrencia(models.Model):
                     ocorrencia=self, de_status=de, para_status=self.status, alterado_por=por
                 )
                 notificacoes.mudanca_status(self, por)
+            if not criando:
+                self._registrar_eventos(por)
 
         self._status_original = self.status
+        self._originais = {c: self.__dict__.get(c) for c in CAMPOS_COM_EVENTO}
+
+    def _registrar_eventos(self, por):
+        """Responsável, prioridade e ciclo de vida viram eventos (spec 021)."""
+        antes = getattr(self, "_originais", None)
+        if antes is None:  # instância que não veio do banco: nada a comparar
+            return
+        eventos = []
+
+        if antes["atribuido_a_id"] != self.atribuido_a_id:
+            from contas.models import Usuario
+
+            nomes = dict(
+                Usuario.objects.filter(pk__in=[antes["atribuido_a_id"], self.atribuido_a_id]).values_list("pk", "nome")
+            )
+            eventos.append((EventoTipo.RESPONSAVEL, nomes.get(antes["atribuido_a_id"]), nomes.get(self.atribuido_a_id)))
+        if antes["prioridade"] != self.prioridade:
+            eventos.append((EventoTipo.PRIORIDADE, antes["prioridade"], self.prioridade))
+        if (antes["arquivada_em"] is None) != (self.arquivada_em is None):
+            eventos.append((EventoTipo.ARQUIVADA if self.arquivada_em else EventoTipo.DESARQUIVADA, None, None))
+        if (antes["excluida_em"] is None) != (self.excluida_em is None):
+            eventos.append((EventoTipo.EXCLUIDA if self.excluida_em else EventoTipo.RESTAURADA, None, None))
+
+        EventoOcorrencia.objects.bulk_create(
+            [EventoOcorrencia(ocorrencia=self, tipo=t, de=de, para=para, autor=por) for t, de, para in eventos]
+        )
 
     # ----- utilidades de exibição -----
 
@@ -324,6 +358,33 @@ class HistoricoStatus(models.Model):
         ordering = ["criado_em"]
         verbose_name = "histórico de status"
         verbose_name_plural = "históricos de status"
+
+
+class EventoOcorrencia(models.Model):
+    """
+    O que acontece na ocorrência além das mensagens e do status (spec 021):
+    troca de responsável e de prioridade, arquivamento e lixeira. Gravado pelo
+    `Ocorrencia.save(por=...)`. Só a operação vê. `autor` nulo = o sistema
+    (ex.: arquivamento automático).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ocorrencia = models.ForeignKey(Ocorrencia, on_delete=models.CASCADE, related_name="eventos")
+    tipo = models.CharField(max_length=14, choices=EventoTipo.choices)
+    de = models.CharField(max_length=200, null=True, blank=True)
+    para = models.CharField(max_length=200, null=True, blank=True)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    criado_em = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["criado_em"]
+        verbose_name = "evento da ocorrência"
+        verbose_name_plural = "eventos da ocorrência"
+
+    def __str__(self) -> str:
+        return f"{self.get_tipo_display()} ({self.criado_em:%d/%m %H:%M})"
 
 
 class Notificacao(models.Model):

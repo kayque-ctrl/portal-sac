@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from .. import kpis, servicos
-from ..apresentacao import preparar_conversa
+from ..apresentacao import linha_do_tempo
 from ..labels import (
     CATEGORIAS_COM_PRODUTOS,
     CATEGORIAS_COM_REFERENCIA,
@@ -203,15 +203,13 @@ def _render_detalhe(request, oc, **extra):
         colegas_da_empresa(user).get(oc.cliente_id, "um colega da empresa") if somente_leitura else user.nome
     )
     mensagens = list(mensagens_visiveis(user, oc))
-    abertura = preparar_conversa(
-        mensagens, oc.anexos.all(), user, oc, responsavel_nome if somente_leitura else None
-    )
+    linha = linha_do_tempo(oc, user, mensagens, oc.anexos.all(), responsavel_nome if somente_leitura else None)
     contexto = {
         "oc": oc,
         "somente_leitura": somente_leitura,
         "responsavel_nome": responsavel_nome,
         "mensagens": mensagens,
-        "anexos_abertura": abertura,
+        "linha": linha,
         "itens": list(oc.itens.all()),
         "accept": ACCEPT_ATTR,
         "max_anexos": MAX_ANEXOS,

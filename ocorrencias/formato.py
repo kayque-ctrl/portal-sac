@@ -24,6 +24,26 @@ def formatar_dia(dt) -> str:
     return timezone.localtime(dt).strftime("%d/%m/%Y")
 
 
+def formatar_hora(dt) -> str:
+    """hh:mm"""
+    if not dt:
+        return ""
+    return timezone.localtime(dt).strftime("%H:%M")
+
+
+def dia_da_conversa(dt) -> str:
+    """Separador de dia da linha do tempo: Hoje, Ontem ou dd/mm/aaaa."""
+    if not dt:
+        return ""
+    dia = timezone.localtime(dt).date()
+    diferenca = (timezone.localdate() - dia).days
+    if diferenca == 0:
+        return "Hoje"
+    if diferenca == 1:
+        return "Ontem"
+    return dia.strftime("%d/%m/%Y")
+
+
 def tempo_relativo(dt) -> str:
     """agora, há 5 min, há 2 h, há 3 d (depois de uma semana, a data)."""
     seg = js_round((timezone.now() - dt).total_seconds())

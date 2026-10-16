@@ -16,6 +16,7 @@ usa chave primária UUID.
 | `Mensagem` | ocorrencias | Conversa cliente ↔ operação; `interna=True` é nota só da operação |
 | `Anexo` | ocorrencias | Arquivo da abertura ou de uma mensagem |
 | `HistoricoStatus` | ocorrencias | Auditoria de cada troca de status (consulta pública e KPIs) |
+| `EventoOcorrencia` | ocorrencias | Troca de responsável e prioridade, arquivamento e lixeira, na linha do tempo (só a operação vê) |
 | `Notificacao` | ocorrencias | Notificação in-app para um destinatário |
 | `Aviso` | ocorrencias | Aviso do painel do portal (`info`/`alerta`), com validade opcional |
 | `ContatoEncaminhamento` | ocorrencias | E-mail que recebe as novas reclamações/sugestões |
@@ -35,6 +36,7 @@ ReferenciaTipo    nf | pedido | picking             ← picking: spec 016
 Status            aberta | em_analise | resolvida | concluida | recusada
 Prioridade        baixa | media | alta
 AvisoTipo         info | alerta
+EventoTipo        responsavel | prioridade | arquivada | desarquivada | excluida | restaurada   ← spec 021
 ```
 
 Rótulos que costumam confundir:
@@ -58,6 +60,7 @@ Ocorrencia 1───N OcorrenciaItem
 Ocorrencia 1───N Mensagem 1───N Anexo
 Ocorrencia 1───N Anexo              (anexos da abertura têm mensagem nula)
 Ocorrencia 1───N HistoricoStatus
+Ocorrencia 1───N EventoOcorrencia N───1 Usuario (autor; nulo = sistema)
 Ocorrencia 1───N Notificacao N───1 Usuario (destinatario)
 SlaRegra  ── tipo + prioridade ──► sla_horas / sla_prazo da Ocorrencia
 ```
@@ -105,6 +108,10 @@ atendente da **operação**; no portal do cliente (lista e painel) é o
   - → `concluida`/`recusada`: marca `sla_cumprido`;
   - reabertura a partir de `concluida`/`recusada`: reinicia o prazo.
 - **Histórico:** registra cada troca, com `alterado_por = por`.
+- **Eventos** (spec 021): troca de responsável (guarda os nomes), de
+  prioridade, arquivar/desarquivar e lixeira/restaurar gravam um
+  `EventoOcorrencia` com `autor = por`, comparando com os valores lidos do
+  banco. O arquivamento automático grava o evento sem autor.
 - **Notificações** (`notificacoes.py`): nova ocorrência vai para a
   operação; mudança de status vai para a outra parte (reabertura pelo
   cliente e conclusão avisam a operação; tratativa, aguardando aprovação e
@@ -133,10 +140,17 @@ atendente da **operação**; no portal do cliente (lista e painel) é o
 - Autor ou operação reabre (→ `em_analise`, desarquiva).
 - Colegas da mesma empresa veem tudo menos notas internas, mas não agem.
 
+### Linha do tempo (`apresentacao.linha_do_tempo`, spec 021)
+
+- Uma lista só, do mais antigo ao mais novo: abertura, mensagens, trocas
+  de status e, só para a operação, comentários internos e eventos.
+- O cliente vê a operação como "Operação"; a operação vê o nome de quem
+  escreveu.
+
 ### Ciclo de vida administrativo
 
 - `arquivada_em`: sai da fila principal. O comando `arquivar_concluidas`
-  arquiva as concluídas há mais de N dias.
+  arquiva as concluídas há mais de N dias (e grava o evento, sem autor).
 - `excluida_em`: lixeira (só admin). A exclusão definitiva (`purgar`) só
   apaga o que já está na lixeira.
 

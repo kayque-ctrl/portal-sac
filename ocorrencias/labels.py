@@ -55,6 +55,17 @@ class Prioridade(models.TextChoices):
     ALTA = "alta", "Alta"
 
 
+class EventoTipo(models.TextChoices):
+    """Eventos da linha do tempo além do status (spec 021). Só a operação vê."""
+
+    RESPONSAVEL = "responsavel", "Responsável"
+    PRIORIDADE = "prioridade", "Prioridade"
+    ARQUIVADA = "arquivada", "Arquivada"
+    DESARQUIVADA = "desarquivada", "Desarquivada"
+    EXCLUIDA = "excluida", "Enviada para a lixeira"
+    RESTAURADA = "restaurada", "Restaurada da lixeira"
+
+
 class AvisoTipo(models.TextChoices):
     INFO = "info", "Info"
     ALERTA = "alerta", "Alerta"

@@ -16,7 +16,7 @@ from contas.convites import enviar_convite, reenviar_convite
 from contas.models import Empresa, Papel, TipoPessoa, Usuario
 
 from .. import servicos
-from ..apresentacao import preparar_conversa
+from ..apresentacao import linha_do_tempo
 from ..labels import (
     AVISO_MENSAGEM_MAX,
     AVISO_TITULO_MAX,
@@ -196,7 +196,8 @@ def excluir_selecionadas(request):
 
 
 # Abas do atendimento no celular (spec 020), na ordem em que aparecem.
-ABAS_ATENDIMENTO = [("conversa", "Conversa"), ("atender", "Atender"), ("detalhes", "Detalhes")]
+# A abertura agora é o primeiro item da linha do tempo (spec 021).
+ABAS_ATENDIMENTO = [("conversa", "Linha do tempo"), ("atender", "Atender")]
 
 
 def _ocorrencia(pk) -> Ocorrencia:
@@ -204,14 +205,13 @@ def _ocorrencia(pk) -> Ocorrencia:
 
 
 def _render_detalhe(request, oc, **extra):
-    mensagens = list(oc.mensagens.all())
+    mensagens = list(oc.mensagens.select_related("autor"))
     cliente = oc.cliente
     rotulo_cliente = f"{cliente.nome} · {cliente.empresa.nome}" if cliente.empresa_id else cliente.nome
-    abertura = preparar_conversa(mensagens, oc.anexos.all(), request.user, oc, rotulo_cliente)
     contexto = {
         "oc": oc,
         "mensagens": mensagens,
-        "anexos_abertura": abertura,
+        "linha": linha_do_tempo(oc, request.user, mensagens, oc.anexos.all(), rotulo_cliente),
         "itens": list(oc.itens.all()),
         "operadores": Usuario.objects.filter(papel__in=[Papel.OPERADOR, Papel.ADMIN]).order_by("nome"),
         # Já existe mensagem (não interna) da operação ao cliente? Sem isso,

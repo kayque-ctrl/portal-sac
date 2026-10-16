@@ -16,7 +16,7 @@ de avisar o cliente (dá para reenviar), nunca vaza uma nota.
     <button type="button" role="tab" :aria-selected="interna" @click="interna = true"
       class="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors"
       :class="interna ? 'bg-amber-600 text-white' : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'">
-      {% icone "lock" 14 %} Nota interna
+      {% icone "lock" 14 %} Comentário interno
     </button>
     <button type="button" role="tab" :aria-selected="!interna" @click="interna = false"
       class="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors"
@@ -26,7 +26,7 @@ de avisar o cliente (dá para reenviar), nunca vaza uma nota.
   </div>
   {% endif %}
 
-  <textarea name="conteudo" rows="3" :placeholder="interna ? 'Escreva uma nota interna…' : 'Escreva uma resposta…'"
+  <textarea name="conteudo" rows="3" :placeholder="interna ? 'Escreva um comentário interno (só a operação vê)…' : 'Escreva uma resposta…'"
     class="w-full rounded-lg border px-3 py-2 text-zinc-900 outline-none focus:ring-2 dark:text-white"
     :class="interna ? 'border-amber-300 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/10 dark:border-amber-900/60 dark:bg-amber-950/20' : 'border-zinc-300 bg-white focus:border-zinc-900 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-400'">{{ msg_conteudo|default:'' }}</textarea>
 
@@ -49,7 +49,7 @@ de avisar o cliente (dá para reenviar), nunca vaza uma nota.
     <button type="submit" :disabled="enviando"
       class="flex h-10 items-center justify-center rounded-lg px-5 text-sm font-medium text-white transition-colors disabled:opacity-60"
       :class="interna ? 'bg-amber-600 hover:bg-amber-700' : 'bg-zinc-900 hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200'"
-      x-text="enviando ? 'Enviando…' : (interna ? 'Salvar nota interna' : (permiteNotaInterna ? 'Enviar ao cliente' : 'Enviar'))">Enviar</button>
+      x-text="enviando ? 'Enviando…' : (interna ? 'Salvar comentário interno' : (permiteNotaInterna ? 'Enviar ao cliente' : 'Enviar'))">Enviar</button>
   </div>
 
   <template x-teleport="body">

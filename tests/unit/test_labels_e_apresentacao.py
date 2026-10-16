@@ -92,8 +92,8 @@ def test_regras_de_troca_de_volume():
 # ---------------------------------------------------------------- conversa
 
 
-def msg(pk, autor_id):
-    return SimpleNamespace(pk=pk, autor_id=autor_id)
+def msg(pk, autor_id, nome="Otto Operador"):
+    return SimpleNamespace(pk=pk, autor_id=autor_id, autor=SimpleNamespace(nome=nome))
 
 
 def anexo(mensagem_id):
@@ -102,7 +102,7 @@ def anexo(mensagem_id):
 
 def test_preparar_conversa_rotula_autores_e_separa_anexos():
     oc = SimpleNamespace(cliente_id=1)
-    eu = SimpleNamespace(pk=1)
+    eu = SimpleNamespace(pk=1, eh_operacao=False)
     mensagens = [msg("m1", 1), msg("m2", 9)]
     anexos = [anexo(None), anexo("m2"), anexo("oculta")]
 
@@ -118,7 +118,7 @@ def test_preparar_conversa_rotula_autores_e_separa_anexos():
 
 def test_preparar_conversa_mostra_o_nome_do_cliente_para_a_operacao():
     oc = SimpleNamespace(cliente_id=1)
-    operador = SimpleNamespace(pk=9)
+    operador = SimpleNamespace(pk=9, eh_operacao=True)
     mensagens = [msg("m1", 1)]
 
     preparar_conversa(mensagens, [], operador, oc, "Ana Cliente")
@@ -127,3 +127,14 @@ def test_preparar_conversa_mostra_o_nome_do_cliente_para_a_operacao():
     outras = [msg("m2", 1)]
     preparar_conversa(outras, [], operador, oc, None)
     assert outras[0].autor_rotulo == "Cliente"
+
+
+def test_preparar_conversa_mostra_o_nome_do_colega_so_para_a_operacao():
+    oc = SimpleNamespace(cliente_id=1)
+    colega_op = [msg("m1", 7, "Bia Operadora")]
+    preparar_conversa(colega_op, [], SimpleNamespace(pk=9, eh_operacao=True), oc, None)
+    assert colega_op[0].autor_rotulo == "Bia Operadora"
+
+    para_cliente = [msg("m1", 7, "Bia Operadora")]
+    preparar_conversa(para_cliente, [], SimpleNamespace(pk=1, eh_operacao=False), oc, None)
+    assert para_cliente[0].autor_rotulo == "Operação"

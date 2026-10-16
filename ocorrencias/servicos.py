@@ -32,13 +32,14 @@ from .labels import (
     STATUS_LABEL,
     TIPOS_FORM,
     REFERENCIA_FORM,
+    EventoTipo,
     Prioridade,
     ReferenciaTipo,
     SinalVolume,
     Status,
     formatar_referencia,
 )
-from .models import Anexo, ContatoEncaminhamento, Mensagem, Ocorrencia, OcorrenciaItem
+from .models import Anexo, ContatoEncaminhamento, EventoOcorrencia, Mensagem, Ocorrencia, OcorrenciaItem
 from .permissoes import colegas_da_empresa, ocorrencias_visiveis
 from .uploads import validar_arquivos
 
@@ -427,10 +428,19 @@ def purgar(ids) -> int:
 
 def arquivar_concluidas_antigas(dias: int = 30) -> int:
     """Arquiva resolvidas/recusadas paradas há mais de N dias."""
-    limite = timezone.now() - timedelta(days=dias)
-    return Ocorrencia.objects.filter(
-        status__in=[Status.RESOLVIDA, Status.RECUSADA],
-        arquivada_em__isnull=True,
-        excluida_em__isnull=True,
-        atualizado_em__lt=limite,
-    ).update(arquivada_em=timezone.now())
+    agora = timezone.now()
+    with transaction.atomic():
+        ids = list(
+            Ocorrencia.objects.filter(
+                status__in=[Status.RESOLVIDA, Status.RECUSADA],
+                arquivada_em__isnull=True,
+                excluida_em__isnull=True,
+                atualizado_em__lt=agora - timedelta(days=dias),
+            ).values_list("pk", flat=True)
+        )
+        Ocorrencia.objects.filter(pk__in=ids).update(arquivada_em=agora)
+        # Sem autor: quem arquivou foi o sistema (aparece na linha do tempo).
+        EventoOcorrencia.objects.bulk_create(
+            [EventoOcorrencia(ocorrencia_id=pk, tipo=EventoTipo.ARQUIVADA, criado_em=agora) for pk in ids]
+        )
+    return len(ids)

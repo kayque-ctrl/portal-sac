@@ -117,3 +117,19 @@ def test_inicio_vazio_aponta_o_botao_do_topo(cliente, entrar):
 
     assert "Use o botão “Abrir ocorrência” para começar." in html
     assert "Escolha um assunto acima" not in html
+
+
+def test_bloco_atual_tem_a_barra_inteira_e_descricao_mais_curta():
+    from pathlib import Path
+
+    css = (Path(__file__).resolve().parents[2] / "static" / "css" / "sac.css").read_text(encoding="utf-8")
+    assert ".secao.atual::before" in css  # a barra cobre o cabeçalho também
+    assert ".secao.atual { border-color: var(--preto); }" in css
+    assert "grid-template-columns: 160px minmax(0, 360px) 90px" in css
+
+
+def test_produto_sem_quadro_dentro_de_quadro(cliente, entrar):
+    html = corpo(entrar(cliente).get("/portal/nova"))
+
+    assert 'class="form-produto flex flex-col gap-3"' in html
+    assert 'class="card-plano flex flex-col gap-3"' not in html

@@ -18,8 +18,7 @@ ENV = os.environ
 
 SECRET_KEY = ENV.get("DJANGO_SECRET_KEY", ambiente.SECRET_DEV)
 DEBUG = ambiente.debug(ENV)
-ALLOWED_HOSTS = ambiente.lista(ENV.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"))
-CSRF_TRUSTED_ORIGINS = ambiente.lista(ENV.get("DJANGO_CSRF_TRUSTED_ORIGINS"))
+ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS = ambiente.hosts(ENV)
 
 # Produção: HTTPS, cookies seguros, HSTS; recusa subir com chave de desenvolvimento.
 globals().update(ambiente.seguranca(ENV, DEBUG, SECRET_KEY, ALLOWED_HOSTS))

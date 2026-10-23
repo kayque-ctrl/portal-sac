@@ -183,3 +183,38 @@ def test_smtp_escolhe_tls_ou_ssl_pela_porta(porta, ssl, tls):
     assert cfg["EMAIL_BACKEND"] == "django.core.mail.backends.smtp.EmailBackend"
     assert (cfg["EMAIL_USE_SSL"], cfg["EMAIL_USE_TLS"]) == (ssl, tls)
     assert cfg["EMAIL_HOST_PASSWORD"] == "senha"
+
+
+# ---------------------------------------------------------------- hosts da Vercel (fix 029)
+
+
+def test_hosts_aceitam_os_enderecos_do_deploy_da_vercel():
+    env = {
+        "DJANGO_ALLOWED_HOSTS": "portal-sac.vercel.app",
+        "DJANGO_CSRF_TRUSTED_ORIGINS": "https://portal-sac.vercel.app",
+        "VERCEL_URL": "portal-ncvbpu5h4-kayque-santos-projects.vercel.app",
+        "VERCEL_BRANCH_URL": "portal-git-main-kayque-santos-projects.vercel.app",
+    }
+
+    hosts, origens = ambiente.hosts(env)
+
+    assert hosts == [
+        "portal-sac.vercel.app",
+        "portal-ncvbpu5h4-kayque-santos-projects.vercel.app",
+        "portal-git-main-kayque-santos-projects.vercel.app",
+    ]
+    assert origens == [
+        "https://portal-sac.vercel.app",
+        "https://portal-ncvbpu5h4-kayque-santos-projects.vercel.app",
+        "https://portal-git-main-kayque-santos-projects.vercel.app",
+    ]
+
+
+def test_hosts_fora_da_vercel_nao_mudam():
+    assert ambiente.hosts({}) == (["localhost", "127.0.0.1"], [])
+    assert ambiente.hosts({"DJANGO_ALLOWED_HOSTS": "a.com"}) == (["a.com"], [])
+
+
+def test_hosts_nao_repetem_o_endereco_ja_configurado():
+    env = {"DJANGO_ALLOWED_HOSTS": "portal-sac.vercel.app", "VERCEL_URL": "portal-sac.vercel.app"}
+    assert ambiente.hosts(env) == (["portal-sac.vercel.app"], ["https://portal-sac.vercel.app"])

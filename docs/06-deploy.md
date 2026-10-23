@@ -81,6 +81,10 @@ migration nova (o CI acusa quando falta gerar uma).
    | `CRON_SECRET` | `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
    | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | opcional (sem eles, e-mails não saem) |
 
+   O endereço único de cada deploy e o da branch (`VERCEL_URL` e
+   `VERCEL_BRANCH_URL`, que a Vercel define sozinha) entram em
+   `ALLOWED_HOSTS` e `CSRF_TRUSTED_ORIGINS` automaticamente.
+
 3. **Deploy**. O `vercel.json` já reescreve todas as rotas para o Django e
    registra o cron diário.
 
@@ -112,7 +116,9 @@ revisado antes de rodar (ver spec 015, item de limpeza).
 | Sintoma | Causa provável |
 | --- | --- |
 | 500 logo ao abrir, log com `ImproperlyConfigured: Defina DJANGO_SECRET_KEY` | chave ausente ou curta com `DJANGO_DEBUG=false` |
-| `DisallowedHost` | domínio fora de `DJANGO_ALLOWED_HOSTS` |
+| `DisallowedHost` | domínio próprio fora de `DJANGO_ALLOWED_HOSTS` (os endereços `*.vercel.app` do deploy já entram sozinhos) |
+| 500 só em algumas telas depois de um deploy, `column ... does not exist` | migration nova não rodada no Supabase: rode o `migrate` do passo 2 |
+| 500 logo ao abrir, `No module named 'django'` | existe um `pyproject.toml`: a Vercel instala as dependências dele no lugar do `requirements.txt` |
 | 403 CSRF ao enviar formulário | `DJANGO_CSRF_TRUSTED_ORIGINS` sem o `https://` do domínio |
 | `prepared statement ... already exists` | `DATABASE_URL` fora da porta 6543 do pooler, ou pooler em modo sessão |
 | `relation ... does not exist` | migrations não aplicadas, ou conexão com outro usuário (fora do schema `django`) |

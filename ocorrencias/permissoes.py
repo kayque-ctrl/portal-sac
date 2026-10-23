@@ -46,6 +46,4 @@ def colegas_da_empresa(user) -> dict:
 
     if not user.empresa_id:
         return {}
-    return dict(
-        Usuario.objects.filter(empresa_id=user.empresa_id, papel=Papel.CLIENTE).values_list("id", "nome")
-    )
+    return dict(Usuario.objects.filter(empresa_id=user.empresa_id, papel=Papel.CLIENTE).values_list("id", "nome"))

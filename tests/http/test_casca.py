@@ -64,7 +64,14 @@ def test_item_ativo_marcado_na_pagina(operador, entrar):
 
 @pytest.mark.parametrize(
     ("nome", "esperado"),
-    [("Ana Souza", "AS"), ("Otto", "O"), ("ana maria souza", "AS"), ("Ana Souza · ACME Distribuidora", "AS"), ("", "?"), (None, "?")],
+    [
+        ("Ana Souza", "AS"),
+        ("Otto", "O"),
+        ("ana maria souza", "AS"),
+        ("Ana Souza · ACME Distribuidora", "AS"),
+        ("", "?"),
+        (None, "?"),
+    ],
 )
 def test_iniciais_do_avatar(nome, esperado):
     assert iniciais(nome) == esperado

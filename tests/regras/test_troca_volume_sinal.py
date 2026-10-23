@@ -47,7 +47,9 @@ def test_um_item_sem_sinal_recusa_a_ocorrencia_toda(cliente):
 
 @pytest.mark.parametrize("categoria", ["avaria", "falta", "sobra", "vencido", "pre_vencido"])
 def test_sinal_e_descartado_nas_outras_categorias(cliente, categoria):
-    r = abrir_com(cliente, {"categoria": categoria, "codigo": "1", "descricao": "X", "quantidade": 1, "sinal_volume": "sobra"})
+    r = abrir_com(
+        cliente, {"categoria": categoria, "codigo": "1", "descricao": "X", "quantidade": 1, "sinal_volume": "sobra"}
+    )
     assert r.dados["ocorrencia"].itens.get().sinal_volume is None
 
 
@@ -61,7 +63,9 @@ def test_sinal_e_descartado_nas_outras_categorias(cliente, categoria):
 )
 def test_item_expoe_sinal_e_rotulo(abrir, sinal, esperado_sinal, esperado_rotulo):
     oc = abrir()
-    item = OcorrenciaItem.objects.create(ocorrencia=oc, categoria="troca_volume", descricao="V", quantidade=1, sinal_volume=sinal)
+    item = OcorrenciaItem.objects.create(
+        ocorrencia=oc, categoria="troca_volume", descricao="V", quantidade=1, sinal_volume=sinal
+    )
     assert (item.sinal, item.rotulo_categoria) == (esperado_sinal, esperado_rotulo)
 
 

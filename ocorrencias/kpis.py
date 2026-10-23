@@ -36,7 +36,7 @@ def _decimal(n: float, casas: int = 1) -> str:
 def parse_periodo(v) -> int:
     try:
         n = int(v)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 30
     return n if n in PERIODOS else 30
 
@@ -103,10 +103,7 @@ def barras_motivos(motivos: list[dict], modo: str) -> list[dict]:
         reverse=True,
     )
     maximo = linhas[0]["valor"] if linhas else 0
-    return [
-        {**linha, "pct": max(4, js_round(linha["valor"] / maximo * 100)) if maximo > 0 else 0}
-        for linha in linhas
-    ]
+    return [{**linha, "pct": max(4, js_round(linha["valor"] / maximo * 100)) if maximo > 0 else 0} for linha in linhas]
 
 
 def barras_semanas(semanas: list[dict]) -> list[dict]:
@@ -167,8 +164,16 @@ def calcular_kpis(user, dias: int) -> dict:
     base = ocorrencias_visiveis(user).filter(excluida_em__isnull=True)
     ocs = list(
         base.values(
-            "id", "protocolo", "tipo", "status", "criado_em", "cliente_id",
-            "sla_horas", "sla_prazo", "sla_restante_ms", "sla_cumprido",
+            "id",
+            "protocolo",
+            "tipo",
+            "status",
+            "criado_em",
+            "cliente_id",
+            "sla_horas",
+            "sla_prazo",
+            "sla_restante_ms",
+            "sla_cumprido",
         )
     )
     por_id = {o["id"]: o for o in ocs}
@@ -240,9 +245,7 @@ def calcular_kpis(user, dias: int) -> dict:
         "em_aberto": len(ativas),
         "com_sla_vencido": sum(1 for o in ativas if vencida(o)),
         "aguardando_aprovacao": sum(1 for o in ocs if o["status"] == "resolvida"),
-        "aguardando_aprovacao_minhas": sum(
-            1 for o in ocs if o["status"] == "resolvida" and o["cliente_id"] == user.pk
-        ),
+        "aguardando_aprovacao_minhas": sum(1 for o in ocs if o["status"] == "resolvida" and o["cliente_id"] == user.pk),
         "novas_no_periodo": sum(1 for o in ocs if o["criado_em"] >= ini),
         "resolvidas_no_periodo": sum(1 for r in resolvidas if r["em"] >= ini),
         "tempo_medio_horas": _media([r["horas"] for r in resolvidas if r["em"] >= ini]),

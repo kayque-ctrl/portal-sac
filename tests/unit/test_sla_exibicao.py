@@ -9,7 +9,13 @@ from ocorrencias.sla import calcular_sla
 
 
 def oc(status="aberta", horas=72, prazo=None, restante=None, cumprido=None):
-    return {"status": status, "sla_horas": horas, "sla_prazo": prazo, "sla_restante_ms": restante, "sla_cumprido": cumprido}
+    return {
+        "status": status,
+        "sla_horas": horas,
+        "sla_prazo": prazo,
+        "sla_restante_ms": restante,
+        "sla_cumprido": cumprido,
+    }
 
 
 def em(horas):
@@ -21,9 +27,7 @@ def test_sem_regra_de_sla():
 
 
 @pytest.mark.parametrize("status", ["concluida", "recusada"])
-@pytest.mark.parametrize(
-    ("cumprido", "estado"), [(True, "cumprido"), (False, "estourado"), (None, "sem_sla")]
-)
+@pytest.mark.parametrize(("cumprido", "estado"), [(True, "cumprido"), (False, "estourado"), (None, "sem_sla")])
 def test_encerrada_mostra_se_cumpriu(status, cumprido, estado):
     assert calcular_sla(oc(status=status, cumprido=cumprido)).estado == estado
 

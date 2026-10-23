@@ -175,7 +175,12 @@ def situacao(status, rotulo=None):
     """Situação como ponto colorido + texto (spec 023)."""
     nome = labels.STATUS_LABEL.get(status, status)
     if rotulo == "":  # só o ponto (lista compacta); o nome vai no title
-        return format_html('<span class="sit {}" title="{}"><i aria-hidden="true"></i><span class="sr">{}</span></span>', status, nome, nome)
+        return format_html(
+            '<span class="sit {}" title="{}"><i aria-hidden="true"></i><span class="sr">{}</span></span>',
+            status,
+            nome,
+            nome,
+        )
     return format_html('<span class="sit {}"><i aria-hidden="true"></i>{}</span>', status, rotulo or nome)
 
 

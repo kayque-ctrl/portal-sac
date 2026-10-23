@@ -18,7 +18,10 @@ def test_itens_malformados_equivalem_a_lista_vazia(cliente, itens_json):
 
 
 def test_limite_de_itens_por_ocorrencia(cliente):
-    itens = [{"categoria": "falta", "codigo": str(i), "descricao": "x", "quantidade": 1} for i in range(servicos.MAX_ITENS + 1)]
+    itens = [
+        {"categoria": "falta", "codigo": str(i), "descricao": "x", "quantidade": 1}
+        for i in range(servicos.MAX_ITENS + 1)
+    ]
     r = servicos.criar_ocorrencia(cliente, dados_produtos(itens_json=json.dumps(itens)), [])
     assert r.erro == f"Máximo de {servicos.MAX_ITENS} produtos por ocorrência. Reduza a lista."
 

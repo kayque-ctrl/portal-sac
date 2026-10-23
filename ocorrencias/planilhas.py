@@ -71,7 +71,7 @@ def _achar_coluna(headers: list[str], candidatos: list[str]) -> int:
 
 
 def _ler_csv(texto: str) -> list[list[str]]:
-    linhas = [l for l in texto.splitlines() if l.strip()]
+    linhas = [linha for linha in texto.splitlines() if linha.strip()]
     if not linhas:
         return []
     # Detecta o separador pela primeira linha.

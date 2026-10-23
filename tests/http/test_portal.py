@@ -113,7 +113,10 @@ def test_painel_aguardando_aprovacao_diferencia_minhas_das_de_colegas(abrir, ope
 
 def test_painel_tempo_medio_explica_amostra_pequena(abrir, operador, cliente, entrar):
     http = entrar(cliente)
-    tempo = lambda: {c["label"]: c for c in http.get("/portal/dashboard").context["cartoes"]}["Tempo médio de resolução"]  # noqa: E731
+
+    def tempo():
+        cartoes = http.get("/portal/dashboard").context["cartoes"]
+        return {c["label"]: c for c in cartoes}["Tempo médio de resolução"]
 
     assert tempo()["sub"] == "sem resolvidas no período"
 

@@ -149,14 +149,17 @@ enviado).
 
 `.github/workflows/testes.yml` roda, em todo push para `main` e em todo PR:
 
-1. `makemigrations --check --dry-run` (modelo e migrations em dia);
-2. `pytest --cov` (suíte completa, incluindo a regressão).
+1. `ruff check` e `ruff format --check` (lint e formatação, config em
+   `pyproject.toml`; localmente, `ruff check --fix . && ruff format .` corrige);
+2. `makemigrations --check --dry-run` (modelo e migrations em dia);
+3. `pytest --cov` (suíte completa, incluindo a regressão).
 
 PR com a suíte vermelha não é mesclado.
 
 ## Checklist antes do commit
 
 - [ ] `pytest` verde, sem warnings novos
+- [ ] `ruff check .` e `ruff format --check .` limpos
 - [ ] Teste novo na camada certa; `bug:` com teste em `regressao/`
 - [ ] `pytest --cov` acima do piso
 - [ ] Nenhum teste de regressão removido ou enfraquecido

@@ -15,7 +15,14 @@ def test_paginas_publicas(client, nome):
 
 @pytest.mark.parametrize(
     "url",
-    ["/portal/", "/portal/dashboard", "/portal/dashboard?dias=7", "/portal/nova", "/portal/notificacoes", "/portal/{pk}"],
+    [
+        "/portal/",
+        "/portal/dashboard",
+        "/portal/dashboard?dias=7",
+        "/portal/nova",
+        "/portal/notificacoes",
+        "/portal/{pk}",
+    ],
 )
 def test_telas_do_cliente(url, ocorrencia, cliente, entrar):
     r = entrar(cliente).get(url.format(pk=ocorrencia.pk))

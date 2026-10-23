@@ -90,7 +90,13 @@ def test_papel_desconhecido_vira_cliente(operador, entrar):
 def test_operador_nao_tem_empresa_nem_documento_vinculados(operador, empresa, entrar):
     entrar(operador).post(
         "/operacao/usuarios",
-        {"nome": "Outro Op", "email": "o@x.com", "papel": "operador", "empresa_id": str(empresa.pk), "tipo_pessoa": "pf"},
+        {
+            "nome": "Outro Op",
+            "email": "o@x.com",
+            "papel": "operador",
+            "empresa_id": str(empresa.pk),
+            "tipo_pessoa": "pf",
+        },
     )
     novo = Usuario.objects.get(email="o@x.com")
     assert (novo.empresa, novo.tipo_pessoa) == (None, None)
@@ -115,7 +121,9 @@ def test_cliente_novo_guarda_tipo_documento_e_empresa(operador, empresa, entrar)
 def test_empresa_inexistente_no_cadastro_e_ignorada(operador, entrar):
     import uuid
 
-    entrar(operador).post("/operacao/usuarios", {"nome": "Cli Novo", "email": "c@x.com", "empresa_id": str(uuid.uuid4())})
+    entrar(operador).post(
+        "/operacao/usuarios", {"nome": "Cli Novo", "email": "c@x.com", "empresa_id": str(uuid.uuid4())}
+    )
     assert Usuario.objects.get(email="c@x.com").empresa is None
 
 
@@ -143,13 +151,17 @@ def test_reenviar_convite_pendente(operador, entrar, settings):
 def test_reenviar_convite_de_quem_ja_ativou(cliente, operador, entrar):
     cliente.ativado_em = timezone.now()
     cliente.save()
-    assert entrar(operador).post(f"/operacao/usuarios/{cliente.pk}/reenviar").json() == {"error": "Esse usuário já ativou a conta."}
+    assert entrar(operador).post(f"/operacao/usuarios/{cliente.pk}/reenviar").json() == {
+        "error": "Esse usuário já ativou a conta."
+    }
 
 
 def test_reenviar_convite_de_usuario_inexistente(operador, entrar):
     import uuid
 
-    assert entrar(operador).post(f"/operacao/usuarios/{uuid.uuid4()}/reenviar").json() == {"error": "Usuário não encontrado."}
+    assert entrar(operador).post(f"/operacao/usuarios/{uuid.uuid4()}/reenviar").json() == {
+        "error": "Usuário não encontrado."
+    }
 
 
 def test_reenvio_sem_smtp_informa_a_falha(operador, entrar, settings):
@@ -225,7 +237,9 @@ def test_validacoes_do_aviso(operador, entrar, dados, erro):
 
 def test_aviso_vale_ate_o_fim_do_dia_informado(operador, entrar):
     amanha = (timezone.localdate() + timedelta(days=1)).isoformat()
-    entrar(operador).post("/operacao/avisos", {"titulo": "Aviso", "mensagem": "Teste", "tipo": "alerta", "expira_em": amanha})
+    entrar(operador).post(
+        "/operacao/avisos", {"titulo": "Aviso", "mensagem": "Teste", "tipo": "alerta", "expira_em": amanha}
+    )
 
     aviso = Aviso.objects.get()
     assert aviso.tipo == "alerta"

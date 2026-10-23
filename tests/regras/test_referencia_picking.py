@@ -45,7 +45,9 @@ def test_tipo_de_referencia_desconhecido_continua_recusado(cliente):
 
 
 def test_picking_opcional_na_reclamacao(cliente):
-    oc = servicos.criar_ocorrencia(cliente, dados_reclamacao(referencia_tipo="picking", referencia="77"), []).dados["ocorrencia"]
+    oc = servicos.criar_ocorrencia(cliente, dados_reclamacao(referencia_tipo="picking", referencia="77"), []).dados[
+        "ocorrencia"
+    ]
     assert oc.referencia_formatada == "Picking 77"
 
 
@@ -61,7 +63,12 @@ def test_exportacao_mostra_o_picking(cliente):
 
     from ocorrencias.planilhas import planilha_ocorrencia
 
-    oc = servicos.criar_ocorrencia(cliente, dados_atraso(referencia_tipo="picking", referencia="004512"), []).dados["ocorrencia"]
-    resumo = {linha[0]: linha[1] for linha in load_workbook(BytesIO(planilha_ocorrencia(oc)))["Resumo"].iter_rows(values_only=True)}
+    oc = servicos.criar_ocorrencia(cliente, dados_atraso(referencia_tipo="picking", referencia="004512"), []).dados[
+        "ocorrencia"
+    ]
+    resumo = {
+        linha[0]: linha[1]
+        for linha in load_workbook(BytesIO(planilha_ocorrencia(oc)))["Resumo"].iter_rows(values_only=True)
+    }
 
     assert resumo["Referência"] == "Picking 004512"

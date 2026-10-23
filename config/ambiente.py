@@ -12,7 +12,7 @@ from pathlib import Path
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
-SECRET_DEV = "dev-inseguro-troque-em-producao-0123456789abcdef"
+SECRET_DEV = "dev-inseguro-troque-em-producao-0123456789abcdef"  # noqa: S105 (só para dev; produção exige SECRET_KEY)
 
 # Porta do pooler do Supabase em modo transação (Supavisor).
 PORTA_POOLER_TRANSACAO = 6543

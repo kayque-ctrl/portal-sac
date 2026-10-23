@@ -233,8 +233,10 @@ def test_exportacao_do_painel_respeita_os_filtros(ocorrencia, abrir, estranho, o
     from openpyxl import load_workbook
 
     abrir(por=estranho)
-    r = entrar(operador).get(f"/operacao/painel/export?empresa={empresa.pk}&de=2020-01-01&ate=2099-12-31&tipo=produtos&status=em_analise")
+    r = entrar(operador).get(
+        f"/operacao/painel/export?empresa={empresa.pk}&de=2020-01-01&ate=2099-12-31&tipo=produtos&status=em_analise"
+    )
 
     linhas = list(load_workbook(BytesIO(r.content)).active.iter_rows(values_only=True))
-    assert [l[0] for l in linhas[1:]] == [ocorrencia.protocolo]
+    assert [linha[0] for linha in linhas[1:]] == [ocorrencia.protocolo]
     assert linhas[1][2] == "ACME"

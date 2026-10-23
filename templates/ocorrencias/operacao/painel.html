@@ -1,48 +1,49 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Painel · Operação{% endblock %}
+{% block trilha %}Painel{% endblock %}
 {% block titulo_celular_op %}Painel{% endblock %}
 
 {% block conteudo %}
 <div class="topo">
   <div>
     <h1 class="titulo">Painel</h1>
-    <p class="suave">{{ total }} {{ total|plural:"ocorrência,ocorrências" }} no período</p>
+    <p class="sub">{{ total }} {{ total|plural:"ocorrência,ocorrências" }} no período</p>
   </div>
-  <div class="acoes"><a href="{{ export_href }}" class="btn btn-linha btn-peq">{% icone "download" 15 %} Exportar Excel</a></div>
+  <div class="acoes"><a href="{{ export_href }}" class="btn btn-linha btn-peq">{% icone "download" 14 %} Exportar Excel</a></div>
 </div>
 
 {# Filtros #}
-<form method="get" class="grid grid-cols-2 gap-2.5 lg:flex lg:flex-wrap lg:items-end" x-data @change="$el.requestSubmit()">
-  <div class="campo col-span-2 lg:w-56">
-    <label for="empresa" class="text-[13px]">Empresa</label>
+<form method="get" class="painel filtros" style="align-items: flex-end; border-bottom: 1px solid var(--borda)" x-data @change="$el.requestSubmit()">
+  <div class="campo">
+    <label for="empresa">Empresa</label>
     <select id="empresa" name="empresa" class="in in-peq">
       <option value="">Todas</option>
       {% for e in empresas %}<option value="{{ e.id }}" {% if e.id|stringformat:'s' == filtros.empresa %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
     </select>
   </div>
-  <div class="campo lg:w-48">
-    <label for="status" class="text-[13px]">Situação</label>
+  <div class="campo">
+    <label for="status">Situação</label>
     <select id="status" name="status" class="in in-peq">
       <option value="">Todas</option>
       {% for v, l in status_labels %}<option value="{{ v }}" {% if v == filtros.status %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
   </div>
-  <div class="campo lg:w-52">
-    <label for="tipo" class="text-[13px]">Tipo</label>
+  <div class="campo">
+    <label for="tipo">Tipo</label>
     <select id="tipo" name="tipo" class="in in-peq">
       <option value="">Todos</option>
       {% for v, l in tipo_labels %}<option value="{{ v }}" {% if v == filtros.tipo %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
   </div>
-  <div class="campo lg:w-44"><label for="de" class="text-[13px]">De</label><input id="de" name="de" type="date" value="{{ filtros.de }}" class="in in-peq"></div>
-  <div class="campo lg:w-44"><label for="ate" class="text-[13px]">Até</label><input id="ate" name="ate" type="date" value="{{ filtros.ate }}" class="in in-peq"></div>
+  <div class="campo"><label for="de">De</label><input id="de" name="de" type="date" value="{{ filtros.de }}" class="in in-peq"></div>
+  <div class="campo"><label for="ate">Até</label><input id="ate" name="ate" type="date" value="{{ filtros.ate }}" class="in in-peq"></div>
   <noscript><button type="submit" class="btn btn-preto btn-peq">Aplicar</button></noscript>
-  {% if tem_filtro %}<a href="{% url 'operacao:painel' %}" class="link col-span-2 pb-3 text-sm">Limpar filtros</a>{% endif %}
+  {% if tem_filtro %}<a href="{% url 'operacao:painel' %}" class="link pb-2 text-[13px]">Limpar filtros</a>{% endif %}
 </form>
 
 {# Números #}
-<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+<div class="kpis">
   {% for c in cartoes %}{% include "partials/stat_card.html" with label=c.label valor=c.valor destaque=c.destaque %}{% endfor %}
 </div>
 
@@ -50,42 +51,50 @@
 <div class="card-vazio">Nenhuma ocorrência com os filtros atuais.</div>
 {% else %}
 <div class="grid gap-3 lg:grid-cols-3">
-  <section class="card flex flex-col gap-3" aria-labelledby="g-status">
-    <h2 id="g-status" class="h2" style="font-size: 16px">Por situação</h2>
-    {% for p in graficos.porStatus %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% endfor %}
+  <section class="painel" aria-labelledby="g-status">
+    <h2 id="g-status" class="painel-h">Por situação</h2>
+    <div class="painel-b" style="gap: 10px">
+      {% for p in graficos.porStatus %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% endfor %}
+    </div>
   </section>
-  <section class="card flex flex-col gap-3" aria-labelledby="g-tipo">
-    <h2 id="g-tipo" class="h2" style="font-size: 16px">Por tipo</h2>
-    {% for p in graficos.porTipo %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% endfor %}
+  <section class="painel" aria-labelledby="g-tipo">
+    <h2 id="g-tipo" class="painel-h">Por tipo</h2>
+    <div class="painel-b" style="gap: 10px">
+      {% for p in graficos.porTipo %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% endfor %}
+    </div>
   </section>
-  <section class="card flex flex-col gap-3" aria-labelledby="g-emp">
-    <h2 id="g-emp" class="h2" style="font-size: 16px">Empresas com mais ocorrências</h2>
-    {% for p in graficos.porEmpresa %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% empty %}<p class="text-sm suave">Sem dados de empresa.</p>{% endfor %}
+  <section class="painel" aria-labelledby="g-emp">
+    <h2 id="g-emp" class="painel-h">Empresas com mais ocorrências</h2>
+    <div class="painel-b" style="gap: 10px">
+      {% for p in graficos.porEmpresa %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% empty %}<p class="text-[13.5px] fraco">Sem dados de empresa.</p>{% endfor %}
+    </div>
   </section>
 </div>
 
-<section class="card flex flex-col gap-3" aria-labelledby="g-tempo">
-  <h2 id="g-tempo" class="h2" style="font-size: 16px">Abertas por dia</h2>
-  <ol class="flex h-32 items-end gap-1" aria-label="Ocorrências abertas por dia">
-    {% for p in graficos.porTempo %}
-    <li class="flex h-full min-w-0 max-w-10 flex-1 flex-col justify-end" title="{{ p.label }}: {{ p.valor }}">
-      <span class="block w-full rounded-t-md" style="height: {{ p.pct }}%; min-height: 3px; background: var(--preto)"></span>
-      <span class="mt-1 truncate text-center text-[10.5px] fraco">{{ p.label }}</span>
-    </li>
-    {% endfor %}
-  </ol>
+<section class="painel" aria-labelledby="g-tempo">
+  <h2 id="g-tempo" class="painel-h">Abertas por dia</h2>
+  <div class="painel-b">
+    <ol class="colunas h-32" aria-label="Ocorrências abertas por dia">
+      {% for p in graficos.porTempo %}
+      <li class="flex h-full min-w-0 max-w-10 flex-1 flex-col justify-end" title="{{ p.label }}: {{ p.valor }}">
+        <span class="col" style="height: {{ p.pct }}%"></span>
+        <span class="mt-1 truncate text-center text-[10.5px] fraco">{{ p.label }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
 </section>
 
 {# Tabela por empresa (também serve de visão acessível dos números) #}
-<section class="tbl-box" aria-labelledby="t-emp">
-  <h2 id="t-emp" class="h2 px-3.5 pb-2.5" style="font-size: 16px">Por empresa</h2>
+<section class="painel" aria-labelledby="t-emp">
+  <h2 id="t-emp" class="painel-h">Por empresa</h2>
   <div class="tbl-rola">
     <table class="tabela">
       <thead><tr><th scope="col">Empresa</th><th scope="col" class="text-right">Em aberto</th><th scope="col" class="text-right">Total</th><th scope="col"><span class="sr">Ver</span></th></tr></thead>
       <tbody>
         {% for e in empresas_ordenadas %}
-        <tr><td><strong>{{ e.nome }}</strong></td><td class="mono text-right">{{ e.abertas }}</td><td class="mono text-right">{{ e.total }}</td>
-          <td class="ir">{% if e.id %}<a href="{% url 'operacao:lista' %}?empresa={{ e.id }}" class="link text-sm">Ver ocorrências</a>{% endif %}</td></tr>
+        <tr><td><strong class="font-medium">{{ e.nome }}</strong></td><td class="mono text-right">{{ e.abertas }}</td><td class="mono text-right">{{ e.total }}</td>
+          <td class="ir">{% if e.id %}<a href="{% url 'operacao:lista' %}?empresa={{ e.id }}" class="link text-[13px]">Ver ocorrências</a>{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

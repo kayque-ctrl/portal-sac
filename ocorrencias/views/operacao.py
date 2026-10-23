@@ -233,6 +233,14 @@ def excluir_selecionadas(request):
 # A abertura agora é o primeiro item da linha do tempo (spec 021).
 ABAS_ATENDIMENTO = [("conversa", "Linha do tempo"), ("atender", "Atender")]
 
+# Filtros da linha do tempo no atendimento (spec 030, como no protótipo).
+FILTROS_LINHA_DO_TEMPO = [
+    ("tudo", "Tudo"),
+    ("mensagens", "Mensagens"),
+    ("internas", "Notas internas"),
+    ("documentos", "Documentos"),
+]
+
 
 def _ocorrencia(pk) -> Ocorrencia:
     return get_object_or_404(Ocorrencia.objects.select_related("cliente__empresa", "aprovada_por__empresa"), pk=pk)
@@ -272,6 +280,7 @@ def _render_detalhe(request, oc, **extra):
         "accept": ACCEPT_ATTR,
         "max_anexos": MAX_ANEXOS,
         "abas_celular": ABAS_ATENDIMENTO,
+        "filtros_tl": FILTROS_LINHA_DO_TEMPO,
         "outras_da_empresa": _outras_da_empresa(oc),
         "transportadoras": servicos.transportadoras_para_coleta(cliente.empresa_id),
         **extra,

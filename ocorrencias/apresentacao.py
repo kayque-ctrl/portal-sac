@@ -25,10 +25,20 @@ def preparar_conversa(mensagens, anexos, user, oc, rotulo_cliente: str | None):
 
     for m in mensagens:
         m.sou_eu = m.autor_id == user.pk
+        m.meu_lado = do_meu_lado(m.autor_id == oc.cliente_id, user)
         m.autor_rotulo = _rotulo(m.autor_id, m.autor if user.eh_operacao else None, user, oc, rotulo_cliente)
         m.inicial = (m.autor_rotulo.strip()[:1] or "?").upper()
         m.anexos_lista = por_msg.get(m.pk, [])
     return abertura
+
+
+def do_meu_lado(do_cliente: bool, user) -> bool:
+    """
+    Conversa estilo WhatsApp (spec 030): o que vem do lado de quem vê fica à
+    direita. No portal o lado é o do cliente (inclusive para o colega da
+    empresa que só lê); na mesa, o da operação (qualquer operador).
+    """
+    return do_cliente != user.eh_operacao
 
 
 def _rotulo(autor_id, autor, user, oc, rotulo_cliente) -> str:
@@ -79,6 +89,7 @@ def linha_do_tempo(oc, user, mensagens, anexos, rotulo_cliente: str | None = Non
             "quando": oc.criado_em,
             "autor_rotulo": _rotulo(oc.cliente_id, None, user, oc, rotulo_cliente),
             "anexos": abertura,
+            "meu_lado": do_meu_lado(True, user),
         }
     ]
     itens += [{"tipo": "mensagem", "quando": m.criado_em, "m": m} for m in mensagens]
@@ -97,6 +108,8 @@ def linha_do_tempo(oc, user, mensagens, anexos, rotulo_cliente: str | None = Non
                 "interno": False,
                 # Resumo da resolução: vira o cartão "Solução proposta" (spec 025).
                 "solucao": h.observacao,
+                # A solução vem da operação: à direita na mesa, à esquerda no portal.
+                "meu_lado": do_meu_lado(False, user),
             }
         )
 
@@ -116,4 +129,9 @@ def linha_do_tempo(oc, user, mensagens, anexos, rotulo_cliente: str | None = Non
 
     # sort é estável: no mesmo horário vale a ordem abertura → mensagem → evento.
     itens.sort(key=lambda i: (i["quando"], _ORDEM[i["tipo"]]))
+    # A solução mais recente é a que o cliente aprova ou recusa (spec 030).
+    for item in reversed(itens):
+        if item.get("solucao"):
+            item["atual"] = True
+            break
     return itens

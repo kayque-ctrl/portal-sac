@@ -25,15 +25,19 @@ def pdf(nome="nota.pdf"):
 # ---------------------------------------------------------------- casca
 
 
-def test_cliente_navega_pelo_cabecalho_e_nao_tem_menu_lateral(cliente, entrar):
+def test_cliente_navega_pelo_menu_lateral(cliente, entrar):
+    # Spec 030: o cliente também tem menu lateral (antes, cabeçalho no topo).
     html = corpo(entrar(cliente).get("/portal/"))
-    assert 'class="cab"' in html and 'class="lado"' not in html
+    assert 'class="lado"' in html and 'class="cab"' not in html
+    menu = html[html.index('class="lado"') : html.index("</aside>")]
     for href, rotulo in (
         ("/portal/", "Início"),
+        ("/portal/nova", "Abrir ocorrência"),
         ("/portal/ocorrencias", "Minhas ocorrências"),
         ("/portal/dashboard", "Painel"),
     ):
-        assert f'href="{href}"' in html and rotulo in html
+        assert f'href="{href}"' in menu and rotulo in menu
+    assert "/operacao/" not in menu
 
 
 def test_operacao_tem_menu_lateral_sem_filas(operador, entrar):
@@ -46,11 +50,12 @@ def test_operacao_tem_menu_lateral_sem_filas(operador, entrar):
 
 def test_lista_do_cliente_marca_o_item_do_menu(cliente, entrar):
     html = corpo(entrar(cliente).get("/portal/ocorrencias"))
-    assert 'href="/portal/ocorrencias" aria-current="page"' in html
+    assert 'href="/portal/ocorrencias" class="item" aria-current="page"' in html
 
 
-def test_abrir_ocorrencia_nao_marca_item_do_menu(cliente, entrar):
-    assert entrar(cliente).get("/portal/nova").context["menu_atual"] is None
+def test_abrir_ocorrencia_marca_o_item_do_menu(cliente, entrar):
+    # Spec 030: "Abrir ocorrência" virou item do menu lateral.
+    assert entrar(cliente).get("/portal/nova").context["menu_atual"] == "/portal/nova"
 
 
 # ---------------------------------------------------------------- abertura numa página só

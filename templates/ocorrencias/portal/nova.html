@@ -2,7 +2,7 @@
 {% load ocorrencias_tags %}
 {% block title %}Abrir ocorrência · Portal de Ocorrências{% endblock %}
 {% block titulo_celular %}Abrir ocorrência{% endblock %}
-{% block largura %}estreito{% endblock %}
+{% block trilha %}<a href="/portal/">Início</a> / Abrir ocorrência{% endblock %}
 
 {% block conteudo %}
 {{ config|json_script:"config-nova" }}
@@ -10,13 +10,15 @@
 {% comment %}
 Abertura em etapas (spec 025, estilo GLPI): Assunto → Detalhes → Enviar.
 Cada bloco dos detalhes tem um número; o próximo a preencher fica em
-destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
+destaque (`secaoAtual`) e os seguintes só aparecem quando chega a vez deles
+(`secaoVisivel`, spec 030), para conduzir o usuário sem dúvida sobre o que
+fazer. Em tela larga, a coluna da direita traz ajuda.
 {% endcomment %}
 <div x-data="novaOcorrencia(JSON.parse(document.getElementById('config-nova').textContent), JSON.parse(document.getElementById('inicial-nova').textContent), '{{ tipo_inicial }}')" class="flex flex-col gap-4" x-ref="topo">
 
   <div class="flex flex-col gap-1.5">
-    <a href="{% url 'portal:inicio' %}" class="voltar">{% icone "arrow-left" 16 %} Início</a>
-    <h1 class="titulo md:text-[28px]" x-text="tipo ? config.tipoLabel[tipo] : 'Abrir ocorrência'">Abrir ocorrência</h1>
+    <a href="{% url 'portal:inicio' %}" class="voltar so-cel">{% icone "arrow-left" 16 %} Início</a>
+    <h1 class="titulo" x-text="tipo ? config.tipoLabel[tipo] : 'Abrir ocorrência'">Abrir ocorrência</h1>
     <p class="sub">Leva cerca de 2 minutos. Os marcados com <span class="obg" aria-hidden="true">*</span> são obrigatórios.</p>
   </div>
 
@@ -43,19 +45,20 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
     </div>
   </div>
 
-  <form method="post" enctype="multipart/form-data" @submit="onEnviar" @envio-cancelado="enviando = false" data-anexos-limite="{% limite_upload %}" class="flex flex-col gap-4">
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+  <form method="post" enctype="multipart/form-data" @submit="onEnviar" @envio-cancelado="enviando = false" data-anexos-limite="{% limite_upload %}" class="flex min-w-0 flex-col gap-4">
     {% csrf_token %}
     <input type="hidden" name="tipo" :value="tipo">
     <input type="hidden" name="referencia_tipo" :value="refTipo">
     <input type="hidden" name="itens_json" :value="itensJson">
 
     {# ---------- Etapa 1: assunto (só se não veio do cartão) ---------- #}
-    <section x-show="tipo === ''" class="card secao atual flex flex-col gap-3" aria-labelledby="t-tipo">
-      <div><h2 id="t-tipo" class="secao-num">Selecione uma opção abaixo <span class="obg" aria-hidden="true">*</span></h2><p class="ajuda">Ao escolher, mostramos só os campos daquele assunto.</p></div>
-      <div class="tipos" style="grid-template-columns: 1fr">
+    <section x-show="tipo === ''" class="card secao atual flex flex-col" aria-labelledby="t-tipo">
+      <div class="cab-sec"><span class="num-sec" aria-hidden="true">1</span><div><h2 id="t-tipo" class="secao-num">Selecione uma opção abaixo <span class="obg" aria-hidden="true">*</span></h2><p class="ajuda">Ao escolher, mostramos só os campos daquele assunto.</p></div></div>
+      <div class="tipos lista" style="margin: 0">
         {% for t in config.tipos %}
-        <button type="button" @click="escolherTipo('{{ t.valor }}')" :aria-pressed="tipo === '{{ t.valor }}'" class="tipo" style="flex-direction: row; align-items: center; padding: 14px">
-          <span class="circ {{ t.valor }}">{% icone t.icone 22 %}</span>
+        <button type="button" @click="escolherTipo('{{ t.valor }}')" :aria-pressed="tipo === '{{ t.valor }}'" class="tipo">
+          <span class="circ {{ t.valor }}">{% icone t.icone 18 %}</span>
           <span class="txt"><strong>{{ t.label }}</strong><span class="desc">{{ t.ajuda }}</span></span>
           <span class="fraco">{% icone "chevron-right" 18 %}</span>
         </button>
@@ -78,7 +81,7 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
             <div class="min-w-0 flex-1">
               <h2 id="t-ref" class="secao-num">Referência (Nota Fiscal, Pedido ou Picking)
                 <span x-show="exigeReferencia"><span class="obg" aria-hidden="true">*</span></span>
-                <span x-show="!exigeReferencia" class="text-base font-medium suave">(opcional)</span>
+                <span x-show="!exigeReferencia" class="font-normal fraco">(opcional)</span>
               </h2>
               <p class="ajuda">Escolha uma opção e digite o número que está no documento.</p>
             </div>
@@ -101,7 +104,7 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
         </section>
 
         {# 2. Produtos #}
-        <section x-show="categoriaComProduto" class="card secao flex flex-col gap-3.5" :class="classeSecao('produtos')" aria-labelledby="t-prod" x-ref="secProdutos">
+        <section x-show="categoriaComProduto && secaoVisivel('produtos')" x-transition.opacity.duration.200ms class="card secao flex flex-col gap-3.5" :class="classeSecao('produtos')" aria-labelledby="t-prod" x-ref="secProdutos">
           <div class="cab-sec">
             <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('produtos')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('produtos')">2</span></span>
             <div class="min-w-0 flex-1">
@@ -109,14 +112,12 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
               <p class="ajuda">Adicione um de cada vez: escolha o motivo e preencha os dados do produto.</p>
             </div>
           </div>
-          <p x-show="!podeLancarProdutos" class="motivo">{% icone "info" 16 %} <span>Informe a referência (Nota Fiscal, Pedido ou Picking) acima para lançar os produtos.</span></p>
-
           <ul x-show="itens.length > 0" class="flex flex-col gap-2">
             <template x-for="(it, i) in itens" :key="i">
               <li class="produto" :style="editandoIndex === i ? 'border-color: var(--preto)' : ''">
                 <span class="cat" :class="config.categoriaBadge[it.categoria] || ''" x-text="rotuloItem(it)"></span>
                 <span x-show="it.codigo" class="mono text-sm suave" x-text="it.codigo"></span>
-                <strong class="min-w-0 flex-1 truncate" :class="config.categoriaTexto[it.categoria] || config.textoPadrao" x-text="it.descricao"></strong>
+                <strong class="min-w-0 flex-1 break-words" :class="config.categoriaTexto[it.categoria] || config.textoPadrao" x-text="it.descricao"></strong>
                 <span class="mono font-bold" :class="sinal(it) === 'pos' ? 'text-green-700 dark:text-green-400' : sinal(it) === 'neg' ? 'text-red-700 dark:text-red-400' : ''" x-text="(sinal(it) === 'pos' ? '+' : sinal(it) === 'neg' ? '−' : '') + it.quantidade"></span>
                 <button type="button" @click="editarProduto(i)" class="x" :aria-label="'Editar ' + it.descricao">{% icone "pencil" 16 %}</button>
                 <button type="button" @click="removerProduto(i)" class="x" :aria-label="'Remover ' + it.descricao">{% icone "trash-2" 16 %}</button>
@@ -124,7 +125,7 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
             </template>
           </ul>
 
-          <div x-show="podeLancarProdutos" class="card-plano flex flex-col gap-3">
+          <div x-show="podeLancarProdutos" class="form-produto flex flex-col gap-3" :class="itens.length && 'com-itens'">
             <strong x-text="editandoIndex !== null ? 'Editar produto' : (itens.length ? 'Adicionar outro produto' : 'Adicionar produto')">Adicionar produto</strong>
             <div class="campo motivo-produto">
               <label for="categoria-produto">Motivo <span class="obg" aria-hidden="true">*</span></label>
@@ -169,13 +170,13 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
         </section>
 
         {# 3. Fotos e documentos #}
-        <section class="card secao flex flex-col gap-3" :class="classeSecao('anexos')" aria-labelledby="t-anexos" x-ref="secAnexos" @anexos-mudaram="anexosFotos = $event.detail.fotos; anexosQtd = $event.detail.quantidade; if (anexosFotos > 0) anexoErro = null">
+        <section x-show="secaoVisivel('anexos')" x-transition.opacity.duration.200ms class="card secao flex flex-col gap-3" :class="classeSecao('anexos')" aria-labelledby="t-anexos" x-ref="secAnexos" @anexos-mudaram="anexosFotos = $event.detail.fotos; anexosQtd = $event.detail.quantidade; if (anexosFotos > 0) anexoErro = null">
           <div class="cab-sec">
             <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('anexos')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('anexos')" x-text="categoriaComProduto ? 3 : 2">3</span></span>
             <div class="min-w-0 flex-1">
               <h2 id="t-anexos" class="secao-num">Fotos e documentos
                 <span x-show="precisaFoto"><span class="obg" aria-hidden="true">*</span></span>
-                <span x-show="!precisaFoto" class="text-base font-medium suave">(opcional)</span>
+                <span x-show="!precisaFoto" class="font-normal fraco">(opcional)</span>
               </h2>
               <p class="ajuda">
                 <span x-show="precisaFoto">Pelo menos 1 foto da avaria, do produto vencido ou do volume trocado. A mesma foto pode mostrar vários produtos.</span>
@@ -192,25 +193,24 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
         </section>
 
         {# 4. Comentário: obrigatório fora de "Produtos"; em "Produtos", atrás de um botão (ponto 9) #}
-        <section class="card secao flex flex-col gap-2" :class="classeSecao('desc')" aria-labelledby="t-desc" x-ref="secDesc">
+        <section x-show="secaoVisivel('desc')" x-transition.opacity.duration.200ms class="card secao flex flex-col gap-2" :class="classeSecao('desc')" aria-labelledby="t-desc" x-ref="secDesc">
+          <div class="cab-sec">
+            <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('desc')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('desc')" x-text="categoriaComProduto ? 4 : 3">3</span></span>
+            <div class="min-w-0 flex-1">
+              <label for="descricao" id="t-desc" class="secao-num block">
+                <span x-text="categoriaComProduto ? 'Comentário' : 'Conte o que aconteceu'">Conte o que aconteceu</span>
+                <span x-show="!categoriaComProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="categoriaComProduto" class="font-normal fraco">(opcional)</span>
+              </label>
+              <p x-show="!categoriaComProduto || comentarioAberto" class="ajuda">Descreva o que aconteceu, quando e como<span x-show="!categoriaComProduto"> (mínimo de 10 caracteres)</span>.</p>
+            </div>
+          </div>
           <template x-if="categoriaComProduto && !comentarioAberto">
             <div class="flex flex-wrap items-center gap-3">
-              <span class="num-sec" aria-hidden="true">4</span>
-              <button type="button" id="t-desc" @click="abrirComentario()" class="btn btn-linha btn-peq">{% icone "message-square-plus" 16 %} Adicionar comentário</button>
-              <span class="text-sm suave">Opcional: algo que os produtos não explicam.</span>
+              <button type="button" @click="abrirComentario()" class="btn btn-linha btn-peq">{% icone "message-square-plus" 15 %} Adicionar comentário</button>
+              <span class="text-[13px] fraco">Algo que os produtos não explicam.</span>
             </div>
           </template>
           <div x-show="!categoriaComProduto || comentarioAberto" class="flex flex-col gap-2">
-            <div class="cab-sec">
-              <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('desc')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('desc')" x-text="categoriaComProduto ? 4 : 3">3</span></span>
-              <div class="min-w-0 flex-1">
-                <label for="descricao" class="secao-num block">
-                  <span x-text="categoriaComProduto ? 'Comentário' : 'Conte o que aconteceu'">Conte o que aconteceu</span>
-                  <span x-show="!categoriaComProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="categoriaComProduto" class="text-base font-medium suave">(opcional)</span>
-                </label>
-                <p class="ajuda">Descreva o que aconteceu, quando e como<span x-show="!categoriaComProduto"> (mínimo de 10 caracteres)</span>.</p>
-              </div>
-            </div>
             <textarea id="descricao" name="descricao" x-ref="descricao" x-model="descricaoGeral" @input="descricaoErro = null" rows="4" placeholder="Ex.: A entrega estava prevista para segunda e chegou na quarta, com duas caixas amassadas."
               class="in" :style="descricaoErro ? 'border-color: var(--perigo)' : ''"></textarea>
             <p x-show="!categoriaComProduto" class="text-right text-xs" :class="descricaoGeral.trim().length >= 10 ? 'text-green-700 dark:text-green-400' : 'fraco'" x-text="descricaoGeral.trim().length + ' de 10 caracteres mínimos'"></p>
@@ -219,7 +219,7 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
         </section>
 
         {# Resumo: só se a pessoa quiser ver (ponto 4) #}
-        <div class="flex flex-col gap-2">
+        <div x-show="prontoParaEnviar" x-transition.opacity.duration.200ms class="flex flex-col gap-2">
           <button type="button" @click="verResumo = !verResumo" :aria-expanded="verResumo" aria-controls="resumo-envio" class="link self-start text-sm" style="color: var(--preto)">
             <span x-text="verResumo ? 'Esconder resumo' : 'Ver resumo antes de enviar'">Ver resumo antes de enviar</span>
           </button>
@@ -239,14 +239,38 @@ destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
 
     {% include "partials/erro.html" %}
 
-    <p x-show="!podeAvancar" class="motivo" data-motivo-bloqueio>
-      {% icone "info" 16 %} <span x-text="motivoBloqueio"></span>
-    </p>
-    <div class="flex flex-wrap items-center gap-3">
-      <button type="submit" :disabled="enviando || !podeAvancar" :title="motivoBloqueio" class="btn btn-preto btn-grande flex-1 sm:flex-none sm:min-w-60" x-text="enviando ? 'Enviando…' : 'Enviar ocorrência'">Enviar ocorrência</button>
-      <a href="{% url 'portal:inicio' %}" class="btn btn-linha btn-grande">Cancelar</a>
+    {# Envio: só depois de escolher o assunto (no passo 1 basta escolher uma opção). #}
+    <div x-show="tipo !== ''" x-cloak class="flex flex-col gap-3">
+      <p x-show="!prontoParaEnviar" class="motivo" data-motivo-bloqueio>
+        {% icone "info" 16 %} <span x-text="motivoBloqueio"></span>
+      </p>
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" :disabled="enviando || !prontoParaEnviar" :title="motivoBloqueio" class="btn btn-preto btn-grande flex-1 sm:flex-none sm:min-w-60" x-text="enviando ? 'Enviando…' : 'Enviar ocorrência'">Enviar ocorrência</button>
+        <a href="{% url 'portal:inicio' %}" class="btn btn-linha btn-grande">Cancelar</a>
+      </div>
+      <p class="text-[13px] fraco">Rascunho salvo neste aparelho. Você recebe o protocolo na hora.</p>
     </div>
-    <p class="text-[13.5px] fraco">Rascunho salvo neste aparelho. Você recebe o protocolo na hora.</p>
   </form>
+
+  {# Ajuda (tela larga): o que ter em mãos e o que acontece depois #}
+  <aside class="hidden flex-col gap-3 lg:sticky lg:top-16 lg:flex" aria-label="Ajuda">
+    <section class="painel" aria-labelledby="aj-maos">
+      <h2 id="aj-maos" class="painel-h">O que ter em mãos</h2>
+      <ul class="painel-b list-disc text-[13.5px] suave" style="gap: 6px; padding-left: 32px">
+        <li>Número da nota fiscal, do pedido ou do picking</li>
+        <li>Código, descrição e quantidade de cada produto</li>
+        <li>Foto da etiqueta, da caixa e do produto avariado</li>
+      </ul>
+    </section>
+    <section class="painel" aria-labelledby="aj-depois">
+      <h2 id="aj-depois" class="painel-h">O que acontece depois</h2>
+      <ol class="painel-b list-decimal text-[13.5px] suave" style="gap: 6px; padding-left: 32px">
+        <li>Você recebe o protocolo na hora.</li>
+        <li>A operação responde por aqui e por e-mail.</li>
+        <li>Quando resolver, você aprova ou recusa a solução.</li>
+      </ol>
+    </section>
+  </aside>
+  </div>
 </div>
 {% endblock %}

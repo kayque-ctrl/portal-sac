@@ -1,23 +1,24 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}{{ empresa.nome }} · Operação{% endblock %}
+{% block trilha %}<a href="/operacao/empresas">Empresas</a> / {{ empresa.nome }}{% endblock %}
 {% block titulo_celular_op %}{{ empresa.nome }}{% endblock %}
 
 {% block conteudo %}
-<a href="{% url 'operacao:empresas' %}" class="voltar -mb-2">{% icone "arrow-left" 16 %} Empresas</a>
+<a href="{% url 'operacao:empresas' %}" class="voltar so-cel">{% icone "arrow-left" 16 %} Empresas</a>
 <div class="topo">
   <div>
     <h1 class="titulo">{{ empresa.nome }}</h1>
-    <p class="suave">{{ contato }}</p>
+    <p class="sub">{{ contato }}</p>
   </div>
   <div class="acoes"><a href="{% url 'operacao:lista' %}?empresa={{ empresa.pk }}" class="btn btn-linha btn-peq">Ver ocorrências da empresa</a></div>
 </div>
 
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-  <section aria-labelledby="t-membros" class="tbl-box min-w-0">
-    <h2 id="t-membros" class="h2 px-3.5 pb-2.5" style="font-size: 16px">Clientes vinculados · {{ membros|length }}</h2>
+  <section aria-labelledby="t-membros" class="painel">
+    <h2 id="t-membros" class="painel-h">Clientes vinculados <span class="fraco" style="font-weight: 400">· {{ membros|length }}</span></h2>
     {% if not membros %}
-    <p class="px-3.5 pb-3 text-sm suave">Nenhum cliente vinculado a esta empresa ainda.</p>
+    <p class="p-6 text-center text-[13.5px] fraco">Nenhum cliente vinculado a esta empresa ainda.</p>
     {% else %}
     <div class="tbl-rola">
       <table class="tabela">
@@ -44,51 +45,57 @@
     {% endif %}
   </section>
 
-  <div class="flex flex-col gap-4">
-  {# Prazo (SLA) que vale para a empresa (spec 026) #}
-  <section aria-labelledby="t-prazo" class="card flex flex-col gap-2.5" data-prazo-empresa>
-    <h2 id="t-prazo" class="h2 flex items-center gap-2">{% icone "timer" 17 %} Prazo (SLA)</h2>
-    <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
-      {% for p in prazos %}
-      <dt>{{ p.tipo }}</dt>
-      <dd class="text-right"><strong class="mono">{% if p.horas %}{{ p.horas }} h{% else %}sem prazo{% endif %}</strong> <span class="text-[12.5px] suave">· {% if p.proprio %}desta empresa{% else %}padrão{% endif %}</span></dd>
-      {% endfor %}
-    </dl>
-    {% if user.eh_admin %}<a href="{% url 'operacao:sla' %}?empresa={{ empresa.pk }}" class="link text-sm" style="color: var(--preto)">Configurar prazo desta empresa</a>{% endif %}
-  </section>
-
-  <section aria-labelledby="t-transp" class="card flex flex-col gap-2.5" data-transportadoras-empresa>
-    <h2 id="t-transp" class="h2 flex items-center gap-2">{% icone "truck" 17 %} Transportadoras</h2>
-    {% for t in transportadoras %}
-    <a href="{% url 'operacao:transportadora_detalhe' t.pk %}" class="flex items-center gap-2 text-sm" style="text-decoration: none; color: var(--tinta)">
-      <strong class="min-w-0 flex-1 truncate">{{ t.nome }}</strong><span class="mono text-[13px] suave">{{ t.email }}</span>{% if not t.ativa %}<span class="etq">Inativa</span>{% endif %}
-    </a>
-    {% empty %}
-    <p class="text-sm suave">Nenhuma transportadora ligada. A coleta pede o e-mail na hora.</p>
-    {% endfor %}
-    <a href="{% url 'operacao:transportadoras' %}" class="link text-sm" style="color: var(--preto)">Gerenciar transportadoras</a>
-  </section>
-
-  <section aria-labelledby="t-add" class="card flex flex-col gap-3.5">
-    <h2 id="t-add" class="h2">Vincular cliente</h2>
-    <p class="ajuda">Clientes da mesma empresa veem as ocorrências uns dos outros, só para leitura.</p>
-    {% if not candidatos %}
-    <p class="text-sm suave">Não há outros clientes cadastrados para vincular.</p>
-    {% else %}
-    <form method="post" class="flex flex-col gap-3">
-      {% csrf_token %}
-      <input type="hidden" name="acao" value="vincular">
-      <div class="campo">
-        <label for="v-cliente">Cliente <span class="obg" aria-hidden="true">*</span></label>
-        <select id="v-cliente" name="userId" required class="in">
-          <option value="" disabled selected>Selecione um cliente</option>
-          {% for c in candidatos %}<option value="{{ c.pk }}">{{ c.nome }}{% if c.email and c.email != c.nome %} ({{ c.email }}){% endif %}{% if c.empresa_id %} — já em outra empresa{% endif %}</option>{% endfor %}
-        </select>
+  <div class="flex flex-col gap-3">
+    {# Prazo (SLA) que vale para a empresa (spec 026) #}
+    <section aria-labelledby="t-prazo" class="painel" data-prazo-empresa>
+      <h2 id="t-prazo" class="painel-h">Prazo (SLA)</h2>
+      <div class="painel-b">
+        <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5 text-[13.5px]">
+          {% for p in prazos %}
+          <dt>{{ p.tipo }}</dt>
+          <dd class="text-right"><strong class="mono">{% if p.horas %}{{ p.horas }} h{% else %}sem prazo{% endif %}</strong> <span class="text-[12px] fraco">· {% if p.proprio %}desta empresa{% else %}padrão{% endif %}</span></dd>
+          {% endfor %}
+        </dl>
+        {% if user.eh_admin %}<a href="{% url 'operacao:sla' %}?empresa={{ empresa.pk }}" class="link text-[13px] self-start">Configurar prazo desta empresa</a>{% endif %}
       </div>
-      <button type="submit" class="btn btn-preto">Vincular à empresa</button>
-    </form>
-    {% endif %}
-  </section>
+    </section>
+
+    <section aria-labelledby="t-transp" class="painel" data-transportadoras-empresa>
+      <h2 id="t-transp" class="painel-h">Transportadoras</h2>
+      <div class="painel-b" style="gap: 8px">
+        {% for t in transportadoras %}
+        <a href="{% url 'operacao:transportadora_detalhe' t.pk %}" class="flex items-center gap-2 text-[13.5px]" style="text-decoration: none; color: var(--tinta)">
+          <strong class="min-w-0 flex-1 truncate font-medium">{{ t.nome }}</strong><span class="mono text-[12.5px] fraco">{{ t.email }}</span>{% if not t.ativa %}<span class="etq">Inativa</span>{% endif %}
+        </a>
+        {% empty %}
+        <p class="text-[13.5px] fraco">Nenhuma transportadora ligada. A coleta pede o e-mail na hora.</p>
+        {% endfor %}
+        <a href="{% url 'operacao:transportadoras' %}" class="link text-[13px] self-start">Gerenciar transportadoras</a>
+      </div>
+    </section>
+
+    <section aria-labelledby="t-add" class="painel">
+      <h2 id="t-add" class="painel-h">Vincular cliente</h2>
+      <div class="painel-b">
+        <p class="ajuda">Clientes da mesma empresa veem as ocorrências uns dos outros, só para leitura.</p>
+        {% if not candidatos %}
+        <p class="text-[13.5px] fraco">Não há outros clientes cadastrados para vincular.</p>
+        {% else %}
+        <form method="post" class="flex flex-col gap-3">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="vincular">
+          <div class="campo">
+            <label for="v-cliente">Cliente <span class="obg" aria-hidden="true">*</span></label>
+            <select id="v-cliente" name="userId" required class="in">
+              <option value="" disabled selected>Selecione um cliente</option>
+              {% for c in candidatos %}<option value="{{ c.pk }}">{{ c.nome }}{% if c.email and c.email != c.nome %} ({{ c.email }}){% endif %}{% if c.empresa_id %} — já em outra empresa{% endif %}</option>{% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-preto self-start">Vincular à empresa</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
   </div>
 </div>
 {% endblock %}

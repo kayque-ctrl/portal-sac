@@ -1,6 +1,7 @@
 {% load ocorrencias_tags %}
+{# Parâmetro opcional: rotulo (padrão "Reabrir"; na solução proposta, "Recusar e reabrir"). #}
 <form method="post" action="{% url 'portal:reabrir' oc.pk %}" x-data="confirmar" @submit="interceptar">
   {% csrf_token %}
-  <button type="submit" class="btn btn-linha">{% icone "rotate-ccw" 16 %} Reabrir</button>
+  <button type="submit" class="btn btn-linha">{% icone "rotate-ccw" 15 %} {{ rotulo|default:"Reabrir" }}</button>
   {% include "partials/modal.html" with titulo="Reabrir a ocorrência?" mensagem="Ela volta para 'Em tratativa' e você poderá enviar mensagens novamente." rotulo="Reabrir" %}
 </form>

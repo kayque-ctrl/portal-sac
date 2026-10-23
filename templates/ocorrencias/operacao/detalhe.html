@@ -2,12 +2,14 @@
 {% load ocorrencias_tags %}
 {% block title %}{{ oc.protocolo }} · Operação{% endblock %}
 {% block titulo_celular_op %}{{ oc.protocolo }}{% endblock %}
+{% block trilha %}<a href="/operacao/">Ocorrências</a> / <span class="mono">{{ oc.protocolo }}</span>{% endblock %}
 
 {% block conteudo %}
 {% sla_info oc as sla %}
-<div class="flex flex-wrap items-center gap-2">
-  <a href="{% url 'operacao:lista' %}" class="voltar">{% icone "arrow-left" 16 %} Ocorrências</a>
-  <span class="fraco">/</span><span class="mono">{{ oc.protocolo }}</span>
+<div class="flex flex-wrap items-center gap-3">
+  <a href="{% url 'operacao:lista' %}" class="voltar so-cel">{% icone "arrow-left" 16 %} Ocorrências</a>
+  <h1 class="titulo so-pc min-w-0"><span class="mono fraco" style="font-weight: 500">{{ oc.protocolo }}</span> {{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</h1>
+  <span class="selo {{ oc.status }} so-pc"><span class="ponto {{ oc.status }}" aria-hidden="true"></span>{{ oc.status|status_label }}</span>
   <div class="ml-auto flex flex-wrap items-center gap-2">
     <a href="{% url 'operacao:exportar' oc.pk %}" class="btn btn-linha btn-peq">{% icone "download" 15 %} Exportar</a>
     {% if oc.excluida_em %}
@@ -53,10 +55,10 @@
     <aside class="m-campos lateral" id="painel-atender" role="tabpanel" aria-labelledby="aba-atender" :class="aba === 'atender' ? '' : 'max-md:hidden'">
       <form method="post" action="{% url 'operacao:atualizar' oc.pk %}" @submit="onSubmit"
         x-data="controles({ status: '{{ oc.status }}', statusPedido: '{{ status_pedido|default:oc.status|escapejs }}', resolucao: '{{ resolucao_valor|default:''|escapejs }}', atribuido: '{{ oc.atribuido_a_id|default_if_none:'' }}', temTratativa: {{ tem_tratativa|yesno:'true,false' }} })"
-        class="card flex flex-col gap-3" style="padding: 18px">
+        class="painel">
         {% csrf_token %}
-        <h1 class="so-pc text-lg font-extrabold leading-tight">{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</h1>
-        <p class="so-pc text-[13px] fraco">Aberta em {{ oc.criado_em|data }}</p>
+        <h2 class="painel-h">Ocorrência <span class="dir fraco">aberta em {{ oc.criado_em|data }}</span></h2>
+        <div class="painel-b">
         <div class="campo">
           <label for="status">Situação</label>
           <select id="status" name="status" x-model="statusSel" class="in in-peq">
@@ -86,15 +88,15 @@
           </select>
         </div>
         <div class="prazo-card">
-          <span class="text-[13px] font-bold">Prazo (SLA)</span>
-          <strong class="text-lg" {% if sla.vencido %}style="color: var(--perigo)"{% endif %}>{% if sla.estado == "sem_sla" %}Sem prazo{% else %}{{ sla.label }}{% endif %}</strong>
+          <span class="flex justify-between gap-2"><span class="fraco">Prazo (SLA)</span><strong class="font-semibold" {% if sla.vencido %}style="color: var(--perigo)"{% endif %}>{% if sla.estado == "sem_sla" %}Sem prazo{% else %}{{ sla.label }}{% endif %}</strong></span>
           {% if sla.pct is not None %}<span class="barra" aria-hidden="true"><span style="width: {{ sla.pct }}%{% if sla.vencido %}; background: var(--perigo){% endif %}"></span></span>{% endif %}
         </div>
         <p x-show="bloqueado" x-cloak class="ajuda" style="color: var(--laranja-tinta)">Para mudar a situação, <span x-text="faltando"></span>.</p>
         {% if controles_erro %}<p role="alert" class="caixa-erro">{{ controles_erro }}</p>{% endif %}
         {% for m in messages %}{% if 'controles' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
-        <button type="submit" :disabled="bloqueado" class="btn btn-preto btn-peq">Salvar alterações</button>
+        <button type="submit" :disabled="bloqueado" class="btn btn-preto">Salvar alterações</button>
         <p class="text-[12.5px] fraco">Cada mudança aparece na linha do tempo.</p>
+        </div>
 
         <template x-teleport="body">
           <div x-show="modal" x-cloak class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 animate-fadein sm:items-center" @click.self="modal = false" @keydown.escape.window="modal = false">
@@ -112,12 +114,14 @@
     </aside>
 
     {# ---------- Linha do tempo ---------- #}
-    <section class="m-tl card overflow-hidden" id="painel-conversa" role="tabpanel" aria-labelledby="aba-conversa" :class="aba === 'conversa' ? '' : 'max-md:hidden'" style="padding: 0">
-      <div class="flex items-center gap-2 border-b px-4 py-3" style="border-color: var(--linha)">
-        <h2 class="h2" style="font-size: 16px">Linha do tempo</h2>
-        <span class="ml-auto text-[13px] fraco">mais novo embaixo</span>
+    <section class="m-tl painel overflow-hidden" id="painel-conversa" role="tabpanel" aria-labelledby="aba-conversa" :class="aba === 'conversa' ? '' : 'max-md:hidden'" x-data="{ filtro: 'tudo' }">
+      <div class="painel-h">
+        <h2 class="h2">Linha do tempo</h2>
+        <div role="group" aria-label="Filtrar linha do tempo" class="dir filtro-tl" data-filtros-tl>
+          {% for chave, rotulo in filtros_tl %}<button type="button" :aria-pressed="filtro === '{{ chave }}'" @click="filtro = '{{ chave }}'">{{ rotulo }}</button>{% endfor %}
+        </div>
       </div>
-      <div class="tl-rolagem" x-data x-init="$nextTick(() => { $el.scrollTop = $el.scrollHeight })">
+      <div class="tl-rolagem" :data-filtro="filtro" x-init="$nextTick(() => { $el.scrollTop = $el.scrollHeight })">
         {% include "ocorrencias/partials/linha_do_tempo.html" %}
       </div>
       {% if encerrada %}
@@ -130,39 +134,26 @@
 
     {# ---------- Cliente e contexto ---------- #}
     <aside class="m-info lateral" :class="aba === 'atender' ? '' : 'max-md:hidden'">
-      <section aria-labelledby="cl-tit" class="card flex flex-col gap-3" style="padding: 18px">
-        <h2 id="cl-tit" class="rot" style="font-size: 13px">Pessoas</h2>
-        <div class="pessoa">
-          <span class="av grande" aria-hidden="true">{{ oc.cliente.nome|iniciais }}</span>
-          <div class="min-w-0"><strong class="block truncate">{{ oc.cliente.nome|default:"—" }}</strong><span class="papel">Solicitante{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %}</span></div>
+      <section aria-labelledby="cl-tit" class="painel">
+        <h2 id="cl-tit" class="painel-h">Pessoas</h2>
+        <div class="painel-b">
+          <dl class="def">
+            <dt>Solicitante</dt><dd>{{ oc.cliente.nome|default:"—" }}</dd>
+            {% if oc.cliente.empresa %}<dt>Empresa</dt><dd>{{ oc.cliente.empresa.nome }}</dd>{% endif %}
+            <dt>E-mail</dt><dd>{{ oc.cliente.email|default:"—" }}</dd>
+            {% if oc.cliente.telefone %}<dt>Telefone</dt><dd>{{ oc.cliente.telefone }}</dd>{% endif %}
+            {% if oc.cliente.documento %}<dt>Documento</dt><dd class="mono">{{ oc.cliente.documento }}</dd>{% endif %}
+            <dt>Responsável</dt><dd>{% if oc.atribuido_a %}{% if oc.atribuido_a_id == user.pk %}Você{% else %}{{ oc.atribuido_a.nome }}{% endif %}{% else %}<span class="fraco">Sem responsável</span>{% endif %}</dd>
+          </dl>
         </div>
-        <div class="pessoa">
-          <span class="av grande op" aria-hidden="true">{% if oc.atribuido_a %}{{ oc.atribuido_a.nome|iniciais }}{% else %}{% icone "user" 18 %}{% endif %}</span>
-          <div class="min-w-0"><strong class="block truncate">{% if oc.atribuido_a %}{% if oc.atribuido_a_id == user.pk %}Você{% else %}{{ oc.atribuido_a.nome }}{% endif %}{% else %}Sem responsável{% endif %}</strong><span class="papel">Responsável na operação</span></div>
-        </div>
-        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[13.5px]">
-          <dt class="fraco">E-mail</dt><dd class="min-w-0 break-words">{{ oc.cliente.email|default:"—" }}</dd>
-          {% if oc.cliente.telefone %}<dt class="fraco">Telefone</dt><dd>{{ oc.cliente.telefone }}</dd>{% endif %}
-          {% if oc.cliente.documento %}<dt class="fraco">Documento</dt><dd class="mono">{{ oc.cliente.documento }}</dd>{% endif %}
-        </dl>
       </section>
-
-      {% if outras_da_empresa %}
-      <section aria-labelledby="ou-tit" class="card flex flex-col gap-2" style="padding: 18px" data-outras-da-empresa>
-        <h2 id="ou-tit" class="rot" style="font-size: 13px">Outras {% if oc.cliente.empresa %}da {{ oc.cliente.empresa.nome }}{% else %}deste cliente{% endif %}</h2>
-        {% for o in outras_da_empresa %}
-        <a href="{% url 'operacao:detalhe' o.pk %}" class="flex items-center gap-2 text-sm" style="text-decoration: none">
-          <span class="mono fraco">{{ o.protocolo|slice:"-6:" }}</span><span class="min-w-0 flex-1 truncate">{{ o.tipo|tipo_label }}</span>{% situacao o.status "" %}
-        </a>
-        {% endfor %}
-      </section>
-      {% endif %}
 
       {# Coleta (spec 025, ponto 13): as transportadoras da empresa do cliente vêm primeiro #}
       {% with da_empresa=transportadoras.0 outras=transportadoras.1 %}
-      <form method="post" action="{% url 'operacao:coleta' oc.pk %}" x-data="{ enviando: false, escolha: '{% if da_empresa %}{{ da_empresa.0.pk }}{% endif %}' }" @submit="enviando = true" class="card flex flex-col gap-2.5" style="padding: 18px" data-coleta>
+      <form method="post" action="{% url 'operacao:coleta' oc.pk %}" x-data="{ enviando: false, escolha: '{% if da_empresa %}{{ da_empresa.0.pk }}{% endif %}' }" @submit="enviando = true" class="painel" data-coleta>
         {% csrf_token %}
-        <h2 class="rot flex items-center gap-2" style="font-size: 13px">{% icone "truck" 15 %} Solicitar coleta</h2>
+        <h2 class="painel-h">Solicitar coleta</h2>
+        <div class="painel-b" style="gap: 8px">
         {% if da_empresa or outras %}
         <label for="transportadora" class="text-[13px] font-semibold">Transportadora</label>
         <select id="transportadora" name="transportadora" x-model="escolha" class="in in-peq">
@@ -190,9 +181,24 @@
         <span class="text-[12.5px] fraco">Envia um e-mail padrão e registra como comentário interno.</span>
         {% if coleta_erro %}<p role="alert" class="caixa-erro">{{ coleta_erro }}</p>{% endif %}
         {% for m in messages %}{% if 'coleta' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
-        <button type="submit" :disabled="enviando" class="btn btn-linha btn-peq" x-text="enviando ? 'Enviando…' : 'Enviar pedido'">Enviar pedido</button>
+        <button type="submit" :disabled="enviando" class="btn btn-linha" x-text="enviando ? 'Enviando…' : 'Enviar pedido de coleta'">Enviar pedido de coleta</button>
+        </div>
       </form>
       {% endwith %}
+
+      {% if outras_da_empresa %}
+      <section aria-labelledby="ou-tit" class="painel" data-outras-da-empresa>
+        <h2 id="ou-tit" class="painel-h">Outras {% if oc.cliente.empresa %}da {{ oc.cliente.empresa.nome }}{% else %}deste cliente{% endif %}</h2>
+        <div class="py-1.5">
+        {% for o in outras_da_empresa %}
+        <a href="{% url 'operacao:detalhe' o.pk %}" class="flex items-center gap-2 px-3.5 py-1.5 text-[13px]" style="text-decoration: none; color: var(--tinta)">
+          <span class="mono fraco">{{ o.protocolo|slice:"-6:" }}</span><span class="min-w-0 flex-1 truncate">{{ o.tipo|tipo_label }}</span>{% situacao o.status "" %}
+        </a>
+        {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
     </aside>
   </div>
 </div>

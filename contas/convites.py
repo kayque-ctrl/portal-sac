@@ -27,7 +27,7 @@ def usuario_do_token(uid: str, token: str) -> Usuario | None:
     try:
         pk = force_str(urlsafe_base64_decode(uid))
         user = Usuario.objects.get(pk=pk, is_active=True)
-    except TypeError, ValueError, OverflowError, ValidationError, Usuario.DoesNotExist:
+    except (TypeError, ValueError, OverflowError, ValidationError, Usuario.DoesNotExist):
         return None
     return user if default_token_generator.check_token(user, token) else None
 

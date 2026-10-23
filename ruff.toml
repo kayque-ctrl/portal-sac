@@ -1,11 +1,14 @@
-[tool.ruff]
+# Configuração do ruff. Fica aqui, e não no pyproject.toml: com um
+# pyproject.toml a Vercel instala as dependências dele no lugar do
+# requirements.txt, e a função subia sem o Django (bug 028).
+
 # A Vercel roda Python 3.12 (bug 027): o ruff não pode usar sintaxe mais nova.
 target-version = "py312"
 # O código já seguia ~120 colunas; o formatador cuida das quebras.
 line-length = 120
 extend-exclude = ["*/migrations/*"]
 
-[tool.ruff.lint]
+[lint]
 # E/W pycodestyle · F pyflakes · I imports · B bugbear · UP pyupgrade
 # DJ django · S segurança (bandit) · SIM simplificações
 select = ["E", "W", "F", "I", "B", "UP", "DJ", "S", "SIM"]
@@ -17,6 +20,6 @@ ignore = [
     "SIM103", # cadeia de if/return True é mais legível em uploads.py
 ]
 
-[tool.ruff.lint.per-file-ignores]
+[lint.per-file-ignores]
 # assert é o próprio pytest; senhas fixas são dados de teste.
 "tests/**" = ["S101", "S105", "S106"]

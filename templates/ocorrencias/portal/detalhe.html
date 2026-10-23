@@ -23,29 +23,25 @@ esquerda) e o painel com detalhes e pessoas.
 
 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
   <div class="flex min-w-0 flex-col gap-4">
-    {# Aprovação / desfecho #}
+    {# Aprovação: fica na solução proposta, dentro da linha do tempo (spec 030). #}
     {% if oc.status == "resolvida" %}
-    <section class="card aprovar-card flex flex-col gap-3" aria-labelledby="t-conf" data-aprovacao>
-      <div class="flex flex-wrap items-center gap-3">
+      {% if somente_leitura %}
+      <p class="motivo">{% icone "clock" 15 %}<span>A operação propôs uma solução. Aguardando a aprovação de <strong style="color: var(--tinta)">{{ responsavel_nome }}</strong>.</span></p>
+      {% elif not solucao %}
+      {# Resolvida antes do resumo existir: sem solução na linha do tempo, os botões ficam aqui. #}
+      <section class="card aprovar-card flex flex-wrap items-center gap-3" aria-labelledby="t-conf" data-aprovacao>
         <div class="min-w-0 flex-1">
-          <h2 id="t-conf" class="h2">A operação propôs uma solução. Ela resolve?</h2>
-          <p class="text-sm suave">{% if somente_leitura %}Aguardando a aprovação de {{ responsavel_nome }}.{% else %}Só você, que abriu, pode aprovar. Se faltar algo, reabra.{% endif %}</p>
+          <h2 id="t-conf" class="h2">A operação resolveu. Deu tudo certo?</h2>
+          <p class="text-[13px] fraco">Se faltar algo, recuse e a ocorrência volta para a operação.</p>
         </div>
-      </div>
-      {% if solucao %}
-      <div class="solucao" style="max-width: none"><div class="topo-sol">{% icone "check-circle-2" 16 %} Solução proposta</div><div class="txt-sol">{{ solucao }}</div></div>
-      {% endif %}
-      {% if not somente_leitura %}
-      <div class="flex flex-wrap gap-2">
         <form method="post" action="{% url 'portal:aprovar' oc.pk %}" x-data="confirmar" @submit="interceptar">
           {% csrf_token %}
-          <button type="submit" class="btn btn-verde">{% icone "check" 16 %} Resolveu, aprovar</button>
+          <button type="submit" class="btn btn-verde">{% icone "check" 15 %} Aprovar solução</button>
           {% include "partials/modal.html" with titulo="Aprovar a solução?" mensagem="A ocorrência será encerrada como resolvida." rotulo="Aprovar" %}
         </form>
-        {% include "ocorrencias/portal/partials/botao_reabrir.html" %}
-      </div>
+        {% include "ocorrencias/portal/partials/botao_reabrir.html" with rotulo="Recusar e reabrir" %}
+      </section>
       {% endif %}
-    </section>
     {% elif oc.status == "concluida" or oc.status == "recusada" %}
     <section class="card {% if oc.status == 'recusada' %}card-perigo{% endif %} flex flex-col gap-2">
       <p class="font-bold" {% if oc.status == 'recusada' %}style="color: var(--perigo)"{% endif %}>{% if oc.status == "concluida" %}Ocorrência resolvida. A conversa está encerrada.{% else %}Ocorrência recusada. A conversa está encerrada.{% endif %}</p>
@@ -60,7 +56,7 @@ esquerda) e o painel com detalhes e pessoas.
     {# Conversa (linha do tempo, specs 021, 023 e 025) #}
     <section aria-labelledby="tl-tit" class="painel overflow-hidden">
       <div class="painel-h">
-        <h2 id="tl-tit" class="h2">Conversa</h2>
+        <h2 id="tl-tit" class="h2">Linha do tempo</h2>
         <span class="dir fraco">mais novo embaixo</span>
       </div>
       <div class="tl-rolagem" x-data x-init="$nextTick(() => { $el.scrollTop = $el.scrollHeight })">
@@ -69,7 +65,7 @@ esquerda) e o painel com detalhes e pessoas.
       {% if somente_leitura %}
         <div class="compositor"><p class="text-center text-sm suave">Somente {{ responsavel_nome }} pode responder nesta ocorrência.</p></div>
       {% elif oc.bloqueada %}
-        <div class="compositor"><p class="text-center text-sm suave">Conversa encerrada.{% if oc.status == "resolvida" %} Para responder, use <strong>Reabrir</strong> no cartão acima.{% endif %}</p></div>
+        <div class="compositor"><p class="text-[13px] fraco">{% if oc.status == "resolvida" %}A conversa reabre se você recusar a solução.{% else %}Conversa encerrada.{% endif %}</p></div>
       {% else %}
         {% url 'portal:mensagem' oc.pk as acao_msg %}
         {% include "ocorrencias/partials/mensagem_form.html" with action=acao_msg permite_nota_interna=False avisa_bump=False %}

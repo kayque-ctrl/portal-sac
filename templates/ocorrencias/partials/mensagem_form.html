@@ -12,29 +12,29 @@ deixa de avisar o cliente (dá para reenviar), nunca vaza um comentário.
 
   {% if permite_nota_interna %}
   <input type="hidden" name="interna" :value="interna ? 'on' : ''">
-  <div class="flex flex-wrap items-center gap-2">
-    <div role="tablist" aria-label="Tipo de mensagem" class="seg">
-      <button type="button" role="tab" :aria-selected="interna" @click="interna = true" class="modo-interno">{% icone "lock" 14 %} Comentário interno</button>
-      <button type="button" role="tab" :aria-selected="!interna" @click="interna = false">{% icone "eye" 14 %} Responder ao cliente</button>
-    </div>
-    <span class="ml-auto text-[13px] font-bold" :style="interna ? 'color: var(--laranja-tinta)' : 'color: var(--suave)'">
-      <span x-show="interna">Só a operação vê</span>
-      <span x-show="!interna" x-cloak>O cliente vê e recebe por e-mail</span>
-    </span>
+  {# Abas como no protótipo (spec 030): "Responder ao cliente" | "Comentário interno". #}
+  <div role="tablist" aria-label="Tipo de mensagem" class="abas-resp">
+    <button type="button" role="tab" :aria-selected="!interna" @click="interna = false">Responder ao cliente</button>
+    <button type="button" role="tab" :aria-selected="interna" @click="interna = true" class="modo-interno">{% icone "lock" 13 %} Comentário interno</button>
   </div>
   {% endif %}
 
   <label class="sr" for="conteudo-{{ action|slugify }}">Mensagem</label>
-  <textarea id="conteudo-{{ action|slugify }}" name="conteudo" rows="2" class="in" :class="interna && 'interno'" style="min-height: 64px"
+  <textarea id="conteudo-{{ action|slugify }}" name="conteudo" rows="3" class="in" :class="interna && 'interno'" style="min-height: 72px"
     :placeholder="interna ? 'Escreva um comentário interno (só a operação vê)…' : '{% if permite_nota_interna %}Escreva a resposta para o cliente…{% else %}Escreva uma mensagem para a operação…{% endif %}'">{{ msg_conteudo|default:'' }}</textarea>
-
-  {% include "partials/lista_anexos.html" with id_campo="anexos-mensagem" compacto=True %}
 
   {% if msg_erro %}<p role="alert" class="caixa-erro">{{ msg_erro }}</p>{% endif %}
   <p data-erro-upload hidden role="alert" class="caixa-erro"></p>
   {% for m in messages %}{% if 'mensagem' in m.tags %}<p role="alert" class="caixa-erro" style="color: var(--aviso-tinta); background: var(--aviso)">{{ m }}</p>{% endif %}{% endfor %}
 
-  <div class="flex justify-end">
+  <div class="flex flex-wrap items-start gap-2">
+    <div class="min-w-0 flex-1">{% include "partials/lista_anexos.html" with id_campo="anexos-mensagem" compacto=True %}</div>
+    {% if permite_nota_interna %}
+    <span class="self-center text-[12.5px]" :style="interna ? 'color: var(--laranja-tinta)' : 'color: var(--fraco)'">
+      <span x-show="interna">O cliente não vê.</span>
+      <span x-show="!interna" x-cloak>O cliente vê e recebe por e-mail.</span>
+    </span>
+    {% endif %}
     <button type="submit" :disabled="enviando" class="btn" :class="interna ? 'btn-laranja' : 'btn-preto'"
       x-text="enviando ? 'Enviando…' : (interna ? 'Salvar comentário interno' : (permiteNotaInterna ? 'Enviar ao cliente' : 'Enviar'))">Enviar</button>
   </div>

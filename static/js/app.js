@@ -575,7 +575,8 @@ document.addEventListener("alpine:init", () => {
       if (!inicial) {
         try {
           const d = JSON.parse(lerStorage(this.DRAFT_KEY) || "null");
-          if (d && (d.tipo || d.referencia || (d.itens?.length ?? 0) > 0 || d.descricao)) this.rascunho = d;
+          // Só o assunto escolhido não é rascunho: precisa ter algo preenchido (spec 030).
+          if (d && (d.referencia || (d.itens?.length ?? 0) > 0 || d.descricao)) this.rascunho = d;
         } catch {
           /* rascunho inválido */
         }
@@ -608,6 +609,10 @@ document.addEventListener("alpine:init", () => {
         return "Para continuar, escolha a referência (Nota Fiscal, Pedido ou Picking) e informe o número.";
       if (this.exigeReferencia && this.referencia.trim() === "")
         return `Para continuar, informe o ${this.config.referencias[this.refTipo].campo.toLowerCase()}.`;
+      // Os passos seguintes (spec 030): o aviso aponta o bloco que falta.
+      if (this.secaoAtual === "produtos") return "Para continuar, adicione pelo menos um produto.";
+      if (this.secaoAtual === "anexos") return "Para continuar, anexe pelo menos uma foto do problema.";
+      if (this.secaoAtual === "desc") return "Para continuar, descreva o que aconteceu (pelo menos 10 caracteres).";
       return "";
     },
     /** Bloco preenchido (ganha o "check"). Os opcionais só quando têm conteúdo. */
@@ -627,6 +632,15 @@ document.addEventListener("alpine:init", () => {
       if (this.precisaFoto && this.anexosFotos === 0) return "anexos";
       if (!this.categoriaComProduto && this.descricaoGeral.trim().length < 10) return "desc";
       return null;
+    },
+    /**
+     * Um bloco por vez (spec 030): aparece quando os obrigatórios anteriores
+     * estão preenchidos. Com tudo pronto, todos ficam à vista.
+     */
+    secaoVisivel(s) {
+      const ordem = ["ref", ...(this.categoriaComProduto ? ["produtos"] : []), "anexos", "desc"];
+      const atual = this.secaoAtual;
+      return atual === null || ordem.indexOf(s) <= ordem.indexOf(atual);
     },
     get prontoParaEnviar() {
       return this.tipo !== "" && this.secaoAtual === null;
@@ -659,7 +673,7 @@ document.addEventListener("alpine:init", () => {
 
     // ----- rascunho -----
     salvarRascunho() {
-      const vazio = !this.tipo && !this.referencia && this.itens.length === 0 && !this.descricaoGeral;
+      const vazio = !this.referencia && this.itens.length === 0 && !this.descricaoGeral;
       gravarStorage(
         this.DRAFT_KEY,
         vazio
@@ -703,7 +717,8 @@ document.addEventListener("alpine:init", () => {
         this.comentarioAberto = false;
       }
       this.$nextTick(() => {
-        this.$refs.topo?.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Rola a página toda: com scrollIntoView o título ficava debaixo da barra fixa do topo.
+        window.scrollTo({ top: 0, behavior: "smooth" });
         const alvo = novo ? this.$root.querySelector(".segmentos button") : this.$root.querySelector(".tipo");
         alvo?.focus({ preventScroll: true });
       });

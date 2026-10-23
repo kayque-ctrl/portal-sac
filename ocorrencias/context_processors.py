@@ -13,6 +13,7 @@ MENU_OPERACAO = [
         "Cadastros",
         [
             ("/operacao/empresas", "Empresas", "building-2"),
+            ("/operacao/transportadoras", "Transportadoras", "truck"),
             ("/operacao/usuarios", "Usuários", "users"),
             ("/operacao/avisos", "Avisos", "megaphone"),
             ("/operacao/contatos", "Contatos", "mail"),

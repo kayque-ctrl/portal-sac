@@ -15,12 +15,13 @@ usa chave primária UUID.
 | `OcorrenciaItem` | ocorrencias | Produto lançado numa ocorrência do tipo `produtos`; `sinal_volume` (falta/sobra) só na troca de volume |
 | `Mensagem` | ocorrencias | Conversa cliente ↔ operação; `interna=True` é nota só da operação |
 | `Anexo` | ocorrencias | Arquivo da abertura ou de uma mensagem |
-| `HistoricoStatus` | ocorrencias | Auditoria de cada troca de status (consulta pública e KPIs) |
+| `HistoricoStatus` | ocorrencias | Auditoria de cada troca de status (consulta pública e KPIs); `observacao` guarda o resumo da resolução (spec 025) |
 | `EventoOcorrencia` | ocorrencias | Troca de responsável e prioridade, arquivamento e lixeira, na linha do tempo (só a operação vê) |
 | `Notificacao` | ocorrencias | Notificação in-app para um destinatário |
 | `Aviso` | ocorrencias | Aviso do painel do portal (`info`/`alerta`), com validade opcional |
 | `ContatoEncaminhamento` | ocorrencias | E-mail que recebe as novas reclamações/sugestões |
-| `SlaRegra` | ocorrencias | Prazo em horas por tipo e/ou prioridade (nulo = qualquer) |
+| `Transportadora` | ocorrencias | Transportadora da coleta (nome, e-mail, telefone, ativa) e as empresas que ela atende (spec 025) |
+| `SlaRegra` | ocorrencias | Prazo em horas por empresa, tipo e/ou prioridade (nulo = qualquer; empresa nula = padrão; spec 026) |
 | `ProtocoloSeq` | ocorrencias | Contador do protocolo (linha única, travada com `select_for_update`) |
 
 ## Enums
@@ -62,7 +63,9 @@ Ocorrencia 1───N Anexo              (anexos da abertura têm mensagem nula
 Ocorrencia 1───N HistoricoStatus
 Ocorrencia 1───N EventoOcorrencia N───1 Usuario (autor; nulo = sistema)
 Ocorrencia 1───N Notificacao N───1 Usuario (destinatario)
-SlaRegra  ── tipo + prioridade ──► sla_horas / sla_prazo da Ocorrencia
+SlaRegra  ── empresa + tipo + prioridade ──► sla_horas / sla_prazo da Ocorrencia
+SlaRegra N───0..1 Empresa           (nula = padrão de todas)
+Transportadora N───N Empresa        (as que ela atende; sugeridas na coleta)
 ```
 
 Cuidado com a palavra "responsável": em `Ocorrencia.atribuido_a` é o
@@ -100,14 +103,17 @@ atendente da **operação**; no portal do cliente (lista e painel) é o
 ### No `Ocorrencia.save(por=...)` (antes eram triggers)
 
 - **Protocolo** `AAAA-NNNNNN` na criação.
-- **SLA na criação:** `SlaRegra.horas_para(tipo, prioridade)`; a regra mais
-  específica vence, e prioridade pesa mais que tipo.
+- **SLA na criação:** `SlaRegra.horas_para(tipo, prioridade, empresa_id)`;
+  a regra mais específica vence: a da empresa do cliente pesa mais que o
+  padrão, depois a prioridade, depois o tipo (spec 026). A migration 0007
+  deixou só o padrão geral de 72 h (a prioridade saiu das telas).
 - **SLA nas trocas de status:**
   - ativo → `resolvida`: pausa e guarda o tempo restante;
   - `resolvida` → ativo: retoma do tempo restante;
   - → `concluida`/`recusada`: marca `sla_cumprido`;
   - reabertura a partir de `concluida`/`recusada`: reinicia o prazo.
-- **Histórico:** registra cada troca, com `alterado_por = por`.
+- **Histórico:** registra cada troca, com `alterado_por = por` e a
+  `observacao` recebida em `save(por=..., observacao=...)` (resumo da resolução).
 - **Eventos** (spec 021): troca de responsável (guarda os nomes), de
   prioridade, arquivar/desarquivar e lixeira/restaurar gravam um
   `EventoOcorrencia` com `autor = por`, comparando com os valores lidos do
@@ -123,6 +129,10 @@ atendente da **operação**; no portal do cliente (lista e painel) é o
   ao menos uma mensagem pública que não seja do cliente (`tem_tratativa`).
 - A operação não define `concluida`; isso é aprovação do cliente.
 - `recusada` exige `motivo_recusa`, que é limpo ao sair de `recusada`.
+- Ir para `resolvida` exige `resolucao` (resumo, mínimo 10 caracteres),
+  gravado em `HistoricoStatus.observacao`, mostrado como "Solução proposta"
+  e enviado no e-mail ao cliente (spec 025).
+- `prioridade` é opcional no pedido: sem ela, fica a atual (spec 025).
 - Toda mudança de status feita pela operação envia e-mail ao cliente.
 - Mensagem pública da operação numa ocorrência `aberta` muda o status para
   `em_analise`; toda resposta pública da operação envia e-mail ao cliente.
@@ -131,7 +141,9 @@ atendente da **operação**; no portal do cliente (lista e painel) é o
 - Só a operação marca nota interna; o cliente nunca a vê, nem os anexos
   dela.
 - "Solicitar coleta" envia e-mail à transportadora e **sempre** grava uma
-  nota interna como trilha de auditoria.
+  nota interna como trilha de auditoria. A transportadora pode vir do
+  cadastro (`transportadora_id`, só ativas; as da empresa do cliente vêm
+  primeiro, `transportadoras_para_coleta`) ou ser um e-mail avulso.
 
 ### Cliente
 

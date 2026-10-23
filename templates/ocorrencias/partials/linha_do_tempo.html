@@ -48,6 +48,16 @@ filtrado para o cliente: aqui só se decide a aparência.
   {% endfor %}
   {% endwith %}
 
+  {% elif item.solucao %}
+  {# Solução proposta (spec 025, como no GLPI): o resumo que a operação escreveu ao resolver. #}
+  <li data-item="solucao" class="flex flex-col gap-2">
+    <div class="ev"><span class="pt">{% icone "refresh-cw" 14 %}</span><span><strong>{{ item.autor_rotulo }}</strong> · {{ item.texto }} · {{ item.quando|hora }}</span></div>
+    <div class="solucao">
+      <div class="topo-sol">{% icone "check-circle-2" 16 %} Solução proposta</div>
+      <div class="txt-sol">{{ item.solucao }}</div>
+    </div>
+  </li>
+
   {% else %}
   <li data-item="{% if item.interno %}evento-interno{% else %}evento{% endif %}" class="ev">
     <span class="pt">{% icone item.icone 14 %}</span>

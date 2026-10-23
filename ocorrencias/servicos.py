@@ -9,15 +9,17 @@ para uma futura API (ver docs/05-roadmap-api.md do projeto original).
 
 import json
 import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
 from django.utils.html import escape
 
-from contas.models import Papel
+from contas.models import Empresa, Papel
 
 from . import emails
 from .labels import (
@@ -28,10 +30,10 @@ from .labels import (
     CATEGORIAS_EXIGEM_FOTO,
     ITEM_CATEGORIA_LABEL,
     ITEM_CATEGORIAS,
+    REFERENCIA_FORM,
     STATUS_BLOQUEADOS,
     STATUS_LABEL,
     TIPOS_FORM,
-    REFERENCIA_FORM,
     EventoTipo,
     Prioridade,
     ReferenciaTipo,
@@ -39,7 +41,15 @@ from .labels import (
     Status,
     formatar_referencia,
 )
-from .models import Anexo, ContatoEncaminhamento, EventoOcorrencia, Mensagem, Ocorrencia, OcorrenciaItem
+from .models import (
+    Anexo,
+    ContatoEncaminhamento,
+    EventoOcorrencia,
+    Mensagem,
+    Ocorrencia,
+    OcorrenciaItem,
+    Transportadora,
+)
 from .permissoes import colegas_da_empresa, ocorrencias_visiveis
 from .uploads import validar_arquivos
 
@@ -109,7 +119,7 @@ def _preparar_itens(itens_json: str) -> tuple[list[dict], str | None]:
         brutos = json.loads(itens_json or "[]")
         if not isinstance(brutos, list):
             brutos = []
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError, TypeError:
         brutos = []
     if len(brutos) > MAX_ITENS:
         return [], f"Máximo de {MAX_ITENS} produtos por ocorrência. Reduza a lista."
@@ -125,7 +135,7 @@ def _preparar_itens(itens_json: str) -> tuple[list[dict], str | None]:
         descricao = str(it.get("descricao") or "").strip()
         try:
             quantidade = int(it.get("quantidade"))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             quantidade = 0
 
         # "Troca de volume": o cliente não abriu o produto, então código,
@@ -305,6 +315,9 @@ def adicionar_mensagem(user, oc, conteudo: str, interna: bool, arquivos) -> Resu
 # A operação NÃO define "concluida" — isso é a aprovação do cliente.
 STATUS_OPERACAO = [Status.ABERTA, Status.EM_ANALISE, Status.RESOLVIDA, Status.RECUSADA]
 
+# Tamanho mínimo do resumo da resolução (spec 025).
+MIN_RESOLUCAO = 10
+
 
 def tem_tratativa(oc) -> bool:
     """Já existe mensagem (não interna) da operação para o cliente?"""
@@ -316,9 +329,11 @@ def atualizar_ocorrencia(user, oc, dados) -> Resultado:
         return Resultado("Apenas a operação pode alterar ocorrências.")
 
     status = dados.get("status", "")
-    prioridade = dados.get("prioridade", "")
+    # A prioridade saiu das telas (spec 025): sem ela no pedido, fica a atual.
+    prioridade = dados.get("prioridade") or oc.prioridade
     atribuido = dados.get("atribuido_a") or None
     motivo = (dados.get("motivo_recusa") or "").strip()
+    resolucao = (dados.get("resolucao") or "").strip()
 
     if status not in STATUS_OPERACAO:
         return Resultado("Status inválido.")
@@ -332,9 +347,7 @@ def atualizar_ocorrencia(user, oc, dados) -> Resultado:
         from contas.models import Usuario
 
         try:
-            responsavel = Usuario.objects.filter(
-                pk=atribuido, papel__in=[Papel.OPERADOR, Papel.ADMIN]
-            ).first()
+            responsavel = Usuario.objects.filter(pk=atribuido, papel__in=[Papel.OPERADOR, Papel.ADMIN]).first()
         except ValidationError:  # id que nem é UUID (formulário adulterado)
             responsavel = None
         if responsavel is None:
@@ -352,18 +365,21 @@ def atualizar_ocorrencia(user, oc, dados) -> Resultado:
             faltando.append("pelo menos uma mensagem registrada para o cliente")
         if faltando:
             return Resultado(f"Não é possível mudar o status: falta {' e '.join(faltando)}.")
+        # Ir para "Aguardando aprovação" pede o resumo do que foi feito (spec 025).
+        if status == Status.RESOLVIDA and len(resolucao) < MIN_RESOLUCAO:
+            return Resultado(f"Escreva o resumo da resolução (pelo menos {MIN_RESOLUCAO} caracteres).")
 
     oc.status = status
     oc.prioridade = prioridade
     oc.atribuido_a = responsavel
     # Guarda o motivo só quando recusada; limpa ao sair de recusada.
     oc.motivo_recusa = motivo if status == Status.RECUSADA else None
-    oc.save(por=user)
+    oc.save(por=user, observacao=resolucao if mudou_status and status == Status.RESOLVIDA else None)
 
     if mudou_status:
         extra = ""
         if status == Status.RESOLVIDA:
-            extra = " Ela aguarda sua aprovação."
+            extra = f" Ela aguarda sua aprovação.<br><br><strong>Resumo da resolução:</strong> {escape(resolucao)}"
         elif status == Status.RECUSADA:
             extra = f" Motivo: {escape(motivo)}"
         rotulo = STATUS_LABEL[status]
@@ -379,12 +395,67 @@ def atualizar_ocorrencia(user, oc, dados) -> Resultado:
     return Resultado()
 
 
-def solicitar_coleta(user, oc, email_transportadora: str) -> Resultado:
+def _uuid(valor) -> str | None:
+    try:
+        return str(uuid.UUID(str(valor)))
+    except ValueError:
+        return None
+
+
+def _email_valido(email: str) -> bool:
+    try:
+        validate_email(email)
+    except ValidationError:
+        return False
+    return True
+
+
+def salvar_transportadora(user, dados, transportadora=None) -> Resultado:
+    """Cria ou edita uma transportadora e as empresas que ela atende (spec 025)."""
+    if not user.eh_operacao:
+        return Resultado("Apenas a operação pode cadastrar transportadoras.")
+    nome = (dados.get("nome") or "").strip()
+    email = (dados.get("email") or "").strip().lower()
+    if len(nome) < 2:
+        return Resultado("Informe o nome da transportadora.")
+    if not _email_valido(email):
+        return Resultado("Informe um e-mail válido.")
+
+    lista = dados.getlist("empresas") if hasattr(dados, "getlist") else dados.get("empresas", [])
+    ids = [i for i in (_uuid(v) for v in lista) if i]
+    t = transportadora or Transportadora()
+    t.nome = nome[:120]
+    t.email = email
+    t.telefone = (dados.get("telefone") or "").strip()[:40] or None
+    with transaction.atomic():
+        t.save()
+        t.empresas.set(Empresa.objects.filter(pk__in=ids))
+    return Resultado(dados={"transportadora": t})
+
+
+def transportadoras_para_coleta(empresa_id) -> tuple[list, list]:
+    """Ativas: as que atendem a empresa do cliente primeiro, depois as outras."""
+    ativas = list(Transportadora.objects.filter(ativa=True).prefetch_related("empresas"))
+    da_empresa = [t for t in ativas if empresa_id and any(e.pk == empresa_id for e in t.empresas.all())]
+    return da_empresa, [t for t in ativas if t not in da_empresa]
+
+
+def solicitar_coleta(user, oc, email_transportadora: str, transportadora_id=None) -> Resultado:
+    """Pede a coleta por e-mail: a uma transportadora cadastrada ou a um e-mail avulso."""
     if not user.eh_operacao:
         return Resultado("Apenas a operação pode solicitar coleta.")
-    email = (email_transportadora or "").strip()
-    if "@" not in email:
-        return Resultado("Informe um e-mail válido da transportadora.")
+    destino = None
+    if transportadora_id:
+        pk = _uuid(transportadora_id)
+        t = Transportadora.objects.filter(pk=pk, ativa=True).first() if pk else None
+        if t is None:
+            return Resultado("Transportadora inválida.")
+        email, destino = t.email, f"{t.nome} ({t.email})"
+    else:
+        email = (email_transportadora or "").strip()
+        if "@" not in email:
+            return Resultado("Informe um e-mail válido da transportadora.")
+    destino = destino or email
 
     ref = formatar_referencia(oc.referencia_tipo, oc.referencia)
     ref_texto = f" ({escape(ref)})" if ref else ""
@@ -403,9 +474,9 @@ def solicitar_coleta(user, oc, email_transportadora: str) -> Resultado:
         autor=user,
         interna=True,
         conteudo=(
-            f"Solicitação de coleta enviada para {email}."
+            f"Solicitação de coleta enviada para {destino}."
             if enviado
-            else f"Solicitação de coleta registrada para {email} (envio de e-mail não confirmado — "
+            else f"Solicitação de coleta registrada para {destino} (envio de e-mail não confirmado — "
             "verifique a configuração de SMTP)."
         ),
     )

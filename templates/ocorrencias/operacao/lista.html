@@ -15,6 +15,21 @@
 
 {% for m in messages %}{% if not m.extra_tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
 
+{# Filtros prontos e contadores por situação (spec 025, estilo GLPI) #}
+<nav aria-label="Filtros prontos" class="prontos">
+  {% for rotulo, url, ativo in prontos %}
+  <a href="{{ url }}" class="pilula" {% if ativo %}aria-current="page"{% endif %}>{{ rotulo }}</a>
+  {% endfor %}
+</nav>
+<div class="contadores" data-contadores>
+  {% for c in contadores %}
+  <a href="{{ c.url }}" class="contador {% if c.chave == 'vencido' and c.n %}perigo{% endif %}" {% if c.chave == status or c.chave == 'vencido' and prazo %}aria-current="true"{% endif %}>
+    <span class="rot-c"><span class="ponto {{ c.chave }}" aria-hidden="true"></span>{{ c.rotulo }}</span>
+    <span class="v">{{ c.n }}</span>
+  </a>
+  {% endfor %}
+</div>
+
 {# Abas de situação #}
 <nav class="abas" aria-label="Situação">
   {% for aba in abas %}
@@ -32,6 +47,7 @@
 <form method="get" class="grid gap-2 lg:flex lg:flex-wrap lg:items-center" x-data @change="$el.requestSubmit()">
   <input type="hidden" name="situacao" value="{{ situacao }}">
   {% if cliente %}<input type="hidden" name="cliente" value="{{ cliente }}">{% endif %}
+  {% if prazo %}<input type="hidden" name="prazo" value="{{ prazo }}">{% endif %}
   <label class="busca lg:min-w-60 lg:flex-1">
     {% icone "search" 18 %}<span class="sr">Buscar</span>
     <input id="busca" type="search" name="q" value="{{ q }}" placeholder="Buscar por protocolo, cliente, NF, pedido ou picking">
@@ -108,7 +124,7 @@
   <section class="tbl-box so-pc">
     <div class="tbl-rola">
       <table class="tabela">
-        <thead><tr><th scope="col">Protocolo</th><th scope="col">Cliente</th><th scope="col">Ocorrência</th><th scope="col">Situação</th><th scope="col">Prioridade</th><th scope="col">Prazo</th><th scope="col">Responsável</th></tr></thead>
+        <thead><tr><th scope="col">Protocolo</th><th scope="col">Cliente</th><th scope="col">Ocorrência</th><th scope="col">Situação</th><th scope="col">Prazo</th><th scope="col">Responsável</th></tr></thead>
         <tbody>
           {% for oc in pagina.object_list %}
           <tr>
@@ -116,7 +132,6 @@
             <td><strong>{{ oc.cliente.nome|default:"Cliente" }}</strong>{% if oc.cliente.empresa %}<br><span class="text-[13px] suave">{{ oc.cliente.empresa.nome }}</span>{% endif %}</td>
             <td><a href="{% url 'operacao:detalhe' oc.pk %}" style="text-decoration: none">{{ oc.tipo|tipo_label }}</a>{% if oc.referencia %}<br><span class="mono text-[12.5px] suave">{{ oc|referencia }}</span>{% endif %}</td>
             <td>{% situacao oc.status %}</td>
-            <td><span class="etq {% if oc.prioridade == 'alta' %}alta{% endif %}">{{ oc.prioridade|prioridade_label }}</span></td>
             <td>{% prazo oc %}</td>
             <td class="suave">{% if oc.atribuido_a_id %}{% if oc.atribuido_a_id == user.pk %}Você{% else %}{{ oc.atribuido_a.nome }}{% endif %}{% else %}—{% endif %}</td>
           </tr>
@@ -134,7 +149,7 @@
         <div class="flex items-center gap-2"><span class="mono text-[13px] suave">{{ oc.protocolo }}</span><span class="ml-auto">{% situacao oc.status %}</span></div>
         <strong class="text-base">{{ oc.tipo|tipo_label }}</strong>
         <span class="text-sm suave">{{ oc.cliente.nome|default:"Cliente" }}{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %}</span>
-        <div class="flex items-center gap-2 text-[13px]">{% prazo oc %}<span class="etq ml-auto {% if oc.prioridade == 'alta' %}alta{% endif %}" style="font-size: 12px">{{ oc.prioridade|prioridade_label }}</span></div>
+        <div class="flex items-center gap-2 text-[13px]">{% prazo oc %}<span class="ml-auto suave">{% if oc.atribuido_a_id %}{% if oc.atribuido_a_id == user.pk %}Você{% else %}{{ oc.atribuido_a.nome }}{% endif %}{% else %}Sem responsável{% endif %}</span></div>
       </a>
     </li>
     {% endfor %}

@@ -52,7 +52,7 @@
     {# ---------- Campos do atendimento ---------- #}
     <aside class="m-campos lateral" id="painel-atender" role="tabpanel" aria-labelledby="aba-atender" :class="aba === 'atender' ? '' : 'max-md:hidden'">
       <form method="post" action="{% url 'operacao:atualizar' oc.pk %}" @submit="onSubmit"
-        x-data="controles({ status: '{{ oc.status }}', atribuido: '{{ oc.atribuido_a_id|default_if_none:'' }}', temTratativa: {{ tem_tratativa|yesno:'true,false' }} })"
+        x-data="controles({ status: '{{ oc.status }}', statusPedido: '{{ status_pedido|default:oc.status|escapejs }}', resolucao: '{{ resolucao_valor|default:''|escapejs }}', atribuido: '{{ oc.atribuido_a_id|default_if_none:'' }}', temTratativa: {{ tem_tratativa|yesno:'true,false' }} })"
         class="card flex flex-col gap-3" style="padding: 18px">
         {% csrf_token %}
         <h1 class="so-pc text-lg font-extrabold leading-tight">{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</h1>
@@ -64,6 +64,14 @@
           </select>
           <p x-show="statusSel === 'resolvida'" x-cloak class="ajuda">Fica aguardando a confirmação do cliente.</p>
         </div>
+        {# Resumo da resolução: o cliente vê como "Solução proposta" (spec 025, ponto 11) #}
+        <template x-if="pedeResumo">
+          <div class="campo">
+            <label for="resolucao">Resumo da resolução <span class="obg" aria-hidden="true">*</span></label>
+            <textarea id="resolucao" name="resolucao" x-model="resolucao" required minlength="10" rows="4" placeholder="Ex.: Crédito lançado na próxima fatura e reentrega dos itens agendada para 24/10." class="in"></textarea>
+            <span class="ajuda">O cliente vê este texto e decide se aprova ou reabre.</span>
+          </div>
+        </template>
         <template x-if="statusSel === 'recusada'">
           <div class="campo">
             <label for="motivo_recusa">Motivo da recusa <span class="obg" aria-hidden="true">*</span></label>
@@ -75,12 +83,6 @@
           <select id="atribuido_a" name="atribuido_a" x-model="atribuidoSel" class="in in-peq">
             <option value="">Ninguém</option>
             {% for op in operadores %}<option value="{{ op.pk }}" {% if op.pk == oc.atribuido_a_id %}selected{% endif %}>{{ op.nome }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="campo">
-          <label for="prioridade">Prioridade</label>
-          <select id="prioridade" name="prioridade" class="in in-peq">
-            {% for v, l in prioridades %}<option value="{{ v }}" {% if v == oc.prioridade %}selected{% endif %}>{{ l }}</option>{% endfor %}
           </select>
         </div>
         <div class="prazo-card">
@@ -97,8 +99,8 @@
         <template x-teleport="body">
           <div x-show="modal" x-cloak class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 animate-fadein sm:items-center" @click.self="modal = false" @keydown.escape.window="modal = false">
             <div class="card w-full max-w-md shadow-xl" role="dialog" aria-modal="true">
-              <h3 class="text-lg font-extrabold">Marcar como resolvida?</h3>
-              <p class="mt-2 suave">A ocorrência vai para a <strong>confirmação do cliente</strong> e a conversa fica bloqueada até ele confirmar ou reabrir.</p>
+              <h3 class="text-lg font-extrabold">Enviar a solução ao cliente?</h3>
+              <p class="mt-2 suave">A ocorrência vai para <strong>Aguardando aprovação</strong>, o cliente recebe o resumo e a conversa fica bloqueada até ele aprovar ou reabrir.</p>
               <div class="mt-5 flex justify-end gap-2">
                 <button type="button" @click="modal = false" class="btn btn-linha">Cancelar</button>
                 <button type="button" @click="confirmar()" class="btn btn-preto">Confirmar</button>
@@ -129,10 +131,14 @@
     {# ---------- Cliente e contexto ---------- #}
     <aside class="m-info lateral" :class="aba === 'atender' ? '' : 'max-md:hidden'">
       <section aria-labelledby="cl-tit" class="card flex flex-col gap-3" style="padding: 18px">
-        <h2 id="cl-tit" class="sr">Cliente</h2>
-        <div class="flex items-center gap-3">
+        <h2 id="cl-tit" class="rot" style="font-size: 13px">Pessoas</h2>
+        <div class="pessoa">
           <span class="av grande" aria-hidden="true">{{ oc.cliente.nome|iniciais }}</span>
-          <div class="min-w-0"><strong class="block truncate">{{ oc.cliente.nome|default:"—" }}</strong>{% if oc.cliente.empresa %}<span class="text-[13.5px] suave">{{ oc.cliente.empresa.nome }}</span>{% endif %}</div>
+          <div class="min-w-0"><strong class="block truncate">{{ oc.cliente.nome|default:"—" }}</strong><span class="papel">Solicitante{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %}</span></div>
+        </div>
+        <div class="pessoa">
+          <span class="av grande op" aria-hidden="true">{% if oc.atribuido_a %}{{ oc.atribuido_a.nome|iniciais }}{% else %}{% icone "user" 18 %}{% endif %}</span>
+          <div class="min-w-0"><strong class="block truncate">{% if oc.atribuido_a %}{% if oc.atribuido_a_id == user.pk %}Você{% else %}{{ oc.atribuido_a.nome }}{% endif %}{% else %}Sem responsável{% endif %}</strong><span class="papel">Responsável na operação</span></div>
         </div>
         <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[13.5px]">
           <dt class="fraco">E-mail</dt><dd class="min-w-0 break-words">{{ oc.cliente.email|default:"—" }}</dd>
@@ -152,15 +158,41 @@
       </section>
       {% endif %}
 
-      <form method="post" action="{% url 'operacao:coleta' oc.pk %}" x-data="enviando" @submit="enviando = true" class="card flex flex-col gap-2.5" style="padding: 18px">
+      {# Coleta (spec 025, ponto 13): as transportadoras da empresa do cliente vêm primeiro #}
+      {% with da_empresa=transportadoras.0 outras=transportadoras.1 %}
+      <form method="post" action="{% url 'operacao:coleta' oc.pk %}" x-data="{ enviando: false, escolha: '{% if da_empresa %}{{ da_empresa.0.pk }}{% endif %}' }" @submit="enviando = true" class="card flex flex-col gap-2.5" style="padding: 18px" data-coleta>
         {% csrf_token %}
-        <label for="email_transportadora" class="rot flex items-center gap-2" style="font-size: 13px">{% icone "truck" 15 %} Solicitar coleta</label>
-        <input id="email_transportadora" name="email_transportadora" type="email" required placeholder="E-mail da transportadora" class="in in-peq">
+        <h2 class="rot flex items-center gap-2" style="font-size: 13px">{% icone "truck" 15 %} Solicitar coleta</h2>
+        {% if da_empresa or outras %}
+        <label for="transportadora" class="text-[13px] font-semibold">Transportadora</label>
+        <select id="transportadora" name="transportadora" x-model="escolha" class="in in-peq">
+          {% if da_empresa %}
+          <optgroup label="Atendem {% if oc.cliente.empresa %}{{ oc.cliente.empresa.nome }}{% else %}este cliente{% endif %}">
+            {% for t in da_empresa %}<option value="{{ t.pk }}">{{ t.nome }} · {{ t.email }}</option>{% endfor %}
+          </optgroup>
+          {% endif %}
+          {% if outras %}
+          <optgroup label="Outras transportadoras">
+            {% for t in outras %}<option value="{{ t.pk }}">{{ t.nome }} · {{ t.email }}</option>{% endfor %}
+          </optgroup>
+          {% endif %}
+          <option value="">Outro e-mail…</option>
+        </select>
+        {% else %}
+        <p class="text-[13px] suave">Nenhuma transportadora cadastrada. <a href="{% url 'operacao:transportadoras' %}" class="link">Cadastrar</a></p>
+        {% endif %}
+        <template x-if="escolha === ''">
+          <div class="flex flex-col gap-1.5">
+            <label for="email_transportadora" class="text-[13px] font-semibold">E-mail da transportadora</label>
+            <input id="email_transportadora" name="email_transportadora" type="email" required placeholder="Ex.: coleta@transportadora.com.br" class="in in-peq">
+          </div>
+        </template>
         <span class="text-[12.5px] fraco">Envia um e-mail padrão e registra como comentário interno.</span>
         {% if coleta_erro %}<p role="alert" class="caixa-erro">{{ coleta_erro }}</p>{% endif %}
         {% for m in messages %}{% if 'coleta' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
         <button type="submit" :disabled="enviando" class="btn btn-linha btn-peq" x-text="enviando ? 'Enviando…' : 'Enviar pedido'">Enviar pedido</button>
       </form>
+      {% endwith %}
     </aside>
   </div>
 </div>

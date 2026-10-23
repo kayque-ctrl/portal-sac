@@ -6,7 +6,8 @@
 {% block conteudo %}
 {{ meta|json_script:"ocorrencias-meta" }}
 {{ rotulos_tipo|json_script:"rotulos-tipo" }}
-<div class="flex flex-col gap-4" x-data="portalLista(JSON.parse(document.getElementById('ocorrencias-meta').textContent), '{{ filtro_inicial }}', JSON.parse(document.getElementById('rotulos-tipo').textContent))">
+{{ inicial|json_script:"lista-inicial" }}
+<div class="flex flex-col gap-4" x-data="portalLista(JSON.parse(document.getElementById('ocorrencias-meta').textContent), '{{ filtro_inicial }}', JSON.parse(document.getElementById('rotulos-tipo').textContent), JSON.parse(document.getElementById('lista-inicial').textContent))">
   <div class="topo">
     <div>
       <h1 class="titulo">Minhas ocorrências</h1>

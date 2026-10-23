@@ -20,7 +20,9 @@ def test_mudar_status_exige_responsavel_e_tratativa(abrir, operador):
 def test_mudar_status_com_responsavel_e_tratativa(abrir, responder, operador):
     oc = responder(abrir())
 
-    r = servicos.atualizar_ocorrencia(operador, oc, {**PEDIDO_RESOLVIDA, "atribuido_a": str(operador.pk)})
+    r = servicos.atualizar_ocorrencia(
+        operador, oc, {**PEDIDO_RESOLVIDA, "atribuido_a": str(operador.pk), "resolucao": "Entrega reagendada."}
+    )
 
     assert r.ok, r.erro
     oc.refresh_from_db()
@@ -72,7 +74,9 @@ def test_coleta_registra_nota_interna_para_auditoria(abrir, operador):
 
 
 def test_coleta_exige_email_valido(abrir, operador):
-    assert servicos.solicitar_coleta(operador, abrir(), "sem-arroba").erro == "Informe um e-mail válido da transportadora."
+    assert (
+        servicos.solicitar_coleta(operador, abrir(), "sem-arroba").erro == "Informe um e-mail válido da transportadora."
+    )
 
 
 def test_cliente_nao_solicita_coleta(abrir, cliente):

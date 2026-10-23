@@ -31,9 +31,9 @@ responsável pela ocorrência.
 | Responder, anexar, reabrir | só quem abriu | ✔ | ✔ |
 | Aprovar a resolução | só quem abriu | | |
 | Ver notas internas | | ✔ | ✔ |
-| Mudar status, prioridade, responsável | | ✔ | ✔ |
+| Mudar status e responsável (resolver pede o resumo da solução) | | ✔ | ✔ |
 | Arquivar e desarquivar | | ✔ | ✔ |
-| Empresas, usuários, avisos, contatos | | ✔ | ✔ |
+| Empresas, transportadoras, usuários, avisos, contatos | | ✔ | ✔ |
 | Regras de SLA | | | ✔ |
 | Lixeira: mover, restaurar e excluir definitivamente | | | ✔ |
 | Conceder ou retirar o papel `admin` | | | ✔ |
@@ -67,8 +67,11 @@ Regras principais (detalhes em [03-modelo-dominio.md](03-modelo-dominio.md)):
 - Reabrir (pelo autor ou pela operação) leva a ocorrência de volta para
   `em_analise` e a desarquiva.
 - Recusar exige motivo.
-- O SLA é definido por regra (tipo + prioridade) e **pausa** enquanto a
-  ocorrência aguarda a aprovação do cliente.
+- Ir para `resolvida` exige o **resumo da resolução** (mínimo 10
+  caracteres), que o cliente vê como "Solução proposta" (spec 025).
+- O SLA é definido por regra: um **padrão** (geral ou por tipo) e, se
+  preciso, um prazo **por empresa** que vence o padrão (spec 026). Ele
+  **pausa** enquanto a ocorrência aguarda a aprovação do cliente.
 - Em `resolvida`, `concluida` e `recusada` a conversa fica bloqueada; só
   reabrindo volta a aceitar mensagens.
 

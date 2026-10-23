@@ -1,0 +1,18 @@
+{% extends "area.html" %}
+{% load ocorrencias_tags %}
+{% block title %}{{ transportadora.nome }} · Operação{% endblock %}
+{% block titulo_celular_op %}{{ transportadora.nome }}{% endblock %}
+
+{% block conteudo %}
+<a href="{% url 'operacao:transportadoras' %}" class="voltar -mb-2">{% icone "arrow-left" 16 %} Transportadoras</a>
+<div class="topo">
+  <div>
+    <h1 class="titulo">{{ transportadora.nome }}</h1>
+    <p class="suave">{% if transportadora.ativa %}Ativa{% else %}Inativa: não aparece na coleta{% endif %}</p>
+  </div>
+</div>
+
+<div class="max-w-2xl">
+  {% include "ocorrencias/operacao/partials/form_transportadora.html" %}
+</div>
+{% endblock %}

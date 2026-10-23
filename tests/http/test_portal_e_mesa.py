@@ -28,14 +28,20 @@ def pdf(nome="nota.pdf"):
 def test_cliente_navega_pelo_cabecalho_e_nao_tem_menu_lateral(cliente, entrar):
     html = corpo(entrar(cliente).get("/portal/"))
     assert 'class="cab"' in html and 'class="lado"' not in html
-    for href, rotulo in (("/portal/", "Início"), ("/portal/ocorrencias", "Minhas ocorrências"), ("/portal/dashboard", "Painel")):
+    for href, rotulo in (
+        ("/portal/", "Início"),
+        ("/portal/ocorrencias", "Minhas ocorrências"),
+        ("/portal/dashboard", "Painel"),
+    ):
         assert f'href="{href}"' in html and rotulo in html
 
 
 def test_operacao_tem_menu_lateral_sem_filas(operador, entrar):
     html = corpo(entrar(operador).get("/operacao/"))
     assert 'class="lado"' in html
-    assert "Sem responsável</a>" not in html and "data-atalho" not in html
+    # Os filtros prontos da spec 025 ficam na página da fila, nunca no menu lateral.
+    menu = html[html.index('class="lado"') : html.index("</aside>")]
+    assert "Sem responsável</a>" not in menu and "data-atalho" not in html
 
 
 def test_lista_do_cliente_marca_o_item_do_menu(cliente, entrar):
@@ -50,11 +56,17 @@ def test_abrir_ocorrencia_nao_marca_item_do_menu(cliente, entrar):
 # ---------------------------------------------------------------- abertura numa página só
 
 
-def test_formulario_tem_os_blocos_numerados_e_o_botao_enviar(cliente, entrar):
+def test_formulario_tem_os_blocos_e_o_botao_enviar(cliente, entrar):
     html = corpo(entrar(cliente).get("/portal/nova?tipo=produtos"))
-    for trecho in ("1. Referência", "2. Quais produtos tiveram problema?", "Fotos e documentos", "Conte o que aconteceu", "Enviar ocorrência"):
+    for trecho in (
+        "Referência (Nota Fiscal, Pedido ou Picking)",
+        "Quais produtos tiveram problema?",
+        "Fotos e documentos",
+        "Conte o que aconteceu",
+        "Enviar ocorrência",
+    ):
         assert trecho in html
-    assert "Continuar" not in html  # sem passo 2
+    assert "Continuar" not in html  # spec 025: as etapas avançam sozinhas, sem botão de passo
 
 
 def test_formulario_oferece_tirar_foto_pela_camera(cliente, entrar):
@@ -66,7 +78,9 @@ def test_formulario_oferece_tirar_foto_pela_camera(cliente, entrar):
 
 
 def test_cada_documento_vira_um_evento_com_o_cartao_do_arquivo(ocorrencia, cliente, entrar):
-    servicos.adicionar_mensagem(cliente, ocorrencia, "Segue a foto do lote.", False, [foto("lote.png"), pdf("NF-1.pdf")])
+    servicos.adicionar_mensagem(
+        cliente, ocorrencia, "Segue a foto do lote.", False, [foto("lote.png"), pdf("NF-1.pdf")]
+    )
     html = corpo(entrar(cliente).get(f"/portal/{ocorrencia.pk}"))
     assert html.count('data-item="documento"') >= 3  # resp.png da operação + lote.png + NF-1.pdf
     assert "adicionou o documento <strong>lote.png</strong>" in html

@@ -1,6 +1,7 @@
 """Área do cliente (/portal)."""
 
 import json
+from collections import Counter
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -17,8 +18,8 @@ from ..labels import (
     CATEGORIAS_COM_SINAL_VOLUME,
     CATEGORIAS_DISPENSAM_DADOS_PRODUTO,
     CATEGORIAS_EXIGEM_FOTO,
-    ITEM_CATEGORIA_LABEL,
     ITEM_BADGE,
+    ITEM_CATEGORIA_LABEL,
     ITEM_CATEGORIAS,
     ITEM_TEXTO,
     ITEM_TEXTO_PADRAO,
@@ -73,13 +74,47 @@ def inicio(request):
     andamento.sort(key=lambda o: not o.aguardando)
     avisos = sorted(Aviso.vigentes(), key=lambda a: a.tipo != "alerta")
     anexos_falha = request.GET.get("anexosFalha")
+    # Contadores por situação (spec 025, visão pessoal do GLPI): levam à lista filtrada.
+    contar = Counter(o.status for o in ocorrencias)
+    pendentes = [o for o in ocorrencias if o.aguardando]
+    contadores = [
+        {
+            "chave": "aberta",
+            "rotulo": "Abertas",
+            "n": contar["aberta"],
+            "d": "Aguardando a operação",
+            "url": "?status=aberta",
+        },
+        {
+            "chave": "em_analise",
+            "rotulo": "Em tratativa",
+            "n": contar["em_analise"],
+            "d": "A operação está cuidando",
+            "url": "?status=em_analise",
+        },
+        {
+            "chave": "resolvida",
+            "rotulo": "Aguardando sua aprovação",
+            "n": len(pendentes),
+            "d": "Precisa de você" if pendentes else "Nada pendente",
+            "url": "?filtro=aprovar",
+        },
+        {
+            "chave": "concluida",
+            "rotulo": "Resolvidas",
+            "n": contar["concluida"],
+            "d": "Já encerradas",
+            "url": "?status=concluida",
+        },
+    ]
     return render(
         request,
         "ocorrencias/portal/inicio.html",
         {
+            "contadores": contadores,
             "tipos": [(t, TIPO_LABEL[t], ico, desc) for t, ico, desc in CARTOES_TIPO],
             "andamento": andamento[:8],
-            "pendentes": [o for o in ocorrencias if o.aguardando],
+            "pendentes": pendentes,
             "tem_colegas": any(not o.minha for o in ocorrencias),
             "total": len(ocorrencias),
             "avisos": avisos,
@@ -117,6 +152,11 @@ def lista(request):
             "tem_colegas": any(not o.minha for o in ocorrencias),
             "pendentes": sum(1 for o in ocorrencias if o.aguardando),
             "filtro_inicial": "aprovar" if request.GET.get("filtro") == "aprovar" else "",
+            # Vindo dos contadores e da busca do início (spec 025); valores estranhos são ignorados.
+            "inicial": {
+                "status": request.GET.get("status") if request.GET.get("status") in STATUS_ORDEM else "todas",
+                "q": (request.GET.get("q") or "").strip()[:80],
+            },
             "escopos": [("empresa", "Da empresa"), ("minhas", "Minhas")],
             "chips": [("todas", "Todas")] + [(s, STATUS_LABEL[s]) for s in STATUS_ORDEM],
             "tipos_form": [(t, TIPO_LABEL[t]) for t in TIPOS_FORM],
@@ -173,7 +213,10 @@ def dashboard(request):
         a["idade"] = kpis.rotulo_idade(a["criado_em"], agora)
 
     motivos = {
-        modo: [{**b, "rotulo": ITEM_CATEGORIA_LABEL.get(b["categoria"], b["categoria"])} for b in kpis.barras_motivos(k["motivos"], modo)]
+        modo: [
+            {**b, "rotulo": ITEM_CATEGORIA_LABEL.get(b["categoria"], b["categoria"])}
+            for b in kpis.barras_motivos(k["motivos"], modo)
+        ]
         for modo in ("ocorrencias", "itens")
     }
 
@@ -237,8 +280,18 @@ def _render_detalhe(request, oc, **extra):
     )
     mensagens = list(mensagens_visiveis(user, oc))
     linha = linha_do_tempo(oc, user, mensagens, oc.anexos.all(), responsavel_nome if somente_leitura else None)
+    # A solução proposta mais recente: o cartão de aprovação mostra o resumo (spec 025).
+    solucao = None
+    if oc.status == "resolvida":
+        solucao = (
+            oc.historico.filter(para_status="resolvida", observacao__isnull=False)
+            .order_by("-criado_em")
+            .values_list("observacao", flat=True)
+            .first()
+        )
     contexto = {
         "oc": oc,
+        "solucao": solucao,
         "somente_leitura": somente_leitura,
         "responsavel_nome": responsavel_nome,
         "mensagens": mensagens,

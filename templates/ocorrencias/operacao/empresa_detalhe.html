@@ -13,8 +13,8 @@
   <div class="acoes"><a href="{% url 'operacao:lista' %}?empresa={{ empresa.pk }}" class="btn btn-linha btn-peq">Ver ocorrências da empresa</a></div>
 </div>
 
-<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-  <section aria-labelledby="t-membros" class="tbl-box">
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+  <section aria-labelledby="t-membros" class="tbl-box min-w-0">
     <h2 id="t-membros" class="h2 px-3.5 pb-2.5" style="font-size: 16px">Clientes vinculados · {{ membros|length }}</h2>
     {% if not membros %}
     <p class="px-3.5 pb-3 text-sm suave">Nenhum cliente vinculado a esta empresa ainda.</p>
@@ -44,6 +44,31 @@
     {% endif %}
   </section>
 
+  <div class="flex flex-col gap-4">
+  {# Prazo (SLA) que vale para a empresa (spec 026) #}
+  <section aria-labelledby="t-prazo" class="card flex flex-col gap-2.5" data-prazo-empresa>
+    <h2 id="t-prazo" class="h2 flex items-center gap-2">{% icone "timer" 17 %} Prazo (SLA)</h2>
+    <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
+      {% for p in prazos %}
+      <dt>{{ p.tipo }}</dt>
+      <dd class="text-right"><strong class="mono">{% if p.horas %}{{ p.horas }} h{% else %}sem prazo{% endif %}</strong> <span class="text-[12.5px] suave">· {% if p.proprio %}desta empresa{% else %}padrão{% endif %}</span></dd>
+      {% endfor %}
+    </dl>
+    {% if user.eh_admin %}<a href="{% url 'operacao:sla' %}?empresa={{ empresa.pk }}" class="link text-sm" style="color: var(--preto)">Configurar prazo desta empresa</a>{% endif %}
+  </section>
+
+  <section aria-labelledby="t-transp" class="card flex flex-col gap-2.5" data-transportadoras-empresa>
+    <h2 id="t-transp" class="h2 flex items-center gap-2">{% icone "truck" 17 %} Transportadoras</h2>
+    {% for t in transportadoras %}
+    <a href="{% url 'operacao:transportadora_detalhe' t.pk %}" class="flex items-center gap-2 text-sm" style="text-decoration: none; color: var(--tinta)">
+      <strong class="min-w-0 flex-1 truncate">{{ t.nome }}</strong><span class="mono text-[13px] suave">{{ t.email }}</span>{% if not t.ativa %}<span class="etq">Inativa</span>{% endif %}
+    </a>
+    {% empty %}
+    <p class="text-sm suave">Nenhuma transportadora ligada. A coleta pede o e-mail na hora.</p>
+    {% endfor %}
+    <a href="{% url 'operacao:transportadoras' %}" class="link text-sm" style="color: var(--preto)">Gerenciar transportadoras</a>
+  </section>
+
   <section aria-labelledby="t-add" class="card flex flex-col gap-3.5">
     <h2 id="t-add" class="h2">Vincular cliente</h2>
     <p class="ajuda">Clientes da mesma empresa veem as ocorrências uns dos outros, só para leitura.</p>
@@ -64,5 +89,6 @@
     </form>
     {% endif %}
   </section>
+  </div>
 </div>
 {% endblock %}

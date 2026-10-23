@@ -56,7 +56,12 @@ class Command(BaseCommand):
             )
             oc = servicos.criar_ocorrencia(
                 ana,
-                {"tipo": "atraso", "referencia_tipo": "pedido", "referencia": "9981", "descricao": "Pedido previsto para segunda e ainda não chegou."},
+                {
+                    "tipo": "atraso",
+                    "referencia_tipo": "pedido",
+                    "referencia": "9981",
+                    "descricao": "Pedido previsto para segunda e ainda não chegou.",
+                },
                 [],
             ).dados["ocorrencia"]
             servicos.adicionar_mensagem(operador, oc, "Olá! Já acionamos a transportadora.", False, [])
@@ -71,8 +76,12 @@ class Command(BaseCommand):
             )
 
         if not Aviso.objects.exists():
-            Aviso.objects.create(titulo="Feriado na sexta", mensagem="Não haverá coletas nem entregas na sexta-feira.", tipo="alerta")
-            Aviso.objects.create(titulo="Novo portal", mensagem="Agora você pode importar produtos por planilha.", tipo="info")
+            Aviso.objects.create(
+                titulo="Feriado na sexta", mensagem="Não haverá coletas nem entregas na sexta-feira.", tipo="alerta"
+            )
+            Aviso.objects.create(
+                titulo="Novo portal", mensagem="Novo visual: escolha o assunto e siga as etapas.", tipo="info"
+            )
 
         self.stdout.write(self.style.SUCCESS("Dados de demonstração prontos."))
         self.stdout.write(f"Senha de todos os usuários: {SENHA_DEMO}")

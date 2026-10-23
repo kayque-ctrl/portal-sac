@@ -7,14 +7,32 @@
 {% block conteudo %}
 {{ config|json_script:"config-nova" }}
 {{ inicial|json_script:"inicial-nova" }}
-<div x-data="novaOcorrencia(JSON.parse(document.getElementById('config-nova').textContent), JSON.parse(document.getElementById('inicial-nova').textContent), '{{ tipo_inicial }}')" class="flex flex-col gap-4">
+{% comment %}
+Abertura em etapas (spec 025, estilo GLPI): Assunto → Detalhes → Enviar.
+Cada bloco dos detalhes tem um número; o próximo a preencher fica em
+destaque (`secaoAtual`), para conduzir o usuário sem dúvida sobre o que fazer.
+{% endcomment %}
+<div x-data="novaOcorrencia(JSON.parse(document.getElementById('config-nova').textContent), JSON.parse(document.getElementById('inicial-nova').textContent), '{{ tipo_inicial }}')" class="flex flex-col gap-4" x-ref="topo">
 
   <div class="flex flex-col gap-1.5">
     <a href="{% url 'portal:inicio' %}" class="voltar">{% icone "arrow-left" 16 %} Início</a>
-    <h1 class="titulo md:text-[30px]" x-text="tipo ? config.tipoLabel[tipo] : 'Abrir ocorrência'">Abrir ocorrência</h1>
-    <p class="sub">Preencha os campos abaixo. Os marcados com <span class="obg" aria-hidden="true">*</span> são obrigatórios.</p>
-    <button type="button" x-show="tipo" x-cloak @click="trocarCategoria('')" class="link self-start text-sm">Trocar o tipo de ocorrência</button>
+    <h1 class="titulo md:text-[28px]" x-text="tipo ? config.tipoLabel[tipo] : 'Abrir ocorrência'">Abrir ocorrência</h1>
+    <p class="sub">Leva cerca de 2 minutos. Os marcados com <span class="obg" aria-hidden="true">*</span> são obrigatórios.</p>
   </div>
+
+  <ol class="etapas" aria-label="Etapas">
+    <li :class="tipo ? 'feito' : 'atual'" :aria-current="tipo ? null : 'step'">
+      <span class="n" aria-hidden="true"><span x-show="tipo" x-cloak>{% icone "check" 15 %}</span><span x-show="!tipo">1</span></span><span class="txt">Assunto</span>
+    </li>
+    <li aria-hidden="true" class="tr" :class="tipo && 'feito'"></li>
+    <li :class="tipo && !prontoParaEnviar ? 'atual' : (prontoParaEnviar ? 'feito' : '')" :aria-current="tipo && !prontoParaEnviar ? 'step' : null">
+      <span class="n" aria-hidden="true"><span x-show="prontoParaEnviar" x-cloak>{% icone "check" 15 %}</span><span x-show="!prontoParaEnviar">2</span></span><span class="txt">Detalhes</span>
+    </li>
+    <li aria-hidden="true" class="tr" :class="prontoParaEnviar && 'feito'"></li>
+    <li :class="prontoParaEnviar && 'atual'" :aria-current="prontoParaEnviar ? 'step' : null">
+      <span class="n" aria-hidden="true">3</span><span class="txt">Enviar</span>
+    </li>
+  </ol>
 
   {# Rascunho salvo #}
   <div x-show="rascunho" x-cloak class="card flex flex-wrap items-center gap-3" style="padding: 12px 16px">
@@ -31,39 +49,49 @@
     <input type="hidden" name="referencia_tipo" :value="refTipo">
     <input type="hidden" name="itens_json" :value="itensJson">
 
-    {# ---------- 0. Tipo (só se não veio do cartão) ---------- #}
-    <section x-show="tipo === ''" class="card flex flex-col gap-3" aria-labelledby="t-tipo">
-      <div><h2 id="t-tipo" class="secao-num">O que aconteceu? <span class="obg" aria-hidden="true">*</span></h2><p class="ajuda">Escolha uma opção.</p></div>
+    {# ---------- Etapa 1: assunto (só se não veio do cartão) ---------- #}
+    <section x-show="tipo === ''" class="card secao atual flex flex-col gap-3" aria-labelledby="t-tipo">
+      <div><h2 id="t-tipo" class="secao-num">Selecione uma opção abaixo <span class="obg" aria-hidden="true">*</span></h2><p class="ajuda">Ao escolher, mostramos só os campos daquele assunto.</p></div>
       <div class="tipos" style="grid-template-columns: 1fr">
         {% for t in config.tipos %}
-        <button type="button" @click="trocarCategoria('{{ t.valor }}')" :aria-pressed="tipo === '{{ t.valor }}'" class="tipo" style="flex-direction: row; align-items: center; padding: 14px">
-          <span class="circ">{% icone t.icone 22 %}</span>
+        <button type="button" @click="escolherTipo('{{ t.valor }}')" :aria-pressed="tipo === '{{ t.valor }}'" class="tipo" style="flex-direction: row; align-items: center; padding: 14px">
+          <span class="circ {{ t.valor }}">{% icone t.icone 22 %}</span>
           <span class="txt"><strong>{{ t.label }}</strong><span class="desc">{{ t.ajuda }}</span></span>
+          <span class="fraco">{% icone "chevron-right" 18 %}</span>
         </button>
         {% endfor %}
       </div>
     </section>
 
+    {# ---------- Etapa 2: detalhes ---------- #}
     <template x-if="tipo !== ''">
       <div class="flex flex-col gap-4">
-        {# ---------- 1. Referência ---------- #}
-        <section class="card flex flex-col gap-3.5" aria-labelledby="t-ref">
-          <div>
-            <h2 id="t-ref" class="secao-num">1. Referência (Nota Fiscal, Pedido ou Picking)
-              <span x-show="exigeReferencia"><span class="obg" aria-hidden="true">*</span></span>
-              <span x-show="!exigeReferencia" class="text-base font-medium suave">(opcional)</span>
-            </h2>
-            <p class="ajuda">Escolha uma opção e digite o número que está no documento.</p>
+        <p class="flex flex-wrap items-center gap-2 text-sm suave">
+          <span>Assunto: <strong style="color: var(--tinta)" x-text="config.tipoLabel[tipo]"></strong></span>
+          <button type="button" @click="escolherTipo('')" class="link text-sm" style="color: var(--preto)">Trocar</button>
+        </p>
+
+        {# 1. Referência #}
+        <section class="card secao flex flex-col gap-3.5" :class="classeSecao('ref')" aria-labelledby="t-ref" x-ref="secRef">
+          <div class="cab-sec">
+            <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('ref')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('ref')">1</span></span>
+            <div class="min-w-0 flex-1">
+              <h2 id="t-ref" class="secao-num">Referência (Nota Fiscal, Pedido ou Picking)
+                <span x-show="exigeReferencia"><span class="obg" aria-hidden="true">*</span></span>
+                <span x-show="!exigeReferencia" class="text-base font-medium suave">(opcional)</span>
+              </h2>
+              <p class="ajuda">Escolha uma opção e digite o número que está no documento.</p>
+            </div>
           </div>
-          <div class="escolhas">
+          <div class="segmentos" role="group" aria-label="Tipo de referência">
             {% for rt, rotulo in referencias %}
-            <button type="button" @click="escolherRefTipo('{{ rt }}')" :aria-pressed="refTipo === '{{ rt }}'" class="escolha"><span x-show="refTipo === '{{ rt }}'">{% icone "check" 16 %}</span>{{ rotulo }}</button>
+            <button type="button" @click="escolherRefTipo('{{ rt }}')" :aria-pressed="refTipo === '{{ rt }}'">{{ rotulo }}</button>
             {% endfor %}
           </div>
           <template x-if="refTipo !== ''">
             <div class="campo">
               <label for="referencia"><span x-text="config.referencias[refTipo].campo"></span> <span x-show="exigeReferencia" class="obg" aria-hidden="true">*</span></label>
-              <input id="referencia" name="referencia" x-model="referencia" x-init="$el.focus()" @change="checarDuplicata()" maxlength="80" :placeholder="config.referencias[refTipo].exemplo" class="in mono">
+              <input id="referencia" name="referencia" x-model="referencia" x-init="$el.focus()" @change="checarDuplicata()" @keydown.enter.prevent="seguirDaReferencia()" maxlength="80" :placeholder="config.referencias[refTipo].exemplo" class="in in-ref mono" autocomplete="off">
             </div>
           </template>
           <div x-show="duplicata" x-cloak class="card card-aviso flex items-start gap-2" style="padding: 12px 14px">
@@ -72,11 +100,14 @@
           </div>
         </section>
 
-        {# ---------- 2. Produtos ---------- #}
-        <section x-show="categoriaComProduto" class="card flex flex-col gap-3.5" aria-labelledby="t-prod">
-          <div>
-            <h2 id="t-prod" class="secao-num">2. Quais produtos tiveram problema? <span class="obg" aria-hidden="true">*</span></h2>
-            <p class="ajuda">Adicione um de cada vez. Se forem muitos, importe uma planilha.</p>
+        {# 2. Produtos #}
+        <section x-show="categoriaComProduto" class="card secao flex flex-col gap-3.5" :class="classeSecao('produtos')" aria-labelledby="t-prod" x-ref="secProdutos">
+          <div class="cab-sec">
+            <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('produtos')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('produtos')">2</span></span>
+            <div class="min-w-0 flex-1">
+              <h2 id="t-prod" class="secao-num">Quais produtos tiveram problema? <span class="obg" aria-hidden="true">*</span></h2>
+              <p class="ajuda">Adicione um de cada vez: escolha o motivo e preencha os dados do produto.</p>
+            </div>
           </div>
           <p x-show="!podeLancarProdutos" class="motivo">{% icone "info" 16 %} <span>Informe a referência (Nota Fiscal, Pedido ou Picking) acima para lançar os produtos.</span></p>
 
@@ -94,32 +125,17 @@
           </ul>
 
           <div x-show="podeLancarProdutos" class="card-plano flex flex-col gap-3">
-            <strong x-text="editandoIndex !== null ? 'Editar produto' : 'Adicionar produto'">Adicionar produto</strong>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div class="campo">
-                <label for="categoria-produto">Categoria do produto <span class="obg" aria-hidden="true">*</span></label>
-                <select id="categoria-produto" x-model="catProduto" @change="produtoErro = null" class="in">
-                  <option value="" disabled>Selecione a categoria</option>
-                  {% for c in config.categorias %}<option value="{{ c.valor }}">{{ c.label }}</option>{% endfor %}
-                </select>
-              </div>
-              <div class="campo">
-                <label for="quantidade-produto">Quantidade <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional, padrão 1)</span></label>
-                <input id="quantidade-produto" x-model="quantidade" type="number" min="1" placeholder="Ex.: 2" class="in">
-              </div>
-              <div class="campo">
-                <label for="codigo-produto">Código do produto <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional)</span></label>
-                <input id="codigo-produto" x-model="codigo" placeholder="Ex.: 7891234" class="in mono">
-              </div>
-              <div class="campo">
-                <label for="descricao-produto">Descrição do produto <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional)</span></label>
-                <input id="descricao-produto" x-model="descricao" placeholder="Ex.: Camisa polo azul M" class="in">
-              </div>
+            <strong x-text="editandoIndex !== null ? 'Editar produto' : (itens.length ? 'Adicionar outro produto' : 'Adicionar produto')">Adicionar produto</strong>
+            <div class="campo motivo-produto">
+              <label for="categoria-produto">Motivo <span class="obg" aria-hidden="true">*</span></label>
+              <select id="categoria-produto" x-ref="motivo" x-model="catProduto" @change="produtoErro = null" class="in">
+                <option value="" disabled>Selecione o motivo</option>
+                {% for c in config.categorias %}<option value="{{ c.valor }}">{{ c.label }}</option>{% endfor %}
+              </select>
             </div>
             {# Troca de volume: o volume falta ou sobra? (spec 004) #}
             <fieldset x-show="pedeSinalVolume" x-cloak class="flex flex-col gap-2">
               <legend class="rot">O volume está faltando ou sobrando? <span class="obg" aria-hidden="true">*</span></legend>
-              <p class="ajuda">Escolha uma opção.</p>
               <div class="escolhas">
                 {% for s in config.sinaisVolume %}
                 <label class="escolha has-[:focus-visible]:ring-2" :class="sinalVolume === '{{ s.valor }}' && 'sel'">
@@ -129,31 +145,43 @@
                 {% endfor %}
               </div>
             </fieldset>
+            <div class="linha-produto">
+              <div class="campo">
+                <label for="codigo-produto">Código <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional)</span></label>
+                <input id="codigo-produto" x-model="codigo" placeholder="Ex.: 7891234" class="in mono" autocomplete="off">
+              </div>
+              <div class="campo">
+                <label for="descricao-produto">Descrição do produto <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(opcional)</span></label>
+                <input id="descricao-produto" x-model="descricao" placeholder="Ex.: Camisa polo azul M" class="in">
+              </div>
+              <div class="campo">
+                <label for="quantidade-produto">Qtd. <span x-show="!dispensaDadosProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="dispensaDadosProduto" x-cloak class="font-medium suave">(padrão 1)</span></label>
+                <input id="quantidade-produto" x-model="quantidade" type="number" min="1" inputmode="numeric" placeholder="Ex.: 2" class="in" @keydown.enter.prevent="salvarProduto()">
+              </div>
+            </div>
             <p x-show="dispensaDadosProduto" class="ajuda">Em troca de volume, o importante é a foto do volume — código, descrição e quantidade são opcionais.</p>
             <p x-show="produtoErro" role="alert" class="caixa-erro" x-text="produtoErro"></p>
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" @click="salvarProduto()" class="btn btn-preto btn-peq">{% icone "plus" 16 %} <span x-text="editandoIndex !== null ? 'Salvar alterações' : 'Adicionar produto'"></span></button>
               <button type="button" x-show="editandoIndex !== null" @click="limparProduto()" class="btn btn-linha btn-peq">Cancelar</button>
-              <button type="button" @click="$refs.importar.click()" :disabled="importando" class="btn btn-linha btn-peq">{% icone "upload" 15 %} <span x-text="importando ? 'Importando…' : 'Importar planilha'"></span></button>
-              <button type="button" @click="baixarModelo()" class="link text-sm">Baixar modelo</button>
-              {# Fora do <form> de envio: a planilha não vai junto com a ocorrência. #}
-              <input x-ref="importar" type="file" accept=".xlsx,.xls,.csv" class="hidden" form="sem-form" @change="importarPlanilha">
             </div>
-            <p x-show="importMsg" class="ajuda" x-text="importMsg"></p>
           </div>
         </section>
 
-        {# ---------- 3. Fotos e documentos ---------- #}
-        <section class="card flex flex-col gap-3" aria-labelledby="t-anexos" @anexos-mudaram="anexosFotos = $event.detail.fotos; if (anexosFotos > 0) anexoErro = null">
-          <div>
-            <h2 id="t-anexos" class="secao-num"><span x-text="categoriaComProduto ? '3.' : '2.'">3.</span> Fotos e documentos
-              <span x-show="precisaFoto"><span class="obg" aria-hidden="true">*</span></span>
-              <span x-show="!precisaFoto" class="text-base font-medium suave">(opcional)</span>
-            </h2>
-            <p class="ajuda">
-              <span x-show="precisaFoto">Pelo menos 1 foto da avaria, do produto vencido ou do volume trocado. A mesma foto pode mostrar vários produtos.</span>
-              Aceita foto, PDF e planilha. Você pode adicionar mais de uma vez e remover o que não quiser; as fotos são reduzidas automaticamente.
-            </p>
+        {# 3. Fotos e documentos #}
+        <section class="card secao flex flex-col gap-3" :class="classeSecao('anexos')" aria-labelledby="t-anexos" x-ref="secAnexos" @anexos-mudaram="anexosFotos = $event.detail.fotos; anexosQtd = $event.detail.quantidade; if (anexosFotos > 0) anexoErro = null">
+          <div class="cab-sec">
+            <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('anexos')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('anexos')" x-text="categoriaComProduto ? 3 : 2">3</span></span>
+            <div class="min-w-0 flex-1">
+              <h2 id="t-anexos" class="secao-num">Fotos e documentos
+                <span x-show="precisaFoto"><span class="obg" aria-hidden="true">*</span></span>
+                <span x-show="!precisaFoto" class="text-base font-medium suave">(opcional)</span>
+              </h2>
+              <p class="ajuda">
+                <span x-show="precisaFoto">Pelo menos 1 foto da avaria, do produto vencido ou do volume trocado. A mesma foto pode mostrar vários produtos.</span>
+                Aceita foto, PDF e planilha. Você pode adicionar mais de uma vez e remover o que não quiser; as fotos são reduzidas automaticamente.
+              </p>
+            </div>
           </div>
           <label for="anexos" class="sr">Anexos</label>
           {% include "partials/lista_anexos.html" with id_campo="anexos" %}
@@ -163,38 +191,56 @@
           <p data-erro-upload hidden role="alert" class="erro"></p>
         </section>
 
-        {# ---------- 4. Descrição ---------- #}
-        <section class="card flex flex-col gap-2" aria-labelledby="t-desc">
-          <label id="t-desc" for="descricao" class="secao-num">
-            <span x-text="categoriaComProduto ? '4.' : '3.'">4.</span> Conte o que aconteceu
-            <span x-show="!categoriaComProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="categoriaComProduto" class="text-base font-medium suave">(opcional)</span>
-          </label>
-          <p class="ajuda">Descreva o que aconteceu, quando e como<span x-show="!categoriaComProduto"> (mínimo de 10 caracteres)</span>.</p>
-          <textarea id="descricao" name="descricao" x-model="descricaoGeral" @input="descricaoErro = null" rows="4" placeholder="Ex.: A entrega estava prevista para segunda e chegou na quarta, com duas caixas amassadas."
-            class="in" :style="descricaoErro ? 'border-color: var(--perigo)' : ''"></textarea>
-          <p x-show="!categoriaComProduto" class="text-right text-xs" :class="descricaoGeral.trim().length >= 10 ? 'text-green-700 dark:text-green-400' : 'fraco'" x-text="descricaoGeral.trim().length + ' de 10 caracteres mínimos'"></p>
-          <p x-show="descricaoErro" role="alert" class="erro" x-text="descricaoErro"></p>
+        {# 4. Comentário: obrigatório fora de "Produtos"; em "Produtos", atrás de um botão (ponto 9) #}
+        <section class="card secao flex flex-col gap-2" :class="classeSecao('desc')" aria-labelledby="t-desc" x-ref="secDesc">
+          <template x-if="categoriaComProduto && !comentarioAberto">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="num-sec" aria-hidden="true">4</span>
+              <button type="button" id="t-desc" @click="abrirComentario()" class="btn btn-linha btn-peq">{% icone "message-square-plus" 16 %} Adicionar comentário</button>
+              <span class="text-sm suave">Opcional: algo que os produtos não explicam.</span>
+            </div>
+          </template>
+          <div x-show="!categoriaComProduto || comentarioAberto" class="flex flex-col gap-2">
+            <div class="cab-sec">
+              <span class="num-sec" aria-hidden="true"><span x-show="secaoFeita('desc')" x-cloak>{% icone "check" 14 %}</span><span x-show="!secaoFeita('desc')" x-text="categoriaComProduto ? 4 : 3">3</span></span>
+              <div class="min-w-0 flex-1">
+                <label for="descricao" class="secao-num block">
+                  <span x-text="categoriaComProduto ? 'Comentário' : 'Conte o que aconteceu'">Conte o que aconteceu</span>
+                  <span x-show="!categoriaComProduto"><span class="obg" aria-hidden="true">*</span></span><span x-show="categoriaComProduto" class="text-base font-medium suave">(opcional)</span>
+                </label>
+                <p class="ajuda">Descreva o que aconteceu, quando e como<span x-show="!categoriaComProduto"> (mínimo de 10 caracteres)</span>.</p>
+              </div>
+            </div>
+            <textarea id="descricao" name="descricao" x-ref="descricao" x-model="descricaoGeral" @input="descricaoErro = null" rows="4" placeholder="Ex.: A entrega estava prevista para segunda e chegou na quarta, com duas caixas amassadas."
+              class="in" :style="descricaoErro ? 'border-color: var(--perigo)' : ''"></textarea>
+            <p x-show="!categoriaComProduto" class="text-right text-xs" :class="descricaoGeral.trim().length >= 10 ? 'text-green-700 dark:text-green-400' : 'fraco'" x-text="descricaoGeral.trim().length + ' de 10 caracteres mínimos'"></p>
+            <p x-show="descricaoErro" role="alert" class="erro" x-text="descricaoErro"></p>
+          </div>
         </section>
 
-        {# ---------- Confira ---------- #}
-        <section class="card-plano flex flex-col gap-2" aria-labelledby="t-conf">
-          <strong id="t-conf">Confira antes de enviar</strong>
-          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[14.5px]">
-            <dt class="fraco">Tipo</dt><dd x-text="tipo ? config.tipoLabel[tipo] : '—'"></dd>
-            <dt class="fraco">Referência</dt><dd class="mono" x-text="referenciaOk ? config.referenciaLabel[refTipo] + ' ' + referencia : '—'"></dd>
-            <template x-if="categoriaComProduto"><dt class="fraco">Produtos</dt></template>
-            <template x-if="categoriaComProduto"><dd x-text="itens.length + (itens.length === 1 ? ' produto' : ' produtos')"></dd></template>
-            <dt class="fraco">Fotos</dt><dd :class="precisaFoto && anexosFotos === 0 ? 'obg' : ''" x-text="anexosFotos > 0 ? anexosFotos + (anexosFotos > 1 ? ' anexadas' : ' anexada') : 'nenhuma ainda'"></dd>
-            <dt class="fraco">Descrição</dt><dd x-text="descricaoGeral.trim() ? 'preenchida' : 'não preenchida'"></dd>
-          </dl>
-        </section>
+        {# Resumo: só se a pessoa quiser ver (ponto 4) #}
+        <div class="flex flex-col gap-2">
+          <button type="button" @click="verResumo = !verResumo" :aria-expanded="verResumo" aria-controls="resumo-envio" class="link self-start text-sm" style="color: var(--preto)">
+            <span x-text="verResumo ? 'Esconder resumo' : 'Ver resumo antes de enviar'">Ver resumo antes de enviar</span>
+          </button>
+          <section id="resumo-envio" x-show="verResumo" x-cloak class="card-plano flex flex-col gap-2" aria-label="Resumo">
+            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[14.5px]">
+              <dt class="fraco">Assunto</dt><dd x-text="tipo ? config.tipoLabel[tipo] : '—'"></dd>
+              <dt class="fraco">Referência</dt><dd class="mono" x-text="referenciaOk ? config.referenciaLabel[refTipo] + ' ' + referencia : '—'"></dd>
+              <template x-if="categoriaComProduto"><dt class="fraco">Produtos</dt></template>
+              <template x-if="categoriaComProduto"><dd x-text="itens.length + (itens.length === 1 ? ' produto' : ' produtos')"></dd></template>
+              <dt class="fraco">Fotos</dt><dd :class="precisaFoto && anexosFotos === 0 ? 'obg' : ''" x-text="anexosFotos > 0 ? anexosFotos + (anexosFotos > 1 ? ' anexadas' : ' anexada') : 'nenhuma ainda'"></dd>
+              <dt class="fraco">Comentário</dt><dd x-text="descricaoGeral.trim() ? 'preenchido' : 'não preenchido'"></dd>
+            </dl>
+          </section>
+        </div>
       </div>
     </template>
 
     {% include "partials/erro.html" %}
 
     <p x-show="!podeAvancar" class="motivo" data-motivo-bloqueio>
-      <i data-lucide="info" style="width:16px;height:16px"></i> <span x-text="motivoBloqueio"></span>
+      {% icone "info" 16 %} <span x-text="motivoBloqueio"></span>
     </p>
     <div class="flex flex-wrap items-center gap-3">
       <button type="submit" :disabled="enviando || !podeAvancar" :title="motivoBloqueio" class="btn btn-preto btn-grande flex-1 sm:flex-none sm:min-w-60" x-text="enviando ? 'Enviando…' : 'Enviar ocorrência'">Enviar ocorrência</button>

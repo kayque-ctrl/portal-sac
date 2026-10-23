@@ -41,7 +41,7 @@ def test_endpoint_de_duplicata_avisa_o_colega(ocorrencia, colega, entrar):
 def test_operador_resolve_e_cliente_aprova(ocorrencia, operador, cliente, entrar):
     r = entrar(operador).post(
         f"/operacao/{ocorrencia.pk}/atualizar",
-        {"status": "resolvida", "prioridade": "alta", "atribuido_a": str(operador.pk)},
+        {"status": "resolvida", "atribuido_a": str(operador.pk), "resolucao": "Reenviamos os itens avariados."},
     )
     assert r.url == f"/operacao/{ocorrencia.pk}"
     ocorrencia.refresh_from_db()

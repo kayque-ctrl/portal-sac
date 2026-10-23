@@ -557,12 +557,14 @@ select.in { padding-right: 28px; }
 .etapas li.atual .n { background: var(--preto); color: var(--preto-txt); }
 
 /* seções do formulário que conduzem */
-.secao { padding: 0 !important; overflow: hidden; }
+/* Respiro embaixo no próprio bloco: o último filho pode ser um aviso escondido. */
+.secao { padding: 0 0 14px !important; overflow: hidden; position: relative; }
 .secao > .cab-sec { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 14px; background: var(--sup-3); border-bottom: 1px solid var(--linha); }
 .secao > .cab-sec .ajuda { margin-top: 1px; }
 .secao > :not(.cab-sec) { margin-left: 14px; margin-right: 14px; }
-.secao > :not(.cab-sec):last-child { margin-bottom: 14px; }
-.secao.atual { border-color: var(--preto); box-shadow: inset 3px 0 0 var(--preto); }
+/* Barra do passo atual por cima do cabeçalho também (a sombra interna ficava sob o fundo dele). */
+.secao.atual { border-color: var(--preto); }
+.secao.atual::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--preto); z-index: 1; }
 .secao .num-sec { width: 20px; height: 20px; border-radius: 50%; background: var(--linha); color: var(--suave); display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 600; flex-shrink: 0; }
 .secao.atual .num-sec { background: var(--preto); color: var(--preto-txt); }
 .secao.feita .num-sec { background: var(--ok-fundo); color: var(--ok); }
@@ -582,7 +584,9 @@ select.in { padding-right: 28px; }
 .linha-produto > :nth-child(1) { grid-area: cod; }
 .linha-produto > :nth-child(2) { grid-area: desc; }
 .linha-produto > :nth-child(3) { grid-area: qtd; }
-@media (min-width: 640px) { .linha-produto { grid-template-columns: 150px minmax(0, 1fr) 90px; grid-template-areas: "cod desc qtd"; } }
+@media (min-width: 640px) { .linha-produto { grid-template-columns: 160px minmax(0, 360px) 90px; grid-template-areas: "cod desc qtd"; } }
+/* Formulário do produto direto no bloco (sem quadro dentro de quadro); com itens, uma linha separa. */
+.form-produto.com-itens { border-top: 1px solid var(--linha); padding-top: 12px; }
 .motivo-produto { max-width: 280px; }
 
 /* painel lateral: definição e pessoas */

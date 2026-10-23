@@ -117,7 +117,7 @@ fazer. Em tela larga, a coluna da direita traz ajuda.
               <li class="produto" :style="editandoIndex === i ? 'border-color: var(--preto)' : ''">
                 <span class="cat" :class="config.categoriaBadge[it.categoria] || ''" x-text="rotuloItem(it)"></span>
                 <span x-show="it.codigo" class="mono text-sm suave" x-text="it.codigo"></span>
-                <strong class="min-w-0 flex-1 truncate" :class="config.categoriaTexto[it.categoria] || config.textoPadrao" x-text="it.descricao"></strong>
+                <strong class="min-w-0 flex-1 break-words" :class="config.categoriaTexto[it.categoria] || config.textoPadrao" x-text="it.descricao"></strong>
                 <span class="mono font-bold" :class="sinal(it) === 'pos' ? 'text-green-700 dark:text-green-400' : sinal(it) === 'neg' ? 'text-red-700 dark:text-red-400' : ''" x-text="(sinal(it) === 'pos' ? '+' : sinal(it) === 'neg' ? '−' : '') + it.quantidade"></span>
                 <button type="button" @click="editarProduto(i)" class="x" :aria-label="'Editar ' + it.descricao">{% icone "pencil" 16 %}</button>
                 <button type="button" @click="removerProduto(i)" class="x" :aria-label="'Remover ' + it.descricao">{% icone "trash-2" 16 %}</button>
@@ -125,7 +125,7 @@ fazer. Em tela larga, a coluna da direita traz ajuda.
             </template>
           </ul>
 
-          <div x-show="podeLancarProdutos" class="card-plano flex flex-col gap-3">
+          <div x-show="podeLancarProdutos" class="form-produto flex flex-col gap-3" :class="itens.length && 'com-itens'">
             <strong x-text="editandoIndex !== null ? 'Editar produto' : (itens.length ? 'Adicionar outro produto' : 'Adicionar produto')">Adicionar produto</strong>
             <div class="campo motivo-produto">
               <label for="categoria-produto">Motivo <span class="obg" aria-hidden="true">*</span></label>

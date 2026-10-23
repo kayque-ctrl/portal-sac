@@ -30,8 +30,8 @@ def enviar_email(to: str, subject: str, html: str) -> bool:
 def botao_email(href: str, texto: str) -> str:
     """Botão estilizado para um link absoluto (ex.: convite/redefinição com token)."""
     return (
-        f'<p style="margin:24px 0"><a href="{escape(href)}" style="background:#18181b;color:#fff;'
-        f'text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px">{escape(texto)}</a></p>'
+        f'<p style="margin:24px 0"><a href="{escape(href)}" style="background:#1f7a4d;color:#fff;'
+        f'text-decoration:none;padding:10px 18px;border-radius:2px;font-size:14px">{escape(texto)}</a></p>'
     )
 
 

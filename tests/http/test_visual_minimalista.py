@@ -82,7 +82,8 @@ def test_mensagem_enviada_nao_e_verde():
     from pathlib import Path
 
     css = (Path(__file__).resolve().parents[2] / "static" / "css" / "sac.css").read_text(encoding="utf-8")
-    assert "--bal-eu: #e8eef8;" in css  # azul claro do sistema, não verde
+    assert "--bal-eu: #e9eeec;" in css  # cinza neutro, nunca verde (spec 031 manteve o pedido)
+    assert "--bal-eu: #e6f2eb;" not in css  # o verde-claro do destaque fica fora do balão
 
 
 def test_conteudo_ocupa_toda_a_largura():

@@ -1,8 +1,8 @@
 {% load ocorrencias_tags %}
 {% comment %}Paginação server-side. Preserva os filtros da URL e troca só a página.{% endcomment %}
 {% if pagina.paginator.num_pages > 1 %}
-<div class="flex flex-wrap items-center justify-between gap-3">
-  <span class="text-sm suave">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"item,itens" }}</span>
+<div class="rodape-tbl flex-wrap justify-between">
+  <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"item,itens" }}</span>
   <div class="flex gap-2">
     {% if pagina.has_previous %}
       <a href="{% url_com p=pagina.previous_page_number %}" class="btn btn-linha btn-peq">{% icone "chevron-left" 16 %} Anterior</a>

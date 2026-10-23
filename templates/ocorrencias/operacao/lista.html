@@ -2,6 +2,7 @@
 {% load ocorrencias_tags %}
 {% block title %}Ocorrências · Operação{% endblock %}
 {% block titulo_celular_op %}Ocorrências{% endblock %}
+{% block trilha %}Ocorrências{% endblock %}
 
 {% block conteudo %}
 <div class="topo">
@@ -11,16 +12,17 @@
       {% if situacao == "ativas" %}{{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"ativa,ativas" }}{% else %}{{ pagina.paginator.count }} {{ pagina.paginator.count|plural:"ocorrência,ocorrências" }}{% endif %}{% if tem_filtro %} (filtrado){% endif %}{% if vencidas %} · <strong style="color: var(--perigo)">{{ vencidas }} com prazo vencido</strong>{% endif %}
     </p>
   </div>
-</div>
-
-{% for m in messages %}{% if not m.extra_tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
-
-{# Filtros prontos e contadores por situação (spec 025, estilo GLPI) #}
+  <div class="acoes">
 <nav aria-label="Filtros prontos" class="prontos">
   {% for rotulo, url, ativo in prontos %}
   <a href="{{ url }}" class="pilula" {% if ativo %}aria-current="page"{% endif %}>{{ rotulo }}</a>
   {% endfor %}
 </nav>
+  </div>
+</div>
+
+{% for m in messages %}{% if not m.extra_tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
+
 <div class="contadores" data-contadores>
   {% for c in contadores %}
   <a href="{{ c.url }}" class="contador {% if c.chave == 'vencido' and c.n %}perigo{% endif %}" {% if c.chave == status or c.chave == 'vencido' and prazo %}aria-current="true"{% endif %}>
@@ -30,6 +32,7 @@
   {% endfor %}
 </div>
 
+<section class="painel" aria-label="Ocorrências">
 {# Abas de situação #}
 <nav class="abas" aria-label="Situação">
   {% for aba in abas %}
@@ -38,38 +41,38 @@
 </nav>
 
 {% if cliente %}
-<div class="flex flex-wrap gap-2">
+<div class="flex flex-wrap gap-2 px-3 pt-2.5">
   <span class="etq borda">Aberta por: <strong>{{ cliente_nome|default:"usuário removido" }}</strong> <a href="?{% query situacao=situacao %}" class="x" style="width: 22px; height: 22px" aria-label="Tirar filtro">{% icone "x" 13 %}</a></span>
 </div>
 {% endif %}
 
 {# Busca e filtros #}
-<form method="get" class="grid gap-2 lg:flex lg:flex-wrap lg:items-center" x-data @change="$el.requestSubmit()">
+<form method="get" class="filtros" x-data @change="$el.requestSubmit()">
   <input type="hidden" name="situacao" value="{{ situacao }}">
   {% if cliente %}<input type="hidden" name="cliente" value="{{ cliente }}">{% endif %}
   {% if prazo %}<input type="hidden" name="prazo" value="{{ prazo }}">{% endif %}
-  <label class="busca lg:min-w-60 lg:flex-1">
+  <label class="busca" style="flex: 1 1 220px; max-width: 320px">
     {% icone "search" 18 %}<span class="sr">Buscar</span>
     <input id="busca" type="search" name="q" value="{{ q }}" placeholder="Buscar por protocolo, cliente, NF, pedido ou picking">
   </label>
-  <div class="grid grid-cols-2 gap-2 lg:flex">
+  <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
     <label class="sr" for="f-status">Situação</label>
-    <select id="f-status" name="status" class="in in-peq lg:w-44">
+    <select id="f-status" name="status" class="in in-peq sm:w-44">
       <option value="">Todas as situações</option>
       {% for v, l in status_opcoes %}<option value="{{ v }}" {% if v == status %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
     <label class="sr" for="f-tipo">Tipo</label>
-    <select id="f-tipo" name="tipo" class="in in-peq lg:w-44">
+    <select id="f-tipo" name="tipo" class="in in-peq sm:w-44">
       <option value="">Todos os tipos</option>
       {% for v, l in tipos %}<option value="{{ v }}" {% if v == tipo %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
     <label class="sr" for="f-empresa">Empresa</label>
-    <select id="f-empresa" name="empresa" class="in in-peq lg:w-44">
+    <select id="f-empresa" name="empresa" class="in in-peq sm:w-44">
       <option value="">Todas as empresas</option>
       {% for pk, nome in empresas %}<option value="{{ pk }}" {% if pk|stringformat:'s' == empresa %}selected{% endif %}>{{ nome }}</option>{% endfor %}
     </select>
     <label class="sr" for="f-resp">Responsável</label>
-    <select id="f-resp" name="responsavel" class="in in-peq lg:w-44">
+    <select id="f-resp" name="responsavel" class="in in-peq sm:w-44">
       <option value="">Qualquer responsável</option>
       <option value="eu" {% if responsavel == "eu" %}selected{% endif %}>Comigo</option>
       <option value="ninguem" {% if responsavel == "ninguem" %}selected{% endif %}>Sem responsável</option>
@@ -82,13 +85,13 @@
 
 {# Lista #}
 {% if not pagina.object_list %}
-  <div class="card-vazio">
+  <div class="p-6 text-center text-[13.5px] fraco">
     {% if situacao == "lixeira" %}A lixeira está vazia.{% else %}Nenhuma ocorrência{% if tem_filtro %} com esse filtro{% endif %}.{% endif %}
   </div>
 
 {% elif situacao == "lixeira" %}
   {{ ids_lixeira|json_script:"ids-lixeira" }}
-  <div class="flex flex-col gap-3" x-data="lixeira(JSON.parse(document.getElementById('ids-lixeira').textContent))">
+  <div class="flex flex-col gap-3 p-3" x-data="lixeira(JSON.parse(document.getElementById('ids-lixeira').textContent))">
     <div class="card flex flex-wrap items-center justify-between gap-3" style="padding: 12px 16px">
       <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" :checked="todos" @change="alternarTodos()" class="h-4 w-4">
@@ -157,4 +160,5 @@
 {% endif %}
 
 {% include "partials/paginacao.html" %}
+</section>
 {% endblock %}

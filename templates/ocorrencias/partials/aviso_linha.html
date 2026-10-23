@@ -1,12 +1,11 @@
 {% load ocorrencias_tags %}
-{% comment %}Um aviso da operação. Parâmetros: a (Aviso), dispensavel (bool){% endcomment %}
-<div class="card flex items-start gap-3 {% if a.tipo == 'alerta' %}card-aviso{% endif %}" style="padding: 12px 16px">
-  <span class="mt-0.5 shrink-0">{% if a.tipo == 'alerta' %}{% icone "megaphone" 20 %}{% else %}{% icone "info" 20 %}{% endif %}</span>
-  <div class="min-w-0 flex-1">
-    <p><strong>{{ a.titulo }}</strong>{% if a.mensagem %}<span class="{% if a.tipo != 'alerta' %}suave{% endif %}"> · {{ a.mensagem }}</span>{% endif %}</p>
-    {% if a.expira_em %}<p class="mt-0.5 text-[13px] {% if a.tipo != 'alerta' %}fraco{% endif %}">Válido até {{ a.expira_em|dia }}</p>{% endif %}
+{% comment %}Um aviso da operação, em faixa (spec 030). Parâmetros: a (Aviso), dispensavel (bool){% endcomment %}
+<div class="card flex items-center gap-3 {% if a.tipo == 'alerta' %}card-aviso{% endif %}" style="padding: 8px 12px">
+  <span class="shrink-0 {% if a.tipo != 'alerta' %}fraco{% endif %}">{% if a.tipo == 'alerta' %}{% icone "megaphone" 16 %}{% else %}{% icone "info" 16 %}{% endif %}</span>
+  <div class="min-w-0 flex-1 text-[13.5px]">
+    <p><strong class="font-semibold">{{ a.titulo }}</strong>{% if a.mensagem %}<span class="{% if a.tipo != 'alerta' %}suave{% endif %}"> · {{ a.mensagem }}</span>{% endif %}{% if a.expira_em %}<span class="text-[12.5px] {% if a.tipo != 'alerta' %}fraco{% endif %}"> · válido até {{ a.expira_em|dia }}</span>{% endif %}</p>
   </div>
   {% if dispensavel and a.tipo != 'alerta' %}
-  <button type="button" @click="dispensar('{{ a.id }}')" aria-label="Dispensar aviso: {{ a.titulo }}" class="x">{% icone "x" 16 %}</button>
+  <button type="button" @click="dispensar('{{ a.id }}')" aria-label="Dispensar aviso: {{ a.titulo }}" class="x">{% icone "x" 15 %}</button>
   {% endif %}
 </div>

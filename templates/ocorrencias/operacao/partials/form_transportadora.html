@@ -3,9 +3,10 @@
 Formulário de transportadora (spec 025): cadastro e edição. Parâmetros:
 transportadora (na edição), empresas [(id, nome)], marcadas (ids), valores, erro.
 {% endcomment %}
-<form method="post" class="card flex flex-col gap-3.5" data-form-transportadora>
+<form method="post" class="painel" data-form-transportadora>
   {% csrf_token %}
-  <h2 class="h2">{% if transportadora %}Editar transportadora{% else %}Nova transportadora{% endif %}</h2>
+  <h2 class="painel-h">{% if transportadora %}Editar transportadora{% else %}Nova transportadora{% endif %}</h2>
+  <div class="painel-b">
   <div class="campo">
     <label for="t-nome">Nome <span class="obg" aria-hidden="true">*</span></label>
     <input id="t-nome" name="nome" required value="{{ valores.nome|default:'' }}" placeholder="Ex.: Rápida Log" class="in">
@@ -23,9 +24,9 @@ transportadora (na edição), empresas [(id, nome)], marcadas (ids), valores, er
     <legend class="rot">Empresas que ela atende</legend>
     <p class="ajuda">Na coleta de uma ocorrência dessas empresas, ela já aparece marcada.</p>
     {% if empresas %}
-    <div class="flex max-h-60 flex-col gap-1 overflow-y-auto rounded-lg border p-2" style="border-color: var(--linha)">
+    <div class="flex max-h-60 flex-col overflow-y-auto border" style="border-color: var(--borda); border-radius: 2px">
       {% for pk, nome in empresas %}
-      <label class="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-md px-2 text-[14.5px] hover:bg-[var(--sup-2)]">
+      <label class="flex min-h-9 cursor-pointer items-center gap-2.5 px-2.5 text-[13.5px] hover:bg-[var(--sup-2)]">
         <input type="checkbox" name="empresas" value="{{ pk }}" {% if pk in marcadas %}checked{% endif %} class="h-4 w-4">
         {{ nome }}
       </label>
@@ -39,5 +40,6 @@ transportadora (na edição), empresas [(id, nome)], marcadas (ids), valores, er
   <div class="flex flex-wrap gap-2">
     <button type="submit" class="btn btn-preto">{% if transportadora %}Salvar alterações{% else %}Cadastrar transportadora{% endif %}</button>
     {% if transportadora %}<a href="{% url 'operacao:transportadoras' %}" class="btn btn-linha">Cancelar</a>{% endif %}
+  </div>
   </div>
 </form>

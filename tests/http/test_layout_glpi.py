@@ -151,14 +151,17 @@ def test_inicio_tem_busca_e_contadores(abrir, cliente, entrar):
 
     html = corpo(entrar(cliente).get("/portal/"))
 
-    assert 'class="heroi"' in html and 'action="/portal/ocorrencias"' in html
+    # Spec 030: a busca saiu da faixa escura e foi para a barra do topo (no celular, na página).
+    assert 'class="heroi"' not in html
+    assert html.count('action="/portal/ocorrencias"') == 2
     assert 'href="/portal/ocorrencias?status=aberta"' in html
     assert 'href="/portal/ocorrencias?filtro=aprovar"' in html
 
 
-def test_inicio_sem_ocorrencias_nao_mostra_busca_nem_contadores(cliente, entrar):
+def test_inicio_sem_ocorrencias_nao_mostra_contadores(cliente, entrar):
     html = corpo(entrar(cliente).get("/portal/"))
-    assert "data-contadores" not in html and 'name="q"' not in html
+    assert "data-contadores" not in html
+    assert html.count('action="/portal/ocorrencias"') == 1  # só a busca do topo
 
 
 def test_lista_comeca_com_o_filtro_do_contador(cliente, entrar):
@@ -181,7 +184,8 @@ def test_busca_longa_e_cortada(cliente, entrar):
 # ---------------------------------------------------------------- visual
 
 
-def test_operacao_tem_menu_lateral_escuro_e_fonte_inter(operador, entrar):
+def test_operacao_tem_menu_lateral_e_fonte_ibm_plex(operador, entrar):
+    # Spec 030: a fonte passou a ser IBM Plex Sans / Mono.
     html = corpo(entrar(operador).get("/operacao/"))
-    assert "family=Inter" in html
+    assert "family=IBM+Plex+Sans" in html
     assert 'class="lado"' in html

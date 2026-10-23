@@ -2,6 +2,7 @@
 {% load ocorrencias_tags %}
 {% block title %}{{ oc.protocolo }} · Portal de Ocorrências{% endblock %}
 {% block titulo_celular %}{{ oc.protocolo }}{% endblock %}
+{% block trilha %}<a href="/portal/ocorrencias">Minhas ocorrências</a> / <span class="mono">{{ oc.protocolo }}</span>{% endblock %}
 
 {% block conteudo %}
 {% comment %}
@@ -9,13 +10,9 @@ Detalhe do cliente (spec 025, estilo GLPI): andamento no topo, a solução
 proposta para aprovar, a conversa em balões (você à direita, a operação à
 esquerda) e o painel com detalhes e pessoas.
 {% endcomment %}
-<a href="{% url 'portal:lista' %}" class="voltar so-pc">{% icone "arrow-left" 16 %} Ocorrências</a>
 <div class="flex flex-wrap items-center gap-3">
-  <div class="flex min-w-0 flex-1 flex-col gap-1">
-    <p class="text-sm font-semibold suave"><span class="mono">{{ oc.protocolo }}</span> · {{ oc.tipo|tipo_label }}</p>
-    <h1 class="titulo">{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</h1>
-  </div>
-  {% if oc.status == "resolvida" and not somente_leitura %}<span class="selo-aprov"><span class="ponto resolvida" aria-hidden="true"></span>Aguardando sua aprovação</span>{% else %}<span class="etq borda">{% situacao oc.status %}</span>{% endif %}
+  <h1 class="titulo min-w-0"><span class="mono fraco" style="font-weight: 500">{{ oc.protocolo }}</span> {{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</h1>
+  {% if oc.status == "resolvida" and not somente_leitura %}<span class="selo-aprov"><span class="ponto resolvida" aria-hidden="true"></span>Aguardando sua aprovação</span>{% else %}<span class="selo {{ oc.status }}"><span class="ponto {{ oc.status }}" aria-hidden="true"></span>{{ oc.status|status_label }}</span>{% endif %}
 </div>
 
 {% andamento oc.status True %}
@@ -24,13 +21,12 @@ esquerda) e o painel com detalhes e pessoas.
 <p class="motivo">{% icone "eye" 17 %}<span>Aberta por <strong style="color: var(--tinta)">{{ responsavel_nome }}</strong>. Você pode acompanhar, mas só quem abriu responde e aprova.</span></p>
 {% endif %}
 
-<div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
   <div class="flex min-w-0 flex-col gap-4">
     {# Aprovação / desfecho #}
     {% if oc.status == "resolvida" %}
     <section class="card aprovar-card flex flex-col gap-3" aria-labelledby="t-conf" data-aprovacao>
       <div class="flex flex-wrap items-center gap-3">
-        <span class="selo-aprov" aria-hidden="true">{% icone "check" 16 %}</span>
         <div class="min-w-0 flex-1">
           <h2 id="t-conf" class="h2">A operação propôs uma solução. Ela resolve?</h2>
           <p class="text-sm suave">{% if somente_leitura %}Aguardando a aprovação de {{ responsavel_nome }}.{% else %}Só você, que abriu, pode aprovar. Se faltar algo, reabra.{% endif %}</p>
@@ -62,10 +58,10 @@ esquerda) e o painel com detalhes e pessoas.
     {% endif %}
 
     {# Conversa (linha do tempo, specs 021, 023 e 025) #}
-    <section aria-labelledby="tl-tit" class="card overflow-hidden" style="padding: 0">
-      <div class="flex items-center gap-2 border-b px-4 py-3" style="border-color: var(--linha)">
-        <h2 id="tl-tit" class="h2" style="font-size: 16px">Conversa</h2>
-        <span class="ml-auto hidden text-[13px] fraco sm:inline">mais novo embaixo</span>
+    <section aria-labelledby="tl-tit" class="painel overflow-hidden">
+      <div class="painel-h">
+        <h2 id="tl-tit" class="h2">Conversa</h2>
+        <span class="dir fraco">mais novo embaixo</span>
       </div>
       <div class="tl-rolagem" x-data x-init="$nextTick(() => { $el.scrollTop = $el.scrollHeight })">
         {% include "ocorrencias/partials/linha_do_tempo.html" %}
@@ -81,28 +77,31 @@ esquerda) e o painel com detalhes e pessoas.
     </section>
   </div>
 
-  {# Painel: detalhes e pessoas (fixo no computador) #}
-  <aside class="card flex flex-col gap-4 lg:sticky lg:top-24" aria-label="Detalhes da ocorrência">
-    <h2 class="h2" style="font-size: 15px">Detalhes</h2>
-    <dl class="grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-2 text-sm">
-      <dt class="fraco">Situação</dt><dd>{% if oc.status == "resolvida" and not somente_leitura %}{% situacao oc.status "Aguardando sua aprovação" %}{% else %}{% situacao oc.status %}{% endif %}</dd>
-      <dt class="fraco">Protocolo</dt><dd class="mono">{{ oc.protocolo }}</dd>
-      {% if oc.referencia %}<dt class="fraco">Referência</dt><dd class="mono">{{ oc|referencia }}</dd>{% endif %}
-      <dt class="fraco">Aberta em</dt><dd>{{ oc.criado_em|data }}</dd>
-      <dt class="fraco">Prazo</dt><dd>{% if oc.status == "resolvida" %}<span class="suave">Pausado até a aprovação</span>{% else %}{% prazo oc %}{% endif %}</dd>
-    </dl>
-    <div class="painel-sec">
-      <h3>Pessoas</h3>
-      <div class="pessoa">
-        <span class="av {% if not somente_leitura %}preto{% endif %}" aria-hidden="true">{% if somente_leitura %}{{ responsavel_nome|iniciais }}{% else %}{{ user.nome|iniciais }}{% endif %}</span>
-        <span class="min-w-0"><strong class="block truncate">{% if somente_leitura %}{{ responsavel_nome }}{% else %}{{ user.nome }} (você){% endif %}</strong><span class="papel">Solicitante — responde e aprova{% if oc.cliente.empresa %} · {{ oc.cliente.empresa.nome }}{% endif %}</span></span>
+  {# Painéis: ocorrência e pessoas (fixos no computador) #}
+  <aside class="flex flex-col gap-3 lg:sticky lg:top-16" aria-label="Detalhes da ocorrência">
+    <section class="painel" aria-labelledby="p-oc">
+      <h2 id="p-oc" class="painel-h">Ocorrência</h2>
+      <div class="painel-b">
+        <dl class="def">
+          <dt>Situação</dt><dd>{% if oc.status == "resolvida" and not somente_leitura %}{% situacao oc.status "Aguardando sua aprovação" %}{% else %}{% situacao oc.status %}{% endif %}</dd>
+          <dt>Protocolo</dt><dd class="mono">{{ oc.protocolo }}</dd>
+          {% if oc.referencia %}<dt>Referência</dt><dd class="mono">{{ oc|referencia }}</dd>{% endif %}
+          <dt>Aberta em</dt><dd>{{ oc.criado_em|data }}</dd>
+          <dt>Prazo</dt><dd>{% if oc.status == "resolvida" %}<span class="fraco">Pausado até a aprovação</span>{% else %}{% prazo oc %}{% endif %}</dd>
+        </dl>
+        <a href="{% url 'portal:exportar' oc.pk %}" class="btn btn-linha btn-peq self-start">{% icone "download" 14 %} Baixar em Excel</a>
       </div>
-      <div class="pessoa">
-        <span class="av op" aria-hidden="true">{% icone "headset" 16 %}</span>
-        <span class="min-w-0"><strong class="block">Operação</strong><span class="papel">Atende e propõe a solução</span></span>
+    </section>
+    <section class="painel" aria-labelledby="p-pe">
+      <h2 id="p-pe" class="painel-h">Pessoas</h2>
+      <div class="painel-b">
+        <dl class="def">
+          <dt>Solicitante</dt><dd>{% if somente_leitura %}{{ responsavel_nome }}{% else %}{{ user.nome }} (você){% endif %}</dd>
+          {% if oc.cliente.empresa %}<dt>Empresa</dt><dd>{{ oc.cliente.empresa.nome }}</dd>{% endif %}
+          <dt>Atendimento</dt><dd>Operação</dd>
+        </dl>
       </div>
-    </div>
-    <a href="{% url 'portal:exportar' oc.pk %}" class="btn btn-linha btn-peq">{% icone "download" 15 %} Baixar em Excel</a>
+    </section>
   </aside>
 </div>
 

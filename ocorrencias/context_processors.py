@@ -22,12 +22,13 @@ MENU_OPERACAO = [
 ]
 MENU_ADMIN = ("Administração", [("/operacao/sla", "Prazos (SLA)", "timer")])
 
-# O cliente navega pelo cabeçalho: Início, Minhas ocorrências e Painel.
+# O cliente também navega pelo menu lateral (spec 030, como a interface simplificada do GLPI).
 MENU_CLIENTE = [
     (
-        None,
+        "Atendimento",
         [
             ("/portal/", "Início", "house"),
+            ("/portal/nova", "Abrir ocorrência", "plus"),
             ("/portal/ocorrencias", "Minhas ocorrências", "inbox"),
             ("/portal/dashboard", "Painel", "bar-chart-3"),
         ],
@@ -41,7 +42,7 @@ def _atual(path: str, grupos, padrao: str | None = None) -> str | None:
     vale para ela mesma, e o resto (ex.: o detalhe de uma ocorrência) cai no
     `padrao`. Notificações não marcam nada: têm o sino.
     """
-    if path.rstrip("/").endswith("/notificacoes") or path.startswith("/portal/nova"):
+    if path.rstrip("/").endswith("/notificacoes"):
         return None
     hrefs = [href for _, links in grupos for href, _, _ in links]
     especificos = [h for h in hrefs if not h.endswith("/") and path.startswith(h)]

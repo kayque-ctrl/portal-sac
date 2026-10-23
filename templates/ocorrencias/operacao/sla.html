@@ -1,6 +1,7 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Prazos (SLA) · Operação{% endblock %}
+{% block trilha %}Prazos (SLA){% endblock %}
 {% block titulo_celular_op %}Prazos (SLA){% endblock %}
 
 {% block conteudo %}
@@ -23,7 +24,7 @@ prazo próprio por empresa, que vence o padrão.
     {% else %}
     {% for rotulo, empresa_id, lista in grupos %}
     <section class="tbl-box min-w-0" aria-labelledby="g-{{ forloop.counter }}" data-grupo-sla="{{ empresa_id|default:'padrao' }}">
-      <h2 id="g-{{ forloop.counter }}" class="h2 flex items-center gap-2 px-3.5 pb-2.5" style="font-size: 16px">
+      <h2 id="g-{{ forloop.counter }}" class="h2 flex items-center gap-2 px-3.5 pb-2.5">
         {% if empresa_id %}{% icone "building-2" 16 %}{% else %}{% icone "globe" 16 %}{% endif %} {{ rotulo }}
       </h2>
       <div class="tbl-rola">

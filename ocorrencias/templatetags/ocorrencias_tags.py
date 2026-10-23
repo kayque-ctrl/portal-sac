@@ -151,7 +151,7 @@ def icone(nome, tamanho=16, classe=""):
 @register.simple_tag
 def status_badge(status):
     return format_html(
-        '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset {}">{}</span>',
+        '<span class="inline-flex items-center rounded-[2px] px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset {}">{}</span>',
         labels.STATUS_BADGE.get(status, ""),
         labels.STATUS_LABEL.get(status, status),
     )
@@ -163,7 +163,7 @@ def sla_badge(oc):
     if sla.estado == "sem_sla":
         return ""
     return format_html(
-        '<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset {}">{}{}</span>',
+        '<span class="inline-flex items-center gap-1 rounded-[2px] px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset {}">{}{}</span>',
         SLA_COR[sla.estado],
         icone(SLA_ICONE[sla.estado], 12),
         sla.label,
@@ -210,7 +210,7 @@ def prazo(oc):
 def notif_icone(mensagem, tamanho=16):
     nome, cor = notificacoes.icone(mensagem)
     return format_html(
-        '<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 {}">{}</span>',
+        '<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] bg-zinc-100 dark:bg-zinc-800 {}">{}</span>',
         cor,
         icone(nome, tamanho),
     )

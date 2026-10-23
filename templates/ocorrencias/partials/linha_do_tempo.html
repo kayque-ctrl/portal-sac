@@ -1,8 +1,9 @@
 {% load ocorrencias_tags %}
 {% comment %}
-Linha do tempo da ocorrência (specs 021 e 023), do mais antigo ao mais novo,
-no formato do GLPI: cada coisa que acontece é uma linha, e cada documento
-enviado aparece como evento próprio com o cartão do arquivo. Recebe `linha`
+Linha do tempo da ocorrência, do mais antigo ao mais novo, como conversa de
+WhatsApp (spec 030): o que vem do lado de quem vê (`meu_lado`) fica à
+direita, em verde-claro; o outro lado, à esquerda, com o nome. Eventos e
+documentos ficam no meio ou junto do lado de quem enviou. Recebe `linha`
 (apresentacao.linha_do_tempo), `oc` e `itens`. O que é interno já vem
 filtrado para o cliente: aqui só se decide a aparência.
 {% endcomment %}
@@ -13,54 +14,61 @@ filtrado para o cliente: aqui só se decide a aparência.
   {% endifchanged %}
 
   {% if item.tipo == "abertura" %}
-  <li data-item="abertura" class="abertura">
-    <div class="quem"><span class="av peq {% if item.autor_rotulo == 'Você' %}preto{% endif %}" aria-hidden="true">{% if item.autor_rotulo == 'Você' %}{{ user.nome|iniciais }}{% else %}{{ item.autor_rotulo|iniciais }}{% endif %}</span><span><strong>{{ item.autor_rotulo }}</strong> abriu a ocorrência · {{ item.quando|hora }}</span></div>
-    <strong class="text-base">{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</strong>
-    {% if oc.descricao %}<p class="whitespace-pre-wrap break-words">{{ oc.descricao }}</p>{% endif %}
-    {% if itens %}{% include "ocorrencias/partials/itens.html" %}{% endif %}
-    {% if item.anexos %}{% include "ocorrencias/partials/anexos.html" with anexos=item.anexos %}{% endif %}
+  <li data-item="abertura" class="abertura {% if item.meu_lado %}eu{% endif %}">
+    <div class="corpo">
+      <div class="bal">
+        <span class="quem"><strong>{{ item.autor_rotulo }}</strong> abriu a ocorrência</span>
+        <span class="titulo-ab">{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</span>
+        {% if oc.descricao %}<p class="whitespace-pre-wrap break-words">{{ oc.descricao }}</p>{% endif %}
+        {% if itens %}{% include "ocorrencias/partials/itens.html" %}{% endif %}
+        {% if item.anexos %}<div class="mt-2">{% include "ocorrencias/partials/anexos.html" with anexos=item.anexos %}</div>{% endif %}
+        <span class="hora">{{ item.quando|hora }}</span>
+      </div>
+    </div>
   </li>
 
   {% elif item.tipo == "mensagem" %}
   {% with m=item.m %}
   {% if m.conteudo %}
-  <li data-item="{% if m.interna %}interna{% else %}mensagem{% endif %}" class="msg {% if m.interna %}nota{% elif m.sou_eu %}eu{% endif %}">
-    <span class="av peq {% if m.interna %}int{% elif m.sou_eu %}preto{% endif %}" aria-hidden="true">{% if m.interna %}{% icone "lock" 13 %}{% elif m.sou_eu %}{{ user.nome|iniciais }}{% else %}{{ m.autor_rotulo|iniciais }}{% endif %}</span>
+  <li data-item="{% if m.interna %}interna{% else %}mensagem{% endif %}" class="msg {% if m.meu_lado %}eu{% endif %} {% if m.interna %}nota{% endif %}">
     <div class="corpo">
-      <span class="quem">
-        <strong>{{ m.autor_rotulo }}</strong>
-        {% if m.interna %}<span class="selo-int">{% icone "lock" 11 %} Comentário interno · só a operação vê</span>{% elif m.autor_id != oc.cliente_id %}<span>respondeu</span>{% endif %}
-        <span>· {{ m.criado_em|hora }}</span>
-      </span>
-      <div class="bal">{{ m.conteudo }}</div>
+      <div class="bal">
+        {% if m.interna %}<span class="quem"><strong>{{ m.autor_rotulo }}</strong> <span class="selo-int">{% icone "lock" 11 %} Comentário interno · só a operação vê</span></span>
+        {% elif not m.sou_eu %}<span class="quem"><strong>{{ m.autor_rotulo }}</strong></span>{% endif %}
+        <span class="texto">{{ m.conteudo }}</span>
+        <span class="hora">{{ m.criado_em|hora }}</span>
+      </div>
     </div>
   </li>
   {% endif %}
-  {# Cada documento enviado é um evento próprio, com o cartão do arquivo. #}
+  {# Cada documento enviado é um evento próprio, com o cartão do arquivo, do lado de quem enviou. #}
   {% for a in m.anexos_lista %}
-  <li data-item="documento" class="flex flex-col gap-2">
-    <div class="ev"><span class="pt">{% if a.tipo_mime|slice:":6" == "image/" %}{% icone "camera" 14 %}{% else %}{% icone "file-text" 14 %}{% endif %}</span><span><strong>{{ m.autor_rotulo }}</strong> adicionou o documento <strong>{{ a.nome_arquivo }}</strong> · {{ a.criado_em|hora }}</span>{% if m.interna %}<span class="so-op">só operação</span>{% endif %}</div>
+  <li data-item="documento" class="doc-item {% if m.meu_lado %}eu{% else %}outro{% endif %}">
+    <span class="ev"><span class="pt">{% if a.tipo_mime|slice:":6" == "image/" %}{% icone "camera" 12 %}{% else %}{% icone "file-text" 12 %}{% endif %}</span><span><strong>{{ m.autor_rotulo }}</strong> adicionou o documento <strong>{{ a.nome_arquivo }}</strong> · {{ a.criado_em|hora }}</span>{% if m.interna %}<span class="so-op">só operação</span>{% endif %}</span>
     <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer" class="doc" data-anexo="{% if a.tipo_mime|slice:':6' == 'image/' %}foto{% else %}arquivo{% endif %}">
-      {% if a.tipo_mime|slice:":6" == "image/" %}<img src="{% url 'publico:anexo' a.pk %}" alt="Foto {{ a.nome_arquivo }}" loading="lazy" width="76" height="58">{% else %}<span class="ext">{% if a.tipo_mime == "application/pdf" %}PDF{% else %}{% icone "paperclip" 16 %}{% endif %}</span>{% endif %}
-      <span class="min-w-0"><span class="nome">{{ a.nome_arquivo }}</span><span class="text-[13px] fraco">{% if a.tipo_mime|slice:":6" == "image/" %}foto{% elif a.tipo_mime == "application/pdf" %}PDF{% else %}arquivo{% endif %}{% if a.tamanho_bytes %} · {{ a.tamanho_bytes|tamanho }}{% endif %} · abrir</span></span>
+      {% if a.tipo_mime|slice:":6" == "image/" %}<img src="{% url 'publico:anexo' a.pk %}" alt="Foto {{ a.nome_arquivo }}" loading="lazy" width="64" height="48">{% else %}<span class="ext">{% if a.tipo_mime == "application/pdf" %}PDF{% else %}{% icone "paperclip" 16 %}{% endif %}</span>{% endif %}
+      <span class="min-w-0"><span class="nome">{{ a.nome_arquivo }}</span><span class="text-[12px] fraco">{% if a.tipo_mime|slice:":6" == "image/" %}foto{% elif a.tipo_mime == "application/pdf" %}PDF{% else %}arquivo{% endif %}{% if a.tamanho_bytes %} · {{ a.tamanho_bytes|tamanho }}{% endif %} · abrir</span></span>
     </a>
   </li>
   {% endfor %}
   {% endwith %}
 
   {% elif item.solucao %}
-  {# Solução proposta (spec 025, como no GLPI): o resumo que a operação escreveu ao resolver. #}
+  {# Solução proposta (spec 025, como no GLPI): do lado da operação. #}
   <li data-item="solucao" class="flex flex-col gap-2">
-    <div class="ev"><span class="pt">{% icone "refresh-cw" 14 %}</span><span><strong>{{ item.autor_rotulo }}</strong> · {{ item.texto }} · {{ item.quando|hora }}</span></div>
-    <div class="solucao">
-      <div class="topo-sol">{% icone "check-circle-2" 16 %} Solução proposta</div>
-      <div class="txt-sol">{{ item.solucao }}</div>
+    <span class="ev"><span class="pt">{% icone "refresh-cw" 12 %}</span><span><strong>{{ item.autor_rotulo }}</strong> · {{ item.texto }} · {{ item.quando|hora }}</span></span>
+    <div class="sol-item {% if item.meu_lado %}eu{% endif %}">
+      <div class="solucao">
+        <div class="topo-sol">{% icone "check-circle-2" 14 %} Solução proposta</div>
+        <div class="txt-sol">{{ item.solucao }}</div>
+        <span class="hora">{{ item.quando|hora }}</span>
+      </div>
     </div>
   </li>
 
   {% else %}
   <li data-item="{% if item.interno %}evento-interno{% else %}evento{% endif %}" class="ev">
-    <span class="pt">{% icone item.icone 14 %}</span>
+    <span class="pt">{% icone item.icone 12 %}</span>
     <span><strong>{{ item.autor_rotulo }}</strong> · {{ item.texto }} · {{ item.quando|hora }}</span>
     {% if item.interno %}<span class="so-op">só operação</span>{% endif %}
   </li>

@@ -1,30 +1,32 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Transportadoras · Operação{% endblock %}
+{% block trilha %}Transportadoras{% endblock %}
 {% block titulo_celular_op %}Transportadoras{% endblock %}
 
 {% block conteudo %}
 <div class="topo">
   <div>
     <h1 class="titulo">Transportadoras</h1>
-    <p class="suave">Ligue cada transportadora às empresas que ela atende: na coleta, o e-mail certo já vem marcado.</p>
+    <p class="sub">Ligue cada transportadora às empresas que ela atende: na coleta, o e-mail certo já vem marcado.</p>
   </div>
 </div>
 
 {% for m in messages %}{% if 'transportadora' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
 
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-  {% if not transportadoras %}
-  <div class="card-vazio">Nenhuma transportadora cadastrada ainda. Use o formulário ao lado.</div>
-  {% else %}
-  <section class="tbl-box min-w-0" aria-label="Transportadoras cadastradas">
+  <section class="painel" aria-labelledby="t-transp">
+    <h2 id="t-transp" class="painel-h">Transportadoras <span class="fraco" style="font-weight: 400">· {{ transportadoras|length }}</span></h2>
+    {% if not transportadoras %}
+    <p class="p-6 text-center text-[13.5px] fraco">Nenhuma transportadora cadastrada ainda. Use o formulário ao lado.</p>
+    {% else %}
     <div class="tbl-rola">
       <table class="tabela">
         <thead><tr><th scope="col">Transportadora</th><th scope="col">Atende</th><th scope="col">Situação</th><th scope="col"><span class="sr">Ações</span></th></tr></thead>
         <tbody>
           {% for t in transportadoras %}
           <tr {% if not t.ativa %}style="opacity: .65"{% endif %}>
-            <td><a href="{% url 'operacao:transportadora_detalhe' t.pk %}"><strong>{{ t.nome }}</strong></a><br><span class="mono text-[13px] suave">{{ t.email }}</span>{% if t.telefone %}<span class="text-[13px] suave"> · {{ t.telefone }}</span>{% endif %}</td>
+            <td><a href="{% url 'operacao:transportadora_detalhe' t.pk %}"><strong>{{ t.nome }}</strong></a><br><span class="mono text-[12.5px] fraco">{{ t.email }}</span>{% if t.telefone %}<span class="text-[12.5px] fraco"> · {{ t.telefone }}</span>{% endif %}</td>
             <td class="text-[14px]">{% for e in t.empresas.all %}{{ e.nome }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="suave">Nenhuma empresa</span>{% endfor %}</td>
             <td>{% if t.ativa %}{% situacao "concluida" "Ativa" %}{% else %}{% situacao "recusada" "Inativa" %}{% endif %}</td>
             <td class="ir">
@@ -44,8 +46,8 @@
         </tbody>
       </table>
     </div>
+    {% endif %}
   </section>
-  {% endif %}
 
   {% include "ocorrencias/operacao/partials/form_transportadora.html" %}
 </div>

@@ -2,39 +2,42 @@
  * Portal SAC: visual minimalista inspirado no GLPI (spec 030).
  *
  * Painéis retos (2 px) com cabeçalho cinza claro, tabelas densas, menu
- * lateral azul-marinho nas duas áreas, um azul de ação e a situação como
- * ponto colorido + texto. Conversa no estilo WhatsApp: quem vê fica à
- * direita (verde-claro), o outro lado à esquerda (branco).
+ * lateral grafite nas duas áreas, um verde de ação (cor da marca, spec 031)
+ * e a situação como ponto colorido + texto. Verde forte SÓ para agir e
+ * navegar; "Resolvida" (concluída) é grafite para não se confundir com o
+ * botão. Conversa no estilo WhatsApp: quem vê fica à direita (cinza
+ * neutro, nunca verde), o outro lado à esquerda (branco).
  * Cores da marca SÓ nos tokens abaixo. `--preto` é a cor de AÇÃO (o nome
  * ficou da spec 023). Cores funcionais (situação, categorias, prazo,
  * perigo, nota interna laranja, solução verde) carregam informação.
  */
 
 :root {
-  --fundo: #f5f6f8;
+  --fundo: #f5f7f6;
   --sup: #ffffff;
-  --sup-2: #f2f4f7;
-  --sup-3: #fafbfc;
-  --linha: #e6e8ec;
-  --borda: #dadde3;
-  --borda-in: #c5cad3;
-  --tinta: #1d2330;
-  --suave: #3a4252;
-  --fraco: #5a6272;
-  --preto: #2b5797;
-  --preto-hover: #234a82;
+  --sup-2: #f1f4f2;
+  --sup-3: #fafbfa;
+  --linha: #e3e8e5;
+  --borda: #d6dcd9;
+  --borda-in: #c2cac6;
+  --tinta: #1a2420;
+  --suave: #36413c;
+  --fraco: #59645f;
+  --preto: #1f7a4d;
+  --preto-hover: #18633e;
   --preto-txt: #ffffff;
-  --acento-fundo: #e8eef8;
-  --foco: #2b5797;
-  --anel: rgba(43, 87, 151, .22);
-  --marca: #1f2a3c;
+  --acento-fundo: #e6f2eb;
+  --foco: #1f7a4d;
+  --anel: rgba(31, 122, 77, .22);
+  --marca: #1b2320;
   --marca-txt: #ffffff;
-  --lado: #1f2a3c;
-  --lado-item: #c8cfdb;
-  --lado-ativo: #26334a;
-  --lado-linha: #2c3a50;
-  --lado-grupo: #8c97aa;
-  --lado-marca: #6e9be0;
+  --lado: #1b2320;
+  --lado-item: #c9d3ce;
+  --lado-ativo: #26302c;
+  --lado-linha: #2b3632;
+  --lado-grupo: #8a9792;
+  --lado-marca: #5cc48d;
+  --lado-selo: #1f7a4d;
 
   --laranja: #fff4e8;
   --laranja-borda: #f2c79b;
@@ -58,13 +61,13 @@
   --s-aprovacao-fundo: #f6f2fc;
   --s-aprovacao-tinta: #5b2e9e;
   --s-aprovacao-borda: #d8cbef;
-  --s-resolvida: #2e8540;
+  --s-resolvida: #4b5563;
   --s-recusada: #6b7280;
 
   /* conversa (estilo WhatsApp) */
-  --chat-fundo: #eef0f3;
-  --bal-eu: #e8eef8;
-  --bal-eu-borda: #c9d6ec;
+  --chat-fundo: #eef2f0;
+  --bal-eu: #e9eeec;
+  --bal-eu-borda: #d3dbd7;
   --bal-outro: #ffffff;
 
   --raio: 2px;
@@ -74,27 +77,27 @@
 }
 
 .dark {
-  --fundo: #12151b;
-  --sup: #1a1e26;
-  --sup-2: #232834;
-  --sup-3: #1e222b;
-  --linha: #2a303c;
-  --borda: #343b49;
-  --borda-in: #3e4555;
-  --tinta: #e8ebf0;
-  --suave: #c3c9d4;
-  --fraco: #9aa2b1;
-  --preto: #6e9be0;
-  --preto-hover: #8db0e8;
-  --preto-txt: #0e1420;
-  --acento-fundo: #1d2a40;
-  --foco: #8db0e8;
-  --anel: rgba(110, 155, 224, .3);
-  --marca: #e8ebf0;
-  --marca-txt: #12151b;
-  --lado: #0e121a;
-  --lado-ativo: #1b2230;
-  --lado-linha: #232a37;
+  --fundo: #121614;
+  --sup: #191e1c;
+  --sup-2: #222926;
+  --sup-3: #1d2220;
+  --linha: #28302c;
+  --borda: #333b37;
+  --borda-in: #3e4742;
+  --tinta: #e4ebe7;
+  --suave: #c2ccc7;
+  --fraco: #9aa6a0;
+  --preto: #3fae74;
+  --preto-hover: #4cbd82;
+  --preto-txt: #0b1f15;
+  --acento-fundo: #17281f;
+  --foco: #5cc48d;
+  --anel: rgba(63, 174, 116, .3);
+  --marca: #e4ebe7;
+  --marca-txt: #121614;
+  --lado: #0e1211;
+  --lado-ativo: #1d2622;
+  --lado-linha: #222926;
 
   --laranja: #33220f;
   --laranja-borda: #7a4a1c;
@@ -118,13 +121,13 @@
   --s-aprovacao-fundo: #2a2140;
   --s-aprovacao-tinta: #d6c6f5;
   --s-aprovacao-borda: #4a3a70;
-  --s-resolvida: #6fcf87;
+  --s-resolvida: #9aa3ad;
   --s-recusada: #9ca3af;
 
-  --chat-fundo: #151922;
-  --bal-eu: #1d2a40;
-  --bal-eu-borda: #2b3d5c;
-  --bal-outro: #232834;
+  --chat-fundo: #141917;
+  --bal-eu: #252d2a;
+  --bal-eu-borda: #36423d;
+  --bal-outro: #1f2522;
 }
 
 body { font-family: var(--fonte); background: var(--fundo); color: var(--tinta); font-size: 14px; line-height: 1.45; }
@@ -154,7 +157,7 @@ a { color: var(--preto); }
   width: 26px; height: 26px; border-radius: var(--raio); background: var(--marca); color: var(--marca-txt);
   display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px; flex-shrink: 0;
 }
-.lado .logo { background: #fff; color: #1f2a3c; }
+.lado .logo { background: #fff; color: var(--lado); }
 .lado .grupo { font-size: 11px; font-weight: 600; color: var(--lado-grupo); text-transform: uppercase; letter-spacing: .06em; padding: 18px 16px 6px; }
 .lado .item {
   display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px 0 13px; border-left: 3px solid transparent; text-decoration: none;
@@ -162,7 +165,7 @@ a { color: var(--preto); }
 }
 .lado .item:hover { color: #fff; background: var(--lado-ativo); }
 .lado .item[aria-current] { background: var(--lado-ativo); color: #fff; border-left-color: var(--lado-marca); }
-.lado .n { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: #fff; background: #2b5797; border-radius: var(--raio); padding: 0 6px; }
+.lado .n { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: #fff; background: var(--lado-selo); border-radius: var(--raio); padding: 0 6px; }
 .lado .eu { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 16px; border-top: 1px solid var(--lado-linha); }
 .lado .fraco, .lado .suave { color: var(--lado-grupo); }
 .lado .ico, .lado .x { background: transparent; border-color: transparent; color: var(--lado-item); }
@@ -190,7 +193,7 @@ a { color: var(--preto); }
   padding: 0 12px; display: flex; align-items: center; gap: 10px; min-height: 52px;
 }
 .mcab strong { font-size: 15px; font-weight: 600; }
-.mcab .logo { background: #fff; color: #1f2a3c; }
+.mcab .logo { background: #fff; color: var(--lado); }
 .mcab .av { background: var(--lado-linha); border-color: var(--lado-linha); color: #fff; }
 @media (min-width: 768px) { .mcab, .mbarra { display: none !important; } }
 .mbarra {
@@ -204,7 +207,7 @@ a { color: var(--preto); }
 }
 .mbarra [aria-current] { color: #fff; font-weight: 600; box-shadow: inset 0 2px 0 var(--lado-marca); }
 .mbarra .abrir { color: #fff; font-weight: 600; }
-.mbarra .abrir > span:first-child { width: 34px; height: 30px; border-radius: var(--raio); background: #2b5797; color: #fff; display: flex; align-items: center; justify-content: center; }
+.mbarra .abrir > span:first-child { width: 34px; height: 30px; border-radius: var(--raio); background: var(--lado-selo); color: #fff; display: flex; align-items: center; justify-content: center; }
 .mbarra .ponto {
   position: absolute; top: 6px; left: calc(50% + 6px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
   background: #c2410c; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
@@ -602,15 +605,15 @@ select.in { padding-right: 28px; }
 
 .publica { min-height: 100dvh; display: grid; grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
 @media (min-width: 1024px) { .publica { grid-template-columns: minmax(380px, 460px) 1fr; grid-template-rows: 1fr; } }
-.pub-marca { background: #1f2a3c; color: #fff; padding: 16px 18px; display: flex; flex-direction: column; gap: 18px; }
+.pub-marca { background: var(--lado); color: #fff; padding: 16px 18px; display: flex; flex-direction: column; gap: 18px; }
 @media (min-width: 1024px) { .pub-marca { padding: 40px; } }
-.pub-marca .logo { background: #fff; color: #1f2a3c; }
+.pub-marca .logo { background: #fff; color: var(--lado); }
 .pub-marca .marca { color: #fff; }
 .pub-marca .frase { font-size: 30px; font-weight: 600; line-height: 1.2; color: #fff; }
-.pub-marca p { color: #c8cfdb; font-size: 15px; }
+.pub-marca p { color: var(--lado-item); font-size: 15px; }
 .pub-marca .so-grande { display: none; }
 @media (min-width: 1024px) { .pub-marca .so-grande { display: flex; } }
-.pub-marca .ico-escuro { width: 36px; height: 36px; border-radius: var(--raio); border: 0; background: transparent; color: #c8cfdb; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.pub-marca .ico-escuro { width: 36px; height: 36px; border-radius: var(--raio); border: 0; background: transparent; color: var(--lado-item); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 .pub-form { display: flex; align-items: flex-start; justify-content: center; padding: 18px 16px 40px; }
 @media (min-width: 1024px) { .pub-form { align-items: center; padding: 40px; } }
 .pub-form > .card { width: 100%; max-width: 420px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }

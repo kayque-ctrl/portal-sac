@@ -119,7 +119,7 @@ def _preparar_itens(itens_json: str) -> tuple[list[dict], str | None]:
         brutos = json.loads(itens_json or "[]")
         if not isinstance(brutos, list):
             brutos = []
-    except json.JSONDecodeError, TypeError:
+    except (json.JSONDecodeError, TypeError):
         brutos = []
     if len(brutos) > MAX_ITENS:
         return [], f"Máximo de {MAX_ITENS} produtos por ocorrência. Reduza a lista."
@@ -135,7 +135,7 @@ def _preparar_itens(itens_json: str) -> tuple[list[dict], str | None]:
         descricao = str(it.get("descricao") or "").strip()
         try:
             quantidade = int(it.get("quantidade"))
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             quantidade = 0
 
         # "Troca de volume": o cliente não abriu o produto, então código,

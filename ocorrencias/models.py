@@ -326,7 +326,7 @@ class Mensagem(models.Model):
             notificacoes.nova_mensagem(self)
 
 
-def caminho_anexo(instance: Anexo, filename: str) -> str:
+def caminho_anexo(instance: "Anexo", filename: str) -> str:
     from .uploads import sanitizar_nome
 
     return f"anexos/{instance.ocorrencia_id}/{uuid.uuid4()}-{sanitizar_nome(filename)}"

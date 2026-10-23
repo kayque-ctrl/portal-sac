@@ -36,7 +36,7 @@ def _decimal(n: float, casas: int = 1) -> str:
 def parse_periodo(v) -> int:
     try:
         n = int(v)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return 30
     return n if n in PERIODOS else 30
 

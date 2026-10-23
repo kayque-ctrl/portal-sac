@@ -78,13 +78,16 @@ def test_categoria_comeca_sem_escolha(formulario):
 @pytest.mark.parametrize(
     "texto",
     [
-        "Campos com",  # legenda do obrigatório
-        "1. O que aconteceu?",
-        "2. Preencha os detalhes abaixo e confira o resumo antes de enviar.",
-        "Escolha uma opção.",
-        "Escolha uma opção e informe o número que está no documento.",
+        # Etapas (specs 023 e 025): cada bloco diz o que fazer.
+        "Os marcados com",  # legenda do obrigatório
+        "Selecione uma opção abaixo",
+        "Ao escolher, mostramos só os campos daquele assunto.",
+        "Escolha uma opção e digite o número que está no documento.",
+        "Adicione um de cada vez: escolha o motivo e preencha os dados do produto.",
+        "Aceita foto, PDF e planilha.",
         "Descreva o que aconteceu, quando e como",
         "de 10 caracteres mínimos",
+        "Ver resumo antes de enviar",
     ],
 )
 def test_instrucoes_das_etapas(formulario, texto):
@@ -104,6 +107,6 @@ def test_motivos_estao_no_componente():
     from pathlib import Path
 
     js = (Path(__file__).resolve().parents[2] / "static" / "js" / "app.js").read_text(encoding="utf-8")
-    assert "Para continuar, escolha o que aconteceu." in js
+    assert "Para continuar, selecione uma das opções acima." in js
     assert "Para continuar, escolha a referência (Nota Fiscal, Pedido ou Picking) e informe o número." in js
-    assert '"Escolha a categoria do produto."' in js
+    assert '"Escolha o motivo."' in js

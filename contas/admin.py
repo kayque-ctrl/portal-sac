@@ -15,9 +15,7 @@ class UsuarioAdmin(UserAdmin):
         ("Perfil", {"fields": ("nome", "papel", "tipo_pessoa", "documento", "telefone", "empresa", "ativado_em")}),
         ("Permissões", {"fields": ("is_active", "is_staff", "is_superuser")}),
     )
-    add_fieldsets = (
-        (None, {"classes": ("wide",), "fields": ("email", "nome", "papel", "password1", "password2")}),
-    )
+    add_fieldsets = ((None, {"classes": ("wide",), "fields": ("email", "nome", "papel", "password1", "password2")}),)
 
 
 @admin.register(Empresa)

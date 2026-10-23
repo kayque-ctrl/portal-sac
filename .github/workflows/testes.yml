@@ -18,6 +18,10 @@ jobs:
             requirements.txt
             requirements-dev.txt
       - run: pip install -r requirements-dev.txt
+      - name: Lint e formatação (ruff)
+        run: |
+          ruff check --output-format=github .
+          ruff format --check .
       - name: Migrations em dia
         run: python manage.py makemigrations --check --dry-run
       - name: Suíte completa (inclui regressão) com cobertura

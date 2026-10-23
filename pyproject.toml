@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py314"
+# O código já seguia ~120 colunas; o formatador cuida das quebras.
+line-length = 120
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+# E/W pycodestyle · F pyflakes · I imports · B bugbear · UP pyupgrade
+# DJ django · S segurança (bandit) · SIM simplificações
+select = ["E", "W", "F", "I", "B", "UP", "DJ", "S", "SIM"]
+ignore = [
+    "E501",   # linha longa: o formatador quebra o que dá; strings longas ficam
+    "DJ001",  # null=True em CharField: mudar exige migration e migração de dados
+    "DJ008",  # __str__ em todo modelo: só estilo
+    "DJ012",  # ordem dos membros do modelo: só estilo
+    "SIM103", # cadeia de if/return True é mais legível em uploads.py
+]
+
+[tool.ruff.lint.per-file-ignores]
+# assert é o próprio pytest; senhas fixas são dados de teste.
+"tests/**" = ["S101", "S105", "S106"]

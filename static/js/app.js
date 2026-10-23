@@ -45,9 +45,22 @@ function gravarStorage(chave, valor) {
 }
 
 // Ícones Lucide: troca <i data-lucide> por SVG, inclusive em conteúdo que o
-// Alpine cria depois (x-if / x-for).
+// Alpine cria depois (x-if / x-for). Só os <i> ainda não desenhados: o
+// createIcons() do Lucide também refaz os <svg> já desenhados (eles mantêm
+// data-lucide), o que realimentava o MutationObserver num laço a cada quadro
+// e engolia cliques nos botões só de ícone, como o "x" do anexo (spec 025).
 function desenharIcones() {
-  if (window.lucide) window.lucide.createIcons();
+  const lucide = window.lucide;
+  if (!lucide) return;
+  document.querySelectorAll("i[data-lucide]").forEach((el) => {
+    const nome = el.getAttribute("data-lucide");
+    const no = nome && lucide.icons[nome.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())];
+    if (!no) return;
+    const [tag, attrs, filhos] = no;
+    const proprios = Object.fromEntries(Array.from(el.attributes, (a) => [a.name, a.value]));
+    const classe = ["lucide", `lucide-${nome}`, proprios.class].filter(Boolean).join(" ");
+    el.replaceWith(lucide.createElement([tag, { ...attrs, ...proprios, class: classe }, filhos]));
+  });
 }
 let iconesAgendados = false;
 new MutationObserver(() => {
@@ -238,12 +251,13 @@ document.addEventListener("alpine:init", () => {
   }));
 
   /** Lista de ocorrências do portal: filtros no navegador. */
-  Alpine.data("portalLista", (meta, filtroInicial, rotulosTipo) => ({
+  Alpine.data("portalLista", (meta, filtroInicial, rotulosTipo, inicial = {}) => ({
     meta,
     rotulosTipo,
-    status: filtroInicial === "aprovar" ? "resolvida" : "todas",
+    // Os contadores e a busca do início chegam com ?status= e ?q= (spec 025).
+    status: filtroInicial === "aprovar" ? "resolvida" : inicial.status || "todas",
     escopo: filtroInicial === "aprovar" ? "minhas" : "empresa",
-    q: "",
+    q: inicial.q || "",
     cat: "",
     de: "",
     ate: "",
@@ -418,10 +432,12 @@ document.addEventListener("alpine:init", () => {
 
   /** Controles do operador: status/prioridade/responsável. */
   Alpine.data("controles", (opts) => ({
-    statusSel: opts.status,
+    // Depois de um erro do servidor, a tela volta com o que foi pedido.
+    statusSel: opts.statusPedido || opts.status,
     statusAtual: opts.status,
     atribuidoSel: opts.atribuido,
     temTratativa: opts.temTratativa,
+    resolucao: opts.resolucao || "",
     modal: false,
     confirmado: false,
     init() {
@@ -430,13 +446,21 @@ document.addEventListener("alpine:init", () => {
     get faltaResponsavel() {
       return this.atribuidoSel === "";
     },
+    /** Ir para "Aguardando aprovação" pede o resumo da resolução (spec 025). */
+    get pedeResumo() {
+      return this.statusSel === "resolvida" && this.statusAtual !== "resolvida";
+    },
+    get faltaResumo() {
+      return this.pedeResumo && this.resolucao.trim().length < 10;
+    },
     get bloqueado() {
-      return this.statusSel !== this.statusAtual && (this.faltaResponsavel || !this.temTratativa);
+      return this.statusSel !== this.statusAtual && (this.faltaResponsavel || !this.temTratativa || this.faltaResumo);
     },
     get faltando() {
       return [
         this.faltaResponsavel && "defina um responsável",
         !this.temTratativa && "registre pelo menos uma mensagem para o cliente",
+        this.faltaResumo && "escreva o resumo da resolução (pelo menos 10 caracteres)",
       ]
         .filter(Boolean)
         .join(" e ");
@@ -510,11 +534,15 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
-  /** Wizard de nova ocorrência (2 passos, rascunho no navegador). */
-  Alpine.data("novaOcorrencia", (config, inicial) => ({
+  /**
+   * Abertura de ocorrência em etapas (specs 023 e 025), com rascunho no navegador.
+   * O tipo pode vir do cartão escolhido no início (`tipoInicial`). Nos detalhes,
+   * o primeiro bloco obrigatório ainda incompleto fica em destaque (`secaoAtual`):
+   * é ele que conduz o usuário até "Enviar".
+   */
+  Alpine.data("novaOcorrencia", (config, inicial, tipoInicial) => ({
     config,
-    passo: inicial ? 2 : 1,
-    tipo: inicial?.tipo || "",
+    tipo: inicial?.tipo || tipoInicial || "",
     refTipo: inicial?.refTipo || "",
     referencia: inicial?.referencia || "",
     itens: inicial?.itens || [],
@@ -530,10 +558,12 @@ document.addEventListener("alpine:init", () => {
     produtoErro: null,
 
     anexosFotos: 0,
+    anexosQtd: 0,
     anexoErro: null,
     descricaoErro: null,
-    importMsg: null,
-    importando: false,
+    // Em "Produtos" o comentário é opcional e fica atrás de um botão (spec 025).
+    comentarioAberto: Boolean(inicial?.descricao),
+    verResumo: false,
     duplicata: null,
     rascunho: null,
     enviando: false,
@@ -573,15 +603,37 @@ document.addEventListener("alpine:init", () => {
     },
     /** Por que o "Continuar" está desabilitado (spec 018): mostrado na tela, não só no title. */
     get motivoBloqueio() {
-      if (this.tipo === "") return "Para continuar, escolha o que aconteceu.";
+      if (this.tipo === "") return "Para continuar, selecione uma das opções acima.";
       if (this.exigeReferencia && this.refTipo === "")
         return "Para continuar, escolha a referência (Nota Fiscal, Pedido ou Picking) e informe o número.";
       if (this.exigeReferencia && this.referencia.trim() === "")
         return `Para continuar, informe o ${this.config.referencias[this.refTipo].campo.toLowerCase()}.`;
       return "";
     },
-    get mostrarExtrato() {
-      return this.passo === 2 && this.categoriaComProduto;
+    /** Bloco preenchido (ganha o "check"). Os opcionais só quando têm conteúdo. */
+    secaoFeita(s) {
+      if (s === "ref") return this.referenciaOk;
+      if (s === "produtos") return this.itens.length > 0;
+      if (s === "anexos") return this.anexosFotos > 0 || (!this.precisaFoto && this.anexosQtd > 0);
+      if (s === "desc")
+        return this.categoriaComProduto ? this.descricaoGeral.trim() !== "" : this.descricaoGeral.trim().length >= 10;
+      return false;
+    },
+    /** O primeiro bloco obrigatório que falta: fica em destaque. Nulo = pronto para enviar. */
+    get secaoAtual() {
+      if (this.tipo === "") return null;
+      if (this.exigeReferencia && !this.referenciaOk) return "ref";
+      if (this.categoriaComProduto && this.itens.length === 0) return "produtos";
+      if (this.precisaFoto && this.anexosFotos === 0) return "anexos";
+      if (!this.categoriaComProduto && this.descricaoGeral.trim().length < 10) return "desc";
+      return null;
+    },
+    get prontoParaEnviar() {
+      return this.tipo !== "" && this.secaoAtual === null;
+    },
+    classeSecao(s) {
+      if (this.secaoAtual === s) return "atual";
+      return this.secaoFeita(s) ? "feita" : "";
     },
     get precisaFoto() {
       return this.itens.some((it) => this.config.exigemFoto.includes(it.categoria));
@@ -628,6 +680,7 @@ document.addEventListener("alpine:init", () => {
       this.refTipo = r.refTipo || "";
       this.referencia = r.referencia || "";
       this.descricaoGeral = r.descricao || "";
+      this.comentarioAberto = Boolean(this.descricaoGeral);
       this.itens = r.itens || [];
       this.rascunho = null;
     },
@@ -636,27 +689,53 @@ document.addEventListener("alpine:init", () => {
       this.rascunho = null;
     },
 
-    // ----- passo 1 -----
-    trocarCategoria(novo) {
+    // ----- etapa 1: assunto -----
+    /**
+     * Escolher (ou trocar) o assunto. A tela sobe para o topo e o foco vai para
+     * o primeiro bloco: o usuário vê na hora que avançou (spec 025, ponto 2).
+     */
+    escolherTipo(novo) {
       this.tipo = novo;
       this.duplicata = null;
       if (!this.config.comProdutos.includes(novo)) {
         this.itens = [];
         this.limparProduto();
+        this.comentarioAberto = false;
       }
+      this.$nextTick(() => {
+        this.$refs.topo?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const alvo = novo ? this.$root.querySelector(".segmentos button") : this.$root.querySelector(".tipo");
+        alvo?.focus({ preventScroll: true });
+      });
     },
     escolherRefTipo(rt) {
       // Clicar na opção já selecionada desmarca.
       if (this.refTipo === rt) {
         this.refTipo = "";
         this.referencia = "";
-      } else {
-        this.refTipo = rt;
+        return;
       }
+      this.refTipo = rt;
+      // O campo já existe quando se troca NF ↔ Pedido: leva o foco para ele (ponto 3).
+      this.$nextTick(() => document.getElementById("referencia")?.focus());
     },
-    async continuar() {
-      if (!this.podeAvancar) return;
-      this.passo = 2;
+    /** Enter no número da referência: confere duplicidade e segue para o próximo bloco. */
+    seguirDaReferencia() {
+      this.checarDuplicata();
+      this.$nextTick(() => {
+        const proximo = this.categoriaComProduto
+          ? document.getElementById("categoria-produto")
+          : this.$root.querySelector('[data-lista-anexos] button:not([disabled]):not(.so-cel)');
+        proximo?.focus();
+      });
+    },
+    abrirComentario() {
+      this.comentarioAberto = true;
+      this.$nextTick(() => document.getElementById("descricao")?.focus());
+    },
+    /** Avisa se já existe ocorrência aberta para a referência (ao sair do campo). */
+    async checarDuplicata() {
+      this.duplicata = null;
       if (this.referencia.trim()) {
         try {
           const r = await fetch(`/portal/nova/duplicata?referencia=${encodeURIComponent(this.referencia)}`, {
@@ -682,7 +761,7 @@ document.addEventListener("alpine:init", () => {
     },
     salvarProduto() {
       if (!this.catProduto) {
-        this.produtoErro = "Escolha a categoria do produto.";
+        this.produtoErro = "Escolha o motivo.";
         return;
       }
       const dispensa = this.dispensaDadosProduto;
@@ -732,45 +811,13 @@ document.addEventListener("alpine:init", () => {
       this.itens = this.itens.filter((_, idx) => idx !== i);
       if (this.editandoIndex === i) this.limparProduto();
     },
-    async importarPlanilha(e) {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      this.importando = true;
-      this.importMsg = null;
-      const fd = new FormData();
-      fd.append("file", f);
-      const res = await postForm("/portal/nova/importar", fd);
-      this.importando = false;
-      e.target.value = "";
-      if (!res) {
-        this.importMsg = "Não foi possível ler o arquivo.";
-        return;
-      }
-      if (res.erro) {
-        this.importMsg = res.erro;
-        return;
-      }
-      this.itens = [...this.itens, ...res.itens];
-      this.importMsg =
-        `${res.total} produto(s) importado(s)` + (res.ignoradas > 0 ? ` · ${res.ignoradas} linha(s) ignorada(s)` : "");
-    },
-    baixarModelo() {
-      const csv =
-        "codigo;nome;categoria;quantidade;sinal\n" +
-        "001;Camisa azul;Avaria;1;\n" +
-        "002;Camisa preta;Falta;10;\n" +
-        "003;Caneca;Sobra;5;\n" +
-        ";Volume 2 de 3;Troca de volume;1;Falta\n";
-      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "modelo-produtos.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    },
 
     // ----- anexos e envio -----
     onEnviar(e) {
+      if (!this.podeAvancar) {
+        e.preventDefault();
+        return;
+      }
       if (!this.categoriaComProduto && this.descricaoGeral.trim().length < 10) {
         e.preventDefault();
         this.descricaoErro = "Descreva a ocorrência com pelo menos 10 caracteres.";

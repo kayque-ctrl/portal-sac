@@ -3,6 +3,7 @@
 import re
 from collections import Counter
 from datetime import datetime, time, timedelta
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -20,7 +21,6 @@ from ..apresentacao import linha_do_tempo
 from ..labels import (
     AVISO_MENSAGEM_MAX,
     AVISO_TITULO_MAX,
-    PRIORIDADE_LABEL,
     STATUS_ATIVOS,
     STATUS_BLOQUEADOS,
     STATUS_ENCERRADOS,
@@ -28,8 +28,9 @@ from ..labels import (
     TIPO_LABEL,
     TIPOS_FORM,
     Prioridade,
+    Status,
 )
-from ..models import Aviso, ContatoEncaminhamento, Ocorrencia, SlaRegra
+from ..models import Aviso, ContatoEncaminhamento, Ocorrencia, SlaRegra, Transportadora
 from ..planilhas import XLSX_MIME, planilha_ocorrencia, planilha_ocorrencias
 from ..servicos import STATUS_OPERACAO
 from ..uploads import ACCEPT_ATTR, MAX_ANEXOS
@@ -45,24 +46,10 @@ SITUACOES = [
 ]
 
 
-# Atalhos da aba Ativas (spec 020). "Vencidas" deixa de fora quem aguarda o
-# cliente: nesse status o relógio do SLA está pausado.
-ATALHOS_FILA = [
-    ("", "Todas"),
-    ("minhas", "Minhas"),
-    ("sem_responsavel", "Sem responsável"),
-    ("vencidas", "Vencidas"),
-]
-
-
-def _atalho(qs, chave: str, user):
-    if chave == "minhas":
-        return qs.filter(atribuido_a=user)
-    if chave == "sem_responsavel":
-        return qs.filter(atribuido_a__isnull=True)
-    if chave == "vencidas":
-        return qs.filter(status__in=STATUS_ATIVOS, sla_prazo__lt=timezone.now())
-    return qs
+# Filtro de responsável (spec 023): além de um operador, "eu" e "ninguém".
+RESPONSAVEL_EU, RESPONSAVEL_NINGUEM = "eu", "ninguem"
+# Filtro pronto de prazo (spec 025).
+PRAZO_VENCIDO = "vencido"
 
 
 def sanitizar_busca(q: str | None) -> str:
@@ -82,7 +69,11 @@ def lista(request):
     status, tipo = sp.get("status", ""), sp.get("tipo", "")
     empresa = (uuids_validos([sp.get("empresa")]) or [""])[0]
     cliente = (uuids_validos([sp.get("cliente")]) or [""])[0]
-    responsavel = (uuids_validos([sp.get("responsavel")]) or [""])[0]
+    responsavel = sp.get("responsavel", "")
+    if responsavel not in (RESPONSAVEL_EU, RESPONSAVEL_NINGUEM):
+        responsavel = (uuids_validos([responsavel]) or [""])[0]
+    # Filtro pronto "Prazo vencido" (spec 025); qualquer outro valor é ignorado.
+    prazo = sp.get("prazo") if sp.get("prazo") == PRAZO_VENCIDO else ""
     q = sanitizar_busca(sp.get("q"))
 
     # Lixeira (exclusão definitiva) é restrita a admin — nem a aba aparece,
@@ -90,7 +81,7 @@ def lista(request):
     situacoes = SITUACOES if request.user.eh_admin else [s for s in SITUACOES if s[0] != "lixeira"]
     situacao = sp.get("situacao") if sp.get("situacao") in dict(situacoes) else "ativas"
 
-    qs = Ocorrencia.objects.select_related("cliente__empresa").order_by("-criado_em")
+    qs = Ocorrencia.objects.select_related("cliente__empresa", "atribuido_a").order_by("-criado_em")
     if situacao == "lixeira":
         qs = qs.filter(excluida_em__isnull=False)
     else:
@@ -117,8 +108,14 @@ def lista(request):
         qs = qs.filter(cliente__empresa_id=empresa)
     if cliente:
         qs = qs.filter(cliente_id=cliente)
-    if responsavel:
+    if responsavel == RESPONSAVEL_EU:
+        qs = qs.filter(atribuido_a=request.user)
+    elif responsavel == RESPONSAVEL_NINGUEM:
+        qs = qs.filter(atribuido_a__isnull=True)
+    elif responsavel:
         qs = qs.filter(atribuido_a_id=responsavel)
+    if prazo:
+        qs = qs.filter(status__in=STATUS_ATIVOS, sla_prazo__lt=timezone.now())
     if q:
         qs = qs.filter(
             Q(protocolo__icontains=q)
@@ -127,15 +124,8 @@ def lista(request):
             | Q(cliente__nome__icontains=q, cliente__papel=Papel.CLIENTE)
         )
 
-    # Atalhos só fazem sentido entre as ativas; a contagem de cada um respeita
-    # os outros filtros já aplicados.
-    fila = sp.get("fila", "") if situacao == "ativas" and sp.get("fila") in dict(ATALHOS_FILA) else ""
-    atalhos = (
-        [{"chave": c, "label": l, "qtd": _atalho(qs, c, request.user).count()} for c, l in ATALHOS_FILA]
-        if situacao == "ativas"
-        else []
-    )
-    qs = _atalho(qs, fila, request.user)
+    # Quantas ativas estão com o prazo vencido (aviso no topo).
+    vencidas = qs.filter(status__in=STATUS_ATIVOS, sla_prazo__lt=timezone.now()).count() if situacao == "ativas" else 0
 
     pagina = paginar(request, qs)
     abas = []
@@ -145,8 +135,46 @@ def lista(request):
         params["situacao"] = chave
         abas.append({"chave": chave, "label": label, "params": params})
 
-    escolhidos = Usuario.objects.filter(pk__in=[u for u in (cliente, responsavel) if u])
+    escolhidos = Usuario.objects.filter(pk__in=uuids_validos([cliente, responsavel]))
     nomes = {str(pk): nome for pk, nome in escolhidos.values_list("pk", "nome")}
+
+    # Contadores por situação (visão pessoal do GLPI): a fila inteira, sem filtros.
+    na_fila = Ocorrencia.objects.filter(excluida_em__isnull=True, arquivada_em__isnull=True)
+    por_status = dict(na_fila.values_list("status").annotate(n=Count("pk")))
+    contadores = [
+        {"chave": s, "rotulo": STATUS_LABEL[s], "n": por_status.get(s, 0), "params": {"status": s}}
+        for s in (Status.ABERTA, Status.EM_ANALISE)
+    ]
+    contadores.append(
+        {
+            "chave": Status.RESOLVIDA,
+            "rotulo": STATUS_LABEL[Status.RESOLVIDA],
+            "n": por_status.get(Status.RESOLVIDA, 0),
+            "params": {"situacao": "concluidas", "status": Status.RESOLVIDA},
+        }
+    )
+    contadores.append(
+        {
+            "chave": "vencido",
+            "rotulo": "Prazo vencido",
+            "n": na_fila.filter(status__in=STATUS_ATIVOS, sla_prazo__lt=timezone.now()).count(),
+            "params": {"prazo": PRAZO_VENCIDO},
+        }
+    )
+    # Filtros prontos (as "pesquisas salvas" do protótipo).
+    prontos = [
+        ("Comigo", {"responsavel": RESPONSAVEL_EU}, responsavel == RESPONSAVEL_EU and not prazo),
+        ("Sem responsável", {"responsavel": RESPONSAVEL_NINGUEM}, responsavel == RESPONSAVEL_NINGUEM and not prazo),
+        ("Prazo vencido", {"prazo": PRAZO_VENCIDO}, bool(prazo)),
+        (
+            "Todas ativas",
+            {},
+            situacao == "ativas" and not (status or tipo or empresa or cliente or responsavel or prazo or q),
+        ),
+    ]
+    for c in contadores:
+        c["url"] = "?" + urlencode(c["params"])
+    prontos = [(rotulo, "?" + urlencode(params), ativo) for rotulo, params, ativo in prontos]
 
     return render(
         request,
@@ -159,15 +187,21 @@ def lista(request):
             "status": status,
             "tipo": tipo,
             "empresa": empresa,
-            "empresa_nome": Empresa.objects.filter(pk=empresa).values_list("nome", flat=True).first() if empresa else None,
+            "empresa_nome": Empresa.objects.filter(pk=empresa).values_list("nome", flat=True).first()
+            if empresa
+            else None,
             "cliente": cliente,
             "cliente_nome": nomes.get(cliente),
             "responsavel": responsavel,
             "responsavel_nome": nomes.get(responsavel),
-            "fila": fila,
-            "atalhos": atalhos,
+            "responsaveis": Usuario.objects.filter(papel__in=[Papel.OPERADOR, Papel.ADMIN]).order_by("nome"),
+            "empresas": Empresa.objects.order_by("nome").values_list("pk", "nome"),
+            "vencidas": vencidas,
             "q": sp.get("q", ""),
-            "tem_filtro": bool(status or tipo or empresa or cliente or responsavel or fila or q),
+            "prazo": prazo,
+            "contadores": contadores,
+            "prontos": prontos,
+            "tem_filtro": bool(status or tipo or empresa or cliente or responsavel or prazo or q),
             "status_opcoes": [(s, STATUS_LABEL[s]) for s in status_opcoes],
             "tipos": list(TIPO_LABEL.items()),
         },
@@ -204,6 +238,17 @@ def _ocorrencia(pk) -> Ocorrencia:
     return get_object_or_404(Ocorrencia.objects.select_related("cliente__empresa", "aprovada_por__empresa"), pk=pk)
 
 
+def _outras_da_empresa(oc, limite: int = 5) -> list:
+    """Outras ocorrências da empresa do cliente (coluna da direita do atendimento)."""
+    if not oc.cliente.empresa_id:
+        return list(Ocorrencia.objects.filter(cliente=oc.cliente, excluida_em__isnull=True).exclude(pk=oc.pk)[:limite])
+    return list(
+        Ocorrencia.objects.filter(cliente__empresa_id=oc.cliente.empresa_id, excluida_em__isnull=True)
+        .exclude(pk=oc.pk)
+        .order_by("-criado_em")[:limite]
+    )
+
+
 def _render_detalhe(request, oc, **extra):
     mensagens = list(oc.mensagens.select_related("autor"))
     cliente = oc.cliente
@@ -217,14 +262,18 @@ def _render_detalhe(request, oc, **extra):
         # Já existe mensagem (não interna) da operação ao cliente? Sem isso,
         # o status não pode mudar.
         "tem_tratativa": any(not m.interna and m.autor_id != oc.cliente_id for m in mensagens),
-        "status_opcoes": [(s, STATUS_LABEL[s]) for s in (STATUS_OPERACAO if oc.status in STATUS_OPERACAO else [oc.status, *STATUS_OPERACAO])],
-        "prioridades": list(PRIORIDADE_LABEL.items()),
+        "status_opcoes": [
+            (s, STATUS_LABEL[s])
+            for s in (STATUS_OPERACAO if oc.status in STATUS_OPERACAO else [oc.status, *STATUS_OPERACAO])
+        ],
         "encerrada": oc.status in STATUS_BLOQUEADOS,
         # Responder ao cliente numa ocorrência "aberta" a move para "em tratativa".
         "avisa_bump": oc.status == "aberta",
         "accept": ACCEPT_ATTR,
         "max_anexos": MAX_ANEXOS,
         "abas_celular": ABAS_ATENDIMENTO,
+        "outras_da_empresa": _outras_da_empresa(oc),
+        "transportadoras": servicos.transportadoras_para_coleta(cliente.empresa_id),
         **extra,
     }
     return render(request, "ocorrencias/operacao/detalhe.html", contexto)
@@ -242,7 +291,15 @@ def atualizar(request, pk):
     r = servicos.atualizar_ocorrencia(request.user, oc, request.POST)
     if not r.ok:
         oc.refresh_from_db()
-        return _render_detalhe(request, oc, controles_erro=r.erro)
+        # Volta com o status pedido e o resumo digitado, para não perder o texto.
+        pedido = request.POST.get("status", "")
+        return _render_detalhe(
+            request,
+            oc,
+            controles_erro=r.erro,
+            status_pedido=pedido if pedido in STATUS_OPERACAO else oc.status,
+            resolucao_valor=request.POST.get("resolucao", ""),
+        )
     messages.success(request, "Alterações salvas.", extra_tags="controles")
     return redirect("operacao:detalhe", pk=oc.pk)
 
@@ -268,7 +325,12 @@ def enviar_mensagem(request, pk):
 @require_POST
 def solicitar_coleta(request, pk):
     oc = _ocorrencia(pk)
-    r = servicos.solicitar_coleta(request.user, oc, request.POST.get("email_transportadora", ""))
+    r = servicos.solicitar_coleta(
+        request.user,
+        oc,
+        request.POST.get("email_transportadora", ""),
+        transportadora_id=request.POST.get("transportadora", ""),
+    )
     if not r.ok:
         return _render_detalhe(request, oc, coleta_erro=r.erro)
     messages.success(request, "Solicitação registrada.", extra_tags="coleta")
@@ -365,7 +427,9 @@ def painel(request):
     for o in linhas:
         emp = o.cliente.empresa
         chave = emp.pk if emp else None
-        atual = por_empresa.setdefault(chave, {"id": chave, "nome": emp.nome if emp else "Sem empresa", "total": 0, "abertas": 0})
+        atual = por_empresa.setdefault(
+            chave, {"id": chave, "nome": emp.nome if emp else "Sem empresa", "total": 0, "abertas": 0}
+        )
         atual["total"] += 1
         if o.status in STATUS_ATIVOS:
             atual["abertas"] += 1
@@ -377,6 +441,12 @@ def painel(request):
         "porTempo": [{"label": d.strftime("%d/%m"), "valor": n} for d, n in sorted(cont_dia.items())],
         "porEmpresa": [{"label": e["nome"], "valor": e["total"]} for e in empresas_ordenadas if e["id"]][:8],
     }
+
+    # Barras simples (spec 023): cada série com a % em relação ao maior valor.
+    for serie in graficos.values():
+        maior = max((p["valor"] for p in serie), default=0) or 1
+        for p in serie:
+            p["pct"] = round(p["valor"] / maior * 100)
 
     query = "&".join(f"{k}={v}" for k, v in f.items() if v)
     return render(
@@ -398,12 +468,6 @@ def painel(request):
                 {"label": "Recusadas", "valor": cont_status.get("recusada", 0)},
             ],
             "graficos": graficos,
-            "graficos_titulos": [
-                ("g-status", "Ocorrências por status"),
-                ("g-tipo", "Por categoria"),
-                ("g-tempo", "Evolução no tempo"),
-                ("g-empresa", "Top empresas"),
-            ],
             "empresas_ordenadas": empresas_ordenadas,
             "export_href": f"/operacao/painel/export{'?' + query if query else ''}",
         },
@@ -487,6 +551,16 @@ def empresa_detalhe(request, pk):
         return redirect("operacao:empresa_detalhe", pk=empresa.pk)
 
     clientes = list(Usuario.objects.filter(papel=Papel.CLIENTE).order_by("nome"))
+    # Prazo que vale para cada tipo e se vem de regra da própria empresa (spec 026).
+    proprias = {r.categoria for r in empresa.regras_sla.all()}
+    prazos = [
+        {
+            "tipo": TIPO_LABEL[t],
+            "horas": SlaRegra.horas_para(t, Prioridade.MEDIA, empresa.pk),
+            "proprio": t in proprias or None in proprias,
+        }
+        for t in TIPOS_FORM
+    ]
     contato = " · ".join(filter(None, [empresa.cnpj, empresa.contato_nome, empresa.contato_email, empresa.telefone]))
     return render(
         request,
@@ -496,6 +570,8 @@ def empresa_detalhe(request, pk):
             "contato": contato or "Sem dados de contato",
             "membros": [c for c in clientes if c.empresa_id == empresa.pk],
             "candidatos": [c for c in clientes if c.empresa_id != empresa.pk],
+            "transportadoras": empresa.transportadoras.order_by("nome"),
+            "prazos": prazos,
         },
     )
 
@@ -773,40 +849,135 @@ def contato_acao(request, pk, acao):
     return redirect("operacao:contatos")
 
 
+# ---------------------------------------------------------------- transportadoras (spec 025)
+
+
+def _form_transportadora(request, template, transportadora=None):
+    """Cadastro (lista + formulário) e edição usam o mesmo fluxo."""
+    erro, valores = None, {}
+    if request.method == "POST":
+        r = servicos.salvar_transportadora(request.user, request.POST, transportadora)
+        if r.ok:
+            messages.success(request, "Transportadora salva.", extra_tags="transportadora")
+            return redirect("operacao:transportadoras")
+        erro, valores = r.erro, request.POST
+    elif transportadora:
+        valores = {"nome": transportadora.nome, "email": transportadora.email, "telefone": transportadora.telefone}
+
+    if request.method == "POST":
+        marcadas = set(uuids_validos(request.POST.getlist("empresas")))
+    elif transportadora:
+        marcadas = {str(pk) for pk in transportadora.empresas.values_list("pk", flat=True)}
+    else:
+        marcadas = set()
+    return render(
+        request,
+        template,
+        {
+            "transportadora": transportadora,
+            "transportadoras": Transportadora.objects.prefetch_related("empresas"),
+            "empresas": [(str(pk), nome) for pk, nome in Empresa.objects.order_by("nome").values_list("pk", "nome")],
+            "marcadas": marcadas,
+            "erro": erro,
+            "valores": valores,
+        },
+    )
+
+
+@operacao_required
+def transportadoras(request):
+    return _form_transportadora(request, "ocorrencias/operacao/transportadoras.html")
+
+
+@operacao_required
+def transportadora_detalhe(request, pk):
+    t = get_object_or_404(Transportadora, pk=pk)
+    return _form_transportadora(request, "ocorrencias/operacao/transportadora_detalhe.html", t)
+
+
+@operacao_required
+@require_POST
+def transportadora_acao(request, pk, acao):
+    t = get_object_or_404(Transportadora, pk=pk)
+    if acao == "alternar":
+        t.ativa = not t.ativa
+        t.save(update_fields=["ativa"])
+    elif acao == "excluir":
+        t.delete()
+    return redirect("operacao:transportadoras")
+
+
 # ---------------------------------------------------------------- SLA (admin)
+
+
+def _empresa_da_regra(valor):
+    """Empresa escolhida na tela de SLA: (empresa ou None, válido?). Vazio = padrão."""
+    if not valor:
+        return None, True
+    pk = (uuids_validos([valor]) or [None])[0]
+    empresa = Empresa.objects.filter(pk=pk).first() if pk else None
+    return empresa, empresa is not None
 
 
 @admin_required
 def sla(request):
     erro = None
+    valores = {}
     if request.method == "POST":
+        valores = request.POST
         categoria = request.POST.get("categoria") or None
         prioridade = request.POST.get("prioridade") or None
         categoria = categoria if categoria in TIPOS_FORM else None
         prioridade = prioridade if prioridade in Prioridade.values else None
+        # Empresa inválida é recusada: virar padrão mudaria o prazo de todos (spec 026).
+        empresa, empresa_ok = _empresa_da_regra(request.POST.get("empresa"))
         try:
             horas = int(request.POST.get("horas", ""))
         except ValueError:
             horas = 0
-        if horas <= 0:
+        if not empresa_ok:
+            erro = "Escolha uma empresa válida."
+        elif horas <= 0:
             erro = "Informe o prazo em horas (maior que zero)."
         else:
             # Uma regra por combinação (upsert).
-            SlaRegra.objects.update_or_create(categoria=categoria, prioridade=prioridade, defaults={"horas": horas})
+            SlaRegra.objects.update_or_create(
+                empresa=empresa, categoria=categoria, prioridade=prioridade, defaults={"horas": horas}
+            )
             messages.success(request, "Regra salva.", extra_tags="sla")
-            return redirect("operacao:sla")
+            return redirect(f"/operacao/sla?empresa={empresa.pk}" if empresa else "/operacao/sla")
 
     ordem = {None: -1, **{t: i for i, t in enumerate(TIPO_LABEL)}}
     ordem_p = {None: -1, "baixa": 0, "media": 1, "alta": 2}
-    regras = sorted(SlaRegra.objects.all(), key=lambda r: (ordem.get(r.categoria, 99), ordem_p.get(r.prioridade, 99)))
+    regras = sorted(
+        SlaRegra.objects.select_related("empresa"),
+        key=lambda r: (
+            r.empresa_id is not None,
+            r.empresa.nome if r.empresa_id else "",
+            ordem.get(r.categoria, 99),
+            ordem_p.get(r.prioridade, 99),
+        ),
+    )
+    # Padrão primeiro, depois cada empresa (spec 026).
+    grupos = []
+    for r in regras:
+        rotulo = r.empresa.nome if r.empresa_id else "Padrão (todas as empresas)"
+        if not grupos or grupos[-1][0] != rotulo:
+            grupos.append((rotulo, r.empresa_id, []))
+        grupos[-1][2].append(r)
+    marcada, _ = _empresa_da_regra(valores.get("empresa") or request.GET.get("empresa"))
     return render(
         request,
         "ocorrencias/operacao/sla.html",
         {
+            "grupos": grupos,
             "regras": regras,
             "erro": erro,
             "tipos_form": [(t, TIPO_LABEL[t]) for t in TIPOS_FORM],
-            "prioridades": list(PRIORIDADE_LABEL.items()),
+            "empresas": Empresa.objects.order_by("nome"),
+            "empresa_marcada": marcada.pk if marcada else None,
+            # A prioridade saiu das telas (spec 025): a coluna só aparece para regras antigas.
+            "tem_prioridade": any(r.prioridade for r in regras),
         },
     )
 

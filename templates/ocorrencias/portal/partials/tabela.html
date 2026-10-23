@@ -1,0 +1,39 @@
+{% load ocorrencias_tags %}
+{% comment %}
+Ocorrências do cliente: tabela no computador e cartões no celular.
+Parâmetros: ocorrencias (anotadas com aguardando e responsavel_nome), filtravel
+(com x-show do componente portalLista).
+{% endcomment %}
+<section class="tbl-box so-pc">
+  <div class="tbl-rola">
+    <table class="tabela">
+      <thead><tr><th scope="col">Protocolo</th><th scope="col">Ocorrência</th><th scope="col">Referência</th><th scope="col">Aberta por</th><th scope="col">Situação</th><th scope="col">Prazo</th><th scope="col">Atualizada</th><th scope="col"><span class="sr">Abrir</span></th></tr></thead>
+      <tbody>
+        {% for oc in ocorrencias %}
+        <tr class="{% if oc.aguardando %}dest{% endif %}" {% if filtravel %}x-show="exibidas.has('{{ oc.id }}')"{% endif %}>
+          <td><a href="{% url 'portal:detalhe' oc.pk %}" class="mono">{{ oc.protocolo }}</a></td>
+          <td><a href="{% url 'portal:detalhe' oc.pk %}" style="text-decoration: none"><strong>{{ oc.tipo|tipo_label }}</strong></a></td>
+          <td class="mono suave">{{ oc|referencia|default:"—" }}</td>
+          <td>{{ oc.responsavel_nome }}</td>
+          <td>{% if oc.aguardando %}{% situacao oc.status "Aguarda você" %}{% else %}{% situacao oc.status %}{% endif %}</td>
+          <td>{% prazo oc %}</td>
+          <td class="suave">{{ oc.atualizado_em|relativo }}</td>
+          <td class="ir">{% if oc.aguardando %}<a href="{% url 'portal:detalhe' oc.pk %}" class="btn btn-preto btn-peq">Confirmar</a>{% else %}<a href="{% url 'portal:detalhe' oc.pk %}" aria-label="Abrir {{ oc.protocolo }}">{% icone "arrow-right" 16 %}</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<ul class="cards-cel so-cel">
+  {% for oc in ocorrencias %}
+  <li {% if filtravel %}x-show="exibidas.has('{{ oc.id }}')"{% endif %}>
+    <a href="{% url 'portal:detalhe' oc.pk %}" class="card-oc {% if oc.aguardando %}dest{% endif %}">
+      <div class="flex items-center gap-2">{% if oc.aguardando %}{% situacao oc.status "Aguarda você" %}{% else %}{% situacao oc.status %}{% endif %}<span class="ml-auto text-[13px] fraco">{{ oc.atualizado_em|relativo }}</span></div>
+      <strong class="text-base">{{ oc.tipo|tipo_label }}</strong>
+      <span class="mono text-[13px] suave">{{ oc.protocolo }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</span>
+      {% if oc.aguardando %}<span class="btn btn-preto btn-peq btn-bloco mt-1.5">Ver e confirmar</span>{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>

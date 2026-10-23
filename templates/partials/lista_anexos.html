@@ -3,33 +3,37 @@
 Lista de anexos (spec 017): cada escolha ACRESCENTA arquivos, cada um pode ser
 removido, e as fotos são reduzidas ao adicionar. Só o campo escondido
 `anexos` vai no envio; o seletor fica fora do formulário (form="sem-form").
-Parâmetros: accept, max_anexos, id_campo (padrão "anexos").
+Parâmetros: accept, max_anexos, id_campo (padrão "anexos"), compacto (só o botão Anexar).
 Avisa o componente pai com o evento `anexos-mudaram` ({fotos, quantidade, total}).
 {% endcomment %}
 <div x-data="listaAnexos({ max: {{ max_anexos }}, limite: {% limite_upload %} })" class="flex flex-col gap-2" data-lista-anexos>
   <input x-ref="campo" type="file" name="anexos" multiple class="hidden" tabindex="-1" aria-hidden="true">
   <label for="{{ id_campo|default:'anexos' }}" class="sr-only">Escolher arquivos para anexar</label>
   <input x-ref="escolher" id="{{ id_campo|default:'anexos' }}" type="file" multiple accept="{{ accept }}" form="sem-form" class="sr-only" @change="adicionar($event)">
+  {% if not compacto %}
+  <label for="{{ id_campo|default:'anexos' }}-camera" class="sr-only">Tirar foto</label>
+  <input x-ref="camera" id="{{ id_campo|default:'anexos' }}-camera" type="file" accept="image/*" capture="environment" form="sem-form" class="sr-only" @change="adicionar($event)">
+  {% endif %}
 
-  <div>
-    <button type="button" @click="$refs.escolher.click()" :disabled="preparando || arquivos.length >= max" class="btn btn-linha">
-      {% icone "paperclip" 16 %} <span x-text="preparando ? 'Preparando fotos…' : (arquivos.length ? 'Adicionar mais arquivos' : 'Adicionar arquivos')"></span>
-    </button>
-  </div>
-
-  <ul x-show="arquivos.length > 0" x-cloak class="flex flex-col gap-1.5">
+  <ul x-show="arquivos.length > 0" x-cloak class="anexos">
     <template x-for="(a, i) in arquivos" :key="a.chave">
-      <li class="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm" style="border-color: var(--linha); background: var(--sup)">
-        <span class="shrink-0 text-xs font-bold uppercase suave" x-text="a.extensao"></span>
+      <li class="anexo">
+        <span class="ext" x-text="a.extensao"></span>
         <span class="min-w-0 flex-1 truncate" x-text="a.arquivo.name"></span>
-        <span class="shrink-0 text-xs tabular-nums suave" x-text="tamanho(a.arquivo.size)"></span>
-        <button type="button" @click="remover(i)" :aria-label="'Remover ' + a.arquivo.name" title="Remover" class="ico" style="width: 32px; height: 32px; border: 0">
-          {% icone "x" 15 %}
-        </button>
+        <span class="shrink-0 text-xs tabular-nums fraco" x-text="tamanho(a.arquivo.size)"></span>
+        <button type="button" @click="remover(i)" :aria-label="'Remover ' + a.arquivo.name" title="Remover" class="x">{% icone "x" 16 %}</button>
       </li>
     </template>
   </ul>
 
-  <p class="ajuda" x-text="resumo"></p>
+  <div class="flex flex-wrap items-center gap-2">
+    {% if not compacto %}
+    <button type="button" @click="$refs.camera.click()" :disabled="preparando || arquivos.length >= max" class="btn btn-linha so-cel">{% icone "camera" 18 %} Tirar foto</button>
+    {% endif %}
+    <button type="button" @click="$refs.escolher.click()" :disabled="preparando || arquivos.length >= max" class="btn btn-linha {% if compacto %}btn-peq{% endif %}">
+      {% icone "paperclip" 16 %} <span x-text="preparando ? 'Preparando fotos…' : ({% if compacto %}arquivos.length ? 'Anexar mais' : 'Anexar'{% else %}arquivos.length ? 'Adicionar mais arquivos' : 'Adicionar arquivos'{% endif %})"></span>
+    </button>
+    <span class="text-[13.5px] fraco" x-text="resumo"></span>
+  </div>
   <p x-show="erro" x-cloak role="alert" class="erro" x-text="erro"></p>
 </div>

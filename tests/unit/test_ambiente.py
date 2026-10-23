@@ -21,7 +21,9 @@ S3 = {
 }
 
 
-@pytest.mark.parametrize(("valor", "esperado"), [("true", True), ("1", True), (" ON ", True), ("false", False), ("", False), (None, False)])
+@pytest.mark.parametrize(
+    ("valor", "esperado"), [("true", True), ("1", True), (" ON ", True), ("false", False), ("", False), (None, False)]
+)
 def test_booleano(valor, esperado):
     assert ambiente.booleano(valor) is esperado
 
@@ -146,7 +148,14 @@ def test_producao_permite_ajustar_redirect_e_hsts():
 # ---------------------------------------------------------------- uploads
 
 
-@pytest.mark.parametrize(("env", "esperado"), [({}, 50 * 1024 * 1024), ({"UPLOAD_MAX_TOTAL_MB": "4"}, 4 * 1024 * 1024), ({"UPLOAD_MAX_TOTAL_MB": "4.5"}, int(4.5 * 1024 * 1024))])
+@pytest.mark.parametrize(
+    ("env", "esperado"),
+    [
+        ({}, 50 * 1024 * 1024),
+        ({"UPLOAD_MAX_TOTAL_MB": "4"}, 4 * 1024 * 1024),
+        ({"UPLOAD_MAX_TOTAL_MB": "4.5"}, int(4.5 * 1024 * 1024)),
+    ],
+)
 def test_limite_total_de_upload(env, esperado):
     assert ambiente.limite_total_upload(env) == esperado
 

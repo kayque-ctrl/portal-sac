@@ -1,42 +1,66 @@
 {% load ocorrencias_tags %}
 {% comment %}
-Linha do tempo da ocorrência (spec 021), do mais antigo ao mais novo.
-Recebe `linha` (apresentacao.linha_do_tempo), `oc` e `itens`. O que é
-interno já vem filtrado para o cliente: aqui só se decide a aparência.
+Linha do tempo da ocorrência (specs 021 e 023), do mais antigo ao mais novo,
+no formato do GLPI: cada coisa que acontece é uma linha, e cada documento
+enviado aparece como evento próprio com o cartão do arquivo. Recebe `linha`
+(apresentacao.linha_do_tempo), `oc` e `itens`. O que é interno já vem
+filtrado para o cliente: aqui só se decide a aparência.
 {% endcomment %}
 <ol aria-label="Linha do tempo" class="tl">
   {% for item in linha %}
   {% ifchanged item.quando|dia_conversa %}
-  <li class="tl-dia" data-item="dia">{{ item.quando|dia_conversa }}</li>
+  <li class="dia" data-item="dia">{{ item.quando|dia_conversa }}</li>
   {% endifchanged %}
 
   {% if item.tipo == "abertura" %}
-  <li data-item="abertura" class="tl-abertura">
-    <div class="tl-cab"><span class="tl-av" aria-hidden="true">{{ item.autor_rotulo|iniciais }}</span><strong>{{ item.autor_rotulo }}</strong> abriu a ocorrência · {{ item.quando|hora }}</div>
-    <h3>{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</h3>
-    {% if oc.descricao %}<p class="whitespace-pre-wrap break-words text-[15px]">{{ oc.descricao }}</p>{% endif %}
-    {% if itens %}<div class="border-t pt-3" style="border-color: var(--linha-2)">{% include "ocorrencias/partials/itens.html" %}</div>{% endif %}
+  <li data-item="abertura" class="abertura">
+    <div class="quem"><span class="av peq {% if item.autor_rotulo == 'Você' %}preto{% endif %}" aria-hidden="true">{% if item.autor_rotulo == 'Você' %}{{ user.nome|iniciais }}{% else %}{{ item.autor_rotulo|iniciais }}{% endif %}</span><span><strong>{{ item.autor_rotulo }}</strong> abriu a ocorrência · {{ item.quando|hora }}</span></div>
+    <strong class="text-base">{{ oc.tipo|tipo_label }}{% if oc.referencia %} · {{ oc|referencia }}{% endif %}</strong>
+    {% if oc.descricao %}<p class="whitespace-pre-wrap break-words">{{ oc.descricao }}</p>{% endif %}
+    {% if itens %}{% include "ocorrencias/partials/itens.html" %}{% endif %}
     {% if item.anexos %}{% include "ocorrencias/partials/anexos.html" with anexos=item.anexos %}{% endif %}
   </li>
 
   {% elif item.tipo == "mensagem" %}
   {% with m=item.m %}
-  <li data-item="{% if m.interna %}interna{% else %}mensagem{% endif %}" class="tl-item {% if m.sou_eu %}dir{% endif %} {% if m.interna %}int{% endif %}">
-    <span class="tl-av {% if m.interna %}int{% elif m.autor_id != oc.cliente_id %}op{% endif %}" aria-hidden="true">{{ m.autor_rotulo|iniciais }}</span>
-    <div class="tl-corpo">
-      <div class="tl-cab">
-        <strong>{{ m.autor_rotulo }}</strong><span>· {{ m.criado_em|hora }}</span>
-        {% if m.interna %}<span class="selo-int">{% icone "lock" 11 %} Comentário interno · só a operação vê</span>{% endif %}
-      </div>
-      {% if m.conteudo %}<div class="tl-bal">{{ m.conteudo }}</div>{% endif %}
-      {% if m.anexos_lista %}{% include "ocorrencias/partials/anexos.html" with anexos=m.anexos_lista %}{% endif %}
+  {% if m.conteudo %}
+  <li data-item="{% if m.interna %}interna{% else %}mensagem{% endif %}" class="msg {% if m.interna %}nota{% elif m.sou_eu %}eu{% endif %}">
+    <span class="av peq {% if m.interna %}int{% elif m.sou_eu %}preto{% endif %}" aria-hidden="true">{% if m.interna %}{% icone "lock" 13 %}{% elif m.sou_eu %}{{ user.nome|iniciais }}{% else %}{{ m.autor_rotulo|iniciais }}{% endif %}</span>
+    <div class="corpo">
+      <span class="quem">
+        <strong>{{ m.autor_rotulo }}</strong>
+        {% if m.interna %}<span class="selo-int">{% icone "lock" 11 %} Comentário interno · só a operação vê</span>{% elif m.autor_id != oc.cliente_id %}<span>respondeu</span>{% endif %}
+        <span>· {{ m.criado_em|hora }}</span>
+      </span>
+      <div class="bal">{{ m.conteudo }}</div>
     </div>
   </li>
+  {% endif %}
+  {# Cada documento enviado é um evento próprio, com o cartão do arquivo. #}
+  {% for a in m.anexos_lista %}
+  <li data-item="documento" class="flex flex-col gap-2">
+    <div class="ev"><span class="pt">{% if a.tipo_mime|slice:":6" == "image/" %}{% icone "camera" 14 %}{% else %}{% icone "file-text" 14 %}{% endif %}</span><span><strong>{{ m.autor_rotulo }}</strong> adicionou o documento <strong>{{ a.nome_arquivo }}</strong> · {{ a.criado_em|hora }}</span>{% if m.interna %}<span class="so-op">só operação</span>{% endif %}</div>
+    <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer" class="doc" data-anexo="{% if a.tipo_mime|slice:':6' == 'image/' %}foto{% else %}arquivo{% endif %}">
+      {% if a.tipo_mime|slice:":6" == "image/" %}<img src="{% url 'publico:anexo' a.pk %}" alt="Foto {{ a.nome_arquivo }}" loading="lazy" width="76" height="58">{% else %}<span class="ext">{% if a.tipo_mime == "application/pdf" %}PDF{% else %}{% icone "paperclip" 16 %}{% endif %}</span>{% endif %}
+      <span class="min-w-0"><span class="nome">{{ a.nome_arquivo }}</span><span class="text-[13px] fraco">{% if a.tipo_mime|slice:":6" == "image/" %}foto{% elif a.tipo_mime == "application/pdf" %}PDF{% else %}arquivo{% endif %}{% if a.tamanho_bytes %} · {{ a.tamanho_bytes|tamanho }}{% endif %} · abrir</span></span>
+    </a>
+  </li>
+  {% endfor %}
   {% endwith %}
 
+  {% elif item.solucao %}
+  {# Solução proposta (spec 025, como no GLPI): o resumo que a operação escreveu ao resolver. #}
+  <li data-item="solucao" class="flex flex-col gap-2">
+    <div class="ev"><span class="pt">{% icone "refresh-cw" 14 %}</span><span><strong>{{ item.autor_rotulo }}</strong> · {{ item.texto }} · {{ item.quando|hora }}</span></div>
+    <div class="solucao">
+      <div class="topo-sol">{% icone "check-circle-2" 16 %} Solução proposta</div>
+      <div class="txt-sol">{{ item.solucao }}</div>
+    </div>
+  </li>
+
   {% else %}
-  <li data-item="{% if item.interno %}evento-interno{% else %}evento{% endif %}" class="tl-ev">
-    {% icone item.icone 14 %}
+  <li data-item="{% if item.interno %}evento-interno{% else %}evento{% endif %}" class="ev">
+    <span class="pt">{% icone item.icone 14 %}</span>
     <span><strong>{{ item.autor_rotulo }}</strong> · {{ item.texto }} · {{ item.quando|hora }}</span>
     {% if item.interno %}<span class="so-op">só operação</span>{% endif %}
   </li>

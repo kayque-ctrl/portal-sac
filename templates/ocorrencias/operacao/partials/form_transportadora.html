@@ -1,0 +1,43 @@
+{% load ocorrencias_tags %}
+{% comment %}
+Formulário de transportadora (spec 025): cadastro e edição. Parâmetros:
+transportadora (na edição), empresas [(id, nome)], marcadas (ids), valores, erro.
+{% endcomment %}
+<form method="post" class="card flex flex-col gap-3.5" data-form-transportadora>
+  {% csrf_token %}
+  <h2 class="h2">{% if transportadora %}Editar transportadora{% else %}Nova transportadora{% endif %}</h2>
+  <div class="campo">
+    <label for="t-nome">Nome <span class="obg" aria-hidden="true">*</span></label>
+    <input id="t-nome" name="nome" required value="{{ valores.nome|default:'' }}" placeholder="Ex.: Rápida Log" class="in">
+  </div>
+  <div class="campo">
+    <label for="t-email">E-mail para coleta <span class="obg" aria-hidden="true">*</span></label>
+    <input id="t-email" name="email" type="email" required value="{{ valores.email|default:'' }}" placeholder="Ex.: coleta@rapidalog.com.br" class="in">
+    <span class="ajuda">É para este e-mail que vai o pedido de coleta.</span>
+  </div>
+  <div class="campo">
+    <label for="t-telefone">Telefone <span class="font-medium suave">(opcional)</span></label>
+    <input id="t-telefone" name="telefone" value="{{ valores.telefone|default:'' }}" placeholder="Ex.: (11) 3333-4444" class="in in-ref">
+  </div>
+  <fieldset class="flex flex-col gap-2">
+    <legend class="rot">Empresas que ela atende</legend>
+    <p class="ajuda">Na coleta de uma ocorrência dessas empresas, ela já aparece marcada.</p>
+    {% if empresas %}
+    <div class="flex max-h-60 flex-col gap-1 overflow-y-auto rounded-lg border p-2" style="border-color: var(--linha)">
+      {% for pk, nome in empresas %}
+      <label class="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-md px-2 text-[14.5px] hover:bg-[var(--sup-2)]">
+        <input type="checkbox" name="empresas" value="{{ pk }}" {% if pk in marcadas %}checked{% endif %} class="h-4 w-4">
+        {{ nome }}
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm suave">Nenhuma empresa cadastrada ainda.</p>
+    {% endif %}
+  </fieldset>
+  {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
+  <div class="flex flex-wrap gap-2">
+    <button type="submit" class="btn btn-preto">{% if transportadora %}Salvar alterações{% else %}Cadastrar transportadora{% endif %}</button>
+    {% if transportadora %}<a href="{% url 'operacao:transportadoras' %}" class="btn btn-linha">Cancelar</a>{% endif %}
+  </div>
+</form>

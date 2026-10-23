@@ -1,4 +1,5 @@
+{% load ocorrencias_tags %}
 <form method="post" action="{% url 'operacao:ciclo' oc.pk acao %}">
   {% csrf_token %}
-  <button type="submit" class="btn btn-linha btn-bloco">{{ rotulo }}</button>
+  <button type="submit" class="btn btn-linha btn-peq">{% if icone_acao %}{% icone icone_acao 15 %}{% endif %} {{ rotulo }}</button>
 </form>

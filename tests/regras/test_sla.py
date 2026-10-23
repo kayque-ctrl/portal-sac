@@ -10,12 +10,15 @@ from ocorrencias.sla import calcular_sla
 
 
 def test_regra_mais_especifica_vence(db):
+    # Spec 026: a migration 0007 deixa só o padrão geral (72 h); a regra por
+    # prioridade "alta" é criada aqui para conferir o desempate.
+    SlaRegra.objects.create(categoria=None, prioridade="alta", horas=24)
     SlaRegra.objects.create(categoria="atraso", prioridade="media", horas=10)
     SlaRegra.objects.create(categoria="atraso", prioridade=None, horas=20)
 
     assert SlaRegra.horas_para("atraso", "media") == 10
     assert SlaRegra.horas_para("atraso", "alta") == 24  # prioridade pesa mais que tipo
-    assert SlaRegra.horas_para("produtos", "baixa") == 120
+    assert SlaRegra.horas_para("produtos", "baixa") == 72  # padrão geral
 
 
 def test_sla_pausa_ao_aguardar_aprovacao(abrir, responder, operador):

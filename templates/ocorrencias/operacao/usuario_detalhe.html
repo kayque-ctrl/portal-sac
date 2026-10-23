@@ -1,68 +1,66 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}{{ usuario.nome }} · Operação{% endblock %}
+{% block titulo_celular_op %}{{ usuario.nome }}{% endblock %}
 
 {% block conteudo %}
-<nav class="migalha" aria-label="Caminho"><a href="{% url 'operacao:usuarios' %}">{% icone "arrow-left" 15 %} Usuários</a><span aria-hidden="true">/</span><span>{{ usuario.nome }}</span></nav>
+<a href="{% url 'operacao:usuarios' %}" class="voltar -mb-2">{% icone "arrow-left" 16 %} Usuários</a>
 <div class="topo">
-  <div class="titulo">
-    <h1>{{ usuario.nome }}</h1>
-    <p class="subtitulo">{{ usuario.email|default:"—" }}</p>
+  <div>
+    <h1 class="titulo">{{ usuario.nome }}</h1>
+    <p class="suave">{{ usuario.email|default:"—" }}{% if usuario.criado_em %} · desde {{ usuario.criado_em|dia }}{% endif %}</p>
   </div>
-  {% if usuario.ativado_em %}<span class="inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700 dark:bg-green-950/40 dark:text-green-300">Ativo</span>{% endif %}
+  <div class="acoes">{% if usuario.ativado_em %}{% situacao "concluida" "Ativo" %}{% else %}{% situacao "resolvida" "Convite pendente" %}{% endif %}</div>
 </div>
 
 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-  {# Edição #}
   <form method="post" x-data="{ papel: '{{ request.POST.papel|default:usuario.papel }}' }" class="card flex flex-col gap-4">
     {% csrf_token %}
-    <h2>Dados do usuário</h2>
+    <h2 class="h2">Dados do usuário</h2>
     <div class="grid gap-4 sm:grid-cols-2">
       <div class="campo">
         <label for="nome">Nome <span class="obg" aria-hidden="true">*</span></label>
         <input id="nome" name="nome" required value="{{ request.POST.nome|default:usuario.nome }}" class="in">
       </div>
       <div class="campo">
-        <label for="email-fixo">E-mail (não editável)</label>
+        <label for="email-fixo">E-mail</label>
         <input id="email-fixo" value="{{ usuario.email }}" disabled class="in">
+        <span class="ajuda">O e-mail é o login e não muda.</span>
       </div>
       {% include "ocorrencias/operacao/partials/campos_usuario.html" with v=usuario %}
     </div>
     {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
     {% for m in messages %}{% if 'usuario' in m.tags %}<p class="caixa-ok">{{ m }}</p>{% endif %}{% endfor %}
-    <div><button type="submit" class="btn btn-primario">Salvar</button></div>
+    <div><button type="submit" class="btn btn-preto">Salvar</button></div>
   </form>
 
   <div class="flex flex-col gap-4">
     {# Atividade (spec 020) #}
     <section aria-labelledby="atividade" class="card flex flex-col gap-3">
-      <h2 id="atividade">Atividade</h2>
-      <dl class="dados">
+      <h2 id="atividade" class="h2">Atividade</h2>
+      <dl class="grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-2 text-[14.5px]">
         {% if atividade.total is not None %}
-        <dt>Ocorrências abertas</dt><dd class="font-bold tabular-nums" data-atividade="total">{{ atividade.total }}</dd>
-        <dt>Em andamento</dt><dd class="font-bold tabular-nums" data-atividade="andamento">{{ atividade.em_andamento }}</dd>
+        <dt class="fraco">Ocorrências abertas</dt><dd class="font-bold tabular-nums" data-atividade="total">{{ atividade.total }}</dd>
+        <dt class="fraco">Em andamento</dt><dd class="font-bold tabular-nums" data-atividade="andamento">{{ atividade.em_andamento }}</dd>
         {% else %}
-        <dt>Responsável por (em andamento)</dt><dd class="font-bold tabular-nums" data-atividade="andamento">{{ atividade.em_andamento }}</dd>
+        <dt class="fraco">Responsável por (em andamento)</dt><dd class="font-bold tabular-nums" data-atividade="andamento">{{ atividade.em_andamento }}</dd>
         {% endif %}
-        <dt>Último acesso</dt>
-        <dd data-atividade="acesso">
-          {% if usuario.last_login %}{{ usuario.last_login|relativo }}{% else %}Nunca entrou{% endif %}
-          {% if not usuario.ativado_em %}<span class="ml-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">Convite pendente</span>{% endif %}
-        </dd>
+        <dt class="fraco">Último acesso</dt>
+        <dd data-atividade="acesso">{% if usuario.last_login %}{{ usuario.last_login|relativo }}{% else %}Nunca entrou{% endif %}{% if not usuario.ativado_em %} <span class="etq" style="font-size: 12px">Convite pendente</span>{% endif %}</dd>
       </dl>
-      <a href="{% url 'operacao:lista' %}?{{ atividade.filtro }}" class="btn btn-linha">Ver ocorrências</a>
+      <a href="{% url 'operacao:lista' %}?{{ atividade.filtro }}" class="btn btn-linha btn-peq">Ver ocorrências</a>
     </section>
 
     {# Zona de risco #}
     <section aria-labelledby="t-excluir" class="card card-perigo flex flex-col gap-2">
-      <h2 id="t-excluir" style="color: var(--perigo)">Excluir usuário</h2>
-      <p class="text-[15px]">Remove o acesso desta pessoa permanentemente. Não pode ser desfeito.</p>
+      <h2 id="t-excluir" class="h2" style="color: var(--perigo)">Excluir usuário</h2>
+      <p class="text-sm suave">Remove o acesso desta pessoa permanentemente. Não pode ser desfeito.</p>
       {% if bloqueio_exclusao %}
       <p class="text-sm suave">{{ bloqueio_exclusao }}</p>
       {% else %}
       <form method="post" action="{% url 'operacao:usuario_excluir' usuario.pk %}" x-data="confirmar" @submit="interceptar">
         {% csrf_token %}
-        <button type="submit" class="btn btn-perigo">Excluir usuário</button>
+        <button type="submit" class="btn btn-perigo btn-peq">Excluir usuário</button>
         {% include "partials/modal.html" with titulo="Excluir este usuário?" mensagem="O acesso será removido definitivamente." rotulo="Excluir" perigo=True %}
       </form>
       {% endif %}

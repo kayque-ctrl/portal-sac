@@ -11,7 +11,9 @@ def test_suite_usa_settings_de_testes():
     import os
 
     assert os.environ["DJANGO_SETTINGS_MODULE"] == "config.settings_testes"
-    assert settings.DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3" or os.environ.get("TESTES_DATABASE_URL")
+    assert settings.DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3" or os.environ.get(
+        "TESTES_DATABASE_URL"
+    )
 
 
 def test_banco_dos_testes_nao_e_o_do_env(monkeypatch):

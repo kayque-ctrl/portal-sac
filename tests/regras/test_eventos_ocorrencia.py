@@ -54,7 +54,12 @@ def test_prioridade(abrir, operador):
 
 def test_arquivar_desarquivar_excluir_e_restaurar(abrir, admin):
     oc = recarregar(abrir())
-    for campo, valor in (("arquivada_em", timezone.now()), ("arquivada_em", None), ("excluida_em", timezone.now()), ("excluida_em", None)):
+    for campo, valor in (
+        ("arquivada_em", timezone.now()),
+        ("arquivada_em", None),
+        ("excluida_em", timezone.now()),
+        ("excluida_em", None),
+    ):
         setattr(oc, campo, valor)
         oc.save(por=admin)
 

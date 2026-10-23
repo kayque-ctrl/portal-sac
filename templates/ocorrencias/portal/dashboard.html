@@ -1,57 +1,51 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Painel · Portal de Ocorrências{% endblock %}
+{% block titulo_celular %}Painel{% endblock %}
 
 {% block conteudo %}
 <div class="topo">
-  <div class="titulo">
-    <h1>Painel</h1>
-    <p class="subtitulo">{% if empresa %}{{ empresa }} · {% endif %}últimos {{ periodo }} dias</p>
+  <div>
+    <h1 class="titulo">Painel</h1>
+    <p class="suave">{% if empresa %}{{ empresa }} · {% endif %}últimos {{ periodo }} dias</p>
   </div>
-  <nav aria-label="Período" class="seg">
+  <nav aria-label="Período" class="seg acoes">
     {% for p in periodos %}<a href="?dias={{ p }}" {% if p == periodo %}aria-current="page"{% endif %}>{{ p }} dias</a>{% endfor %}
   </nav>
 </div>
 
-{% if k.aguardando_aprovacao_minhas > 0 %}
-<a href="{% url 'portal:inicio' %}?filtro=aprovar" class="card card-aguarda flex items-center gap-3" style="padding: 14px 18px; text-decoration: none; color: inherit">
-  <span><strong>{{ k.aguardando_aprovacao_minhas }} {{ k.aguardando_aprovacao_minhas|plural:"ocorrência aguarda,ocorrências aguardam" }}</strong> a sua aprovação.</span>
-  <span class="btn btn-primario btn-peq ml-auto">Revisar {% icone "arrow-right" 14 %}</span>
-</a>
-{% endif %}
-
 {% if sem_dados %}
 <div class="card flex flex-col items-center gap-3 py-10 text-center">
-  <span class="flex h-12 w-12 items-center justify-center rounded-full" style="background: var(--sup-2)">{% icone "clipboard-list" 22 %}</span>
-  <p class="text-lg font-bold">Ainda não há ocorrências para mostrar</p>
+  <span class="av grande" aria-hidden="true">{% icone "bar-chart-3" 20 %}</span>
+  <p class="text-lg font-extrabold">Ainda não há ocorrências para mostrar</p>
   <p class="suave">Quando houver ocorrências, os indicadores aparecem aqui.</p>
-  <a href="{% url 'portal:nova' %}" class="btn btn-primario mt-2">{% icone "plus" 16 %} Abrir ocorrência</a>
+  <a href="{% url 'portal:nova' %}" class="btn btn-preto mt-2">{% icone "plus" 16 %} Abrir ocorrência</a>
 </div>
 {% else %}
 <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-  {% for c in cartoes %}{% include "partials/stat_card.html" with label=c.label valor=c.valor sub=c.sub tom=c.tom %}{% endfor %}
+  {% for c in cartoes %}{% include "partials/stat_card.html" with label=c.label valor=c.valor sub=c.sub tom=c.tom destaque=c.destaque %}{% endfor %}
 </div>
 
 <div class="grid gap-3 lg:grid-cols-2">
   <section class="card flex flex-col gap-3" aria-labelledby="titulo-semanas">
-    <h2 id="titulo-semanas">Ocorrências por semana</h2>
+    <h2 id="titulo-semanas" class="h2" style="font-size: 16px">Ocorrências por semana</h2>
     {% with ultima=semanas|last %}
     <ol class="flex h-36 items-end gap-1.5" aria-label="Ocorrências por semana, de {{ semanas.0.rotulo }} a {{ ultima.rotulo }}">
       {% for s in semanas %}
       <li class="flex h-full min-w-0 flex-1 flex-col justify-end">
         <span class="mb-1 text-center text-[11px] font-bold tabular-nums">{% if s.total %}{{ s.total }}{% endif %}</span>
-        <span title="Semana de {{ s.rotulo }}: {{ s.total }}" class="block w-full rounded-t-md" style="height: {{ s.altura|stringformat:'.1f' }}%; background: var(--tinta)"></span>
-        <span class="mt-1 h-4 text-center text-[11px] suave">{% if s.mostrar %}{{ s.rotulo }}{% endif %}</span>
+        <span title="Semana de {{ s.rotulo }}: {{ s.total }}" class="block w-full rounded-t-md" style="height: {{ s.altura|stringformat:'.1f' }}%; background: var(--preto)"></span>
+        <span class="mt-1 h-4 text-center text-[11px] fraco">{% if s.mostrar %}{{ s.rotulo }}{% endif %}</span>
       </li>
       {% endfor %}
     </ol>
     {% endwith %}
-    <p class="ajuda">Semanas começando na segunda-feira.</p>
+    <p class="text-[13px] fraco">Semanas começando na segunda-feira.</p>
   </section>
 
   <section class="card flex flex-col gap-3" x-data="motivos">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h2>Principais motivos</h2>
+      <h2 class="h2" style="font-size: 16px">Principais motivos</h2>
       <div role="group" aria-label="Contar por" class="seg">
         {% for modo, rotulo in modos %}<button type="button" :aria-pressed="modo === '{{ modo }}'" @click="modo = '{{ modo }}'">{{ rotulo }}</button>{% endfor %}
       </div>
@@ -62,32 +56,31 @@
       <p class="text-sm suave">Sem produtos lançados no período.</p>
       {% else %}
       <ul class="flex flex-col gap-2.5">
-        {% for b in barras %}
-        <li class="hbar"><span class="truncate">{{ b.rotulo }}</span><span class="trilho"><span style="width: {{ b.pct }}%"></span></span><span class="text-right font-bold tabular-nums">{{ b.valor }}</span></li>
-        {% endfor %}
+        {% for b in barras %}<li class="hbar"><span class="truncate">{{ b.rotulo }}</span><span class="tr"><span style="width: {{ b.pct }}%"></span></span><span class="mono text-right">{{ b.valor }}</span></li>{% endfor %}
       </ul>
       {% endif %}
     </div>
     {% endfor %}
-    <p class="ajuda" x-text="modo === 'ocorrencias' ? 'Número de ocorrências que têm produtos nessa categoria.' : 'Soma da quantidade de produtos em cada categoria.'">Número de ocorrências que têm produtos nessa categoria.</p>
+    <p class="text-[13px] fraco" x-text="modo === 'ocorrencias' ? 'Número de ocorrências que têm produtos nessa categoria.' : 'Soma da quantidade de produtos em cada categoria.'">Número de ocorrências que têm produtos nessa categoria.</p>
   </section>
 </div>
 
 <section class="tbl-box" aria-labelledby="titulo-atencao">
-  <h2 id="titulo-atencao" class="card-titulo px-5 pb-2 pt-4">Precisam de atenção</h2>
+  <div class="flex items-center gap-2 px-3.5 pb-2.5"><h2 id="titulo-atencao" class="h2" style="font-size: 16px">Precisam de atenção</h2>
+    {% if k.aguardando_aprovacao_minhas > 0 %}<a href="{% url 'portal:lista' %}?filtro=aprovar" class="link ml-auto text-sm">{{ k.aguardando_aprovacao_minhas }} {{ k.aguardando_aprovacao_minhas|plural:"aguarda,aguardam" }} sua confirmação</a>{% endif %}</div>
   {% if not k.atencao %}
-  <p class="px-5 pb-5 text-sm suave">Nenhuma ocorrência em aberto.</p>
+  <p class="px-3.5 pb-3 text-sm suave">Nenhuma ocorrência em aberto.</p>
   {% else %}
   <div class="tbl-rola">
-    <table class="tbl min-w-[34rem]">
-      <thead><tr><th scope="col">Protocolo</th><th scope="col">Tipo</th><th scope="col">Responsável</th><th scope="col">Idade</th><th scope="col">SLA</th></tr></thead>
+    <table class="tabela min-w-[34rem]">
+      <thead><tr><th scope="col">Protocolo</th><th scope="col">Tipo</th><th scope="col">Aberta por</th><th scope="col">Idade</th><th scope="col">Prazo</th></tr></thead>
       <tbody>
         {% for a in k.atencao %}
         <tr>
-          <td class="mono"><a href="{% url 'portal:detalhe' a.id %}" class="font-semibold">{{ a.protocolo }}</a></td>
-          <td>{{ a.tipo|tipo_label }}</td>
+          <td><a href="{% url 'portal:detalhe' a.id %}" class="mono">{{ a.protocolo }}</a></td>
+          <td><strong>{{ a.tipo|tipo_label }}</strong></td>
           <td>{% if a.eh_minha %}Você{% else %}{{ a.autor_nome|default:"—" }}{% endif %}</td>
-          <td class="tabular-nums">{{ a.idade }}</td>
+          <td class="suave">{{ a.idade }}</td>
           <td>{% sla_badge a %}</td>
         </tr>
         {% endfor %}

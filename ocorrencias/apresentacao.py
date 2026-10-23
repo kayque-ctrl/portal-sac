@@ -95,6 +95,8 @@ def linha_do_tempo(oc, user, mensagens, anexos, rotulo_cliente: str | None = Non
                 "texto": f"Status: {de} → {para}",
                 "autor_rotulo": _rotulo(h.alterado_por_id, autor, user, oc, rotulo_cliente),
                 "interno": False,
+                # Resumo da resolução: vira o cartão "Solução proposta" (spec 025).
+                "solucao": h.observacao,
             }
         )
 

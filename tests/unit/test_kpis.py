@@ -1,6 +1,6 @@
 """Lógica pura do painel do cliente (spec 011): sem banco, sem HTTP."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -118,7 +118,11 @@ def test_barras_por_semana_proporcionais_ao_maior():
             {"semana": "2026-09-21", "total": 0},
         ]
     )
-    assert [(b["rotulo"], b["total"], b["pct"]) for b in barras] == [("07/09", 2, 50), ("14/09", 4, 100), ("21/09", 0, 0)]
+    assert [(b["rotulo"], b["total"], b["pct"]) for b in barras] == [
+        ("07/09", 2, 50),
+        ("14/09", 4, 100),
+        ("21/09", 0, 0),
+    ]
 
 
 def test_barras_por_semana_todas_zeradas_nao_dividem_por_zero():
@@ -128,13 +132,13 @@ def test_barras_por_semana_todas_zeradas_nao_dividem_por_zero():
 @pytest.mark.parametrize(
     ("criado_em", "esperado"),
     [
-        (datetime(2026, 9, 21, 11, 40, tzinfo=timezone.utc), "agora"),
-        (datetime(2026, 9, 21, 7, tzinfo=timezone.utc), "5 h"),
-        (datetime(2026, 9, 15, 12, tzinfo=timezone.utc), "6 d"),
+        (datetime(2026, 9, 21, 11, 40, tzinfo=UTC), "agora"),
+        (datetime(2026, 9, 21, 7, tzinfo=UTC), "5 h"),
+        (datetime(2026, 9, 15, 12, tzinfo=UTC), "6 d"),
     ],
 )
 def test_rotulo_de_idade(criado_em, esperado):
-    agora = datetime(2026, 9, 21, 12, tzinfo=timezone.utc)
+    agora = datetime(2026, 9, 21, 12, tzinfo=UTC)
     assert rotulo_idade(criado_em, agora) == esperado
 
 

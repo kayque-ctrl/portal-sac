@@ -44,9 +44,15 @@ class ProtocoloSeq(models.Model):
 
 
 class SlaRegra(models.Model):
-    """Prazo (horas) por categoria e/ou prioridade. Nulo = qualquer."""
+    """
+    Prazo (horas) por empresa, categoria e/ou prioridade. Nulo = qualquer;
+    empresa nula = padrão de todas as empresas (spec 026).
+    """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    empresa = models.ForeignKey(
+        "contas.Empresa", on_delete=models.CASCADE, null=True, blank=True, related_name="regras_sla"
+    )
     categoria = models.CharField(max_length=24, choices=OcorrenciaTipo.choices, null=True, blank=True)
     prioridade = models.CharField(max_length=8, choices=Prioridade.choices, null=True, blank=True)
     horas = models.PositiveIntegerField()
@@ -57,18 +63,23 @@ class SlaRegra(models.Model):
         verbose_name_plural = "regras de SLA"
 
     def __str__(self) -> str:
-        return f"{self.categoria or 'qualquer'} / {self.prioridade or 'qualquer'}: {self.horas} h"
+        base = f"{self.categoria or 'qualquer'} / {self.prioridade or 'qualquer'}: {self.horas} h"
+        return f"{self.empresa} / {base}" if self.empresa_id else base
 
     @staticmethod
-    def horas_para(tipo: str, prioridade: str) -> int | None:
-        """Regra mais específica vence: prioridade pesa mais que categoria."""
+    def horas_para(tipo: str, prioridade: str, empresa_id=None) -> int | None:
+        """
+        Regra mais específica vence: a da empresa pesa mais que o padrão,
+        depois a prioridade, depois a categoria (spec 026).
+        """
         candidatas = SlaRegra.objects.filter(
+            models.Q(empresa_id=empresa_id) | models.Q(empresa__isnull=True),
             models.Q(categoria=tipo) | models.Q(categoria__isnull=True),
             models.Q(prioridade=prioridade) | models.Q(prioridade__isnull=True),
         )
         melhor = sorted(
             candidatas,
-            key=lambda r: (r.prioridade is not None, r.categoria is not None),
+            key=lambda r: (r.empresa_id is not None, r.prioridade is not None, r.categoria is not None),
             reverse=True,
         )
         return melhor[0].horas if melhor else None
@@ -81,9 +92,7 @@ CAMPOS_COM_EVENTO = ("atribuido_a_id", "prioridade", "arquivada_em", "excluida_e
 class Ocorrencia(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     protocolo = models.CharField(max_length=20, unique=True, editable=False)
-    cliente = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ocorrencias"
-    )
+    cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ocorrencias")
     tipo = models.CharField(max_length=24, choices=OcorrenciaTipo.choices)
     titulo = models.CharField(max_length=200, null=True, blank=True)
     descricao = models.TextField(blank=True, default="")
@@ -144,7 +153,7 @@ class Ocorrencia(models.Model):
     # ----- regras que eram triggers -----
 
     def _sla_ao_criar(self, agora):
-        self.sla_horas = SlaRegra.horas_para(self.tipo, self.prioridade)
+        self.sla_horas = SlaRegra.horas_para(self.tipo, self.prioridade, self.cliente.empresa_id)
         if self.sla_horas is not None:
             self.sla_prazo = agora + timedelta(hours=self.sla_horas)
 
@@ -182,8 +191,11 @@ class Ocorrencia(models.Model):
             if self.sla_horas is not None:
                 self.sla_prazo = agora + timedelta(hours=self.sla_horas)
 
-    def save(self, *args, por=None, **kwargs):
-        """`por` = quem fez a alteração (antes: auth.uid() nos triggers)."""
+    def save(self, *args, por=None, observacao=None, **kwargs):
+        """
+        `por` = quem fez a alteração (antes: auth.uid() nos triggers).
+        `observacao` = texto da troca de status (ex.: resumo da resolução, spec 025).
+        """
         from . import notificacoes
 
         agora = timezone.now()
@@ -208,7 +220,7 @@ class Ocorrencia(models.Model):
                 notificacoes.nova_ocorrencia(self)
             elif mudou_status:
                 HistoricoStatus.objects.create(
-                    ocorrencia=self, de_status=de, para_status=self.status, alterado_por=por
+                    ocorrencia=self, de_status=de, para_status=self.status, alterado_por=por, observacao=observacao
                 )
                 notificacoes.mudanca_status(self, por)
             if not criando:
@@ -314,7 +326,7 @@ class Mensagem(models.Model):
             notificacoes.nova_mensagem(self)
 
 
-def caminho_anexo(instance: "Anexo", filename: str) -> str:
+def caminho_anexo(instance: Anexo, filename: str) -> str:
     from .uploads import sanitizar_nome
 
     return f"anexos/{instance.ocorrencia_id}/{uuid.uuid4()}-{sanitizar_nome(filename)}"
@@ -325,9 +337,7 @@ class Anexo(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ocorrencia = models.ForeignKey(Ocorrencia, on_delete=models.CASCADE, related_name="anexos")
-    mensagem = models.ForeignKey(
-        Mensagem, on_delete=models.SET_NULL, null=True, blank=True, related_name="anexos"
-    )
+    mensagem = models.ForeignKey(Mensagem, on_delete=models.SET_NULL, null=True, blank=True, related_name="anexos")
     arquivo = models.FileField(upload_to=caminho_anexo, max_length=300)
     nome_arquivo = models.CharField(max_length=255)
     tipo_mime = models.CharField(max_length=120, blank=True, null=True)
@@ -352,6 +362,8 @@ class HistoricoStatus(models.Model):
     alterado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    # Ao ir para "Aguardando aprovação": o resumo da resolução, que o cliente vê (spec 025).
+    observacao = models.TextField(null=True, blank=True)
     criado_em = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -389,9 +401,7 @@ class EventoOcorrencia(models.Model):
 
 class Notificacao(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    destinatario = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notificacoes"
-    )
+    destinatario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notificacoes")
     ocorrencia = models.ForeignKey(
         Ocorrencia, on_delete=models.CASCADE, null=True, blank=True, related_name="notificacoes"
     )
@@ -452,3 +462,24 @@ class ContatoEncaminhamento(models.Model):
 
     def __str__(self) -> str:
         return self.email
+
+
+class Transportadora(models.Model):
+    """
+    Transportadora que faz as coletas (spec 025). Ligada às empresas que ela
+    atende, para a coleta já sugerir o e-mail certo.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nome = models.CharField(max_length=120)
+    email = models.EmailField()
+    telefone = models.CharField(max_length=40, null=True, blank=True)
+    ativa = models.BooleanField(default=True, db_index=True)
+    empresas = models.ManyToManyField("contas.Empresa", blank=True, related_name="transportadoras")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self) -> str:
+        return self.nome

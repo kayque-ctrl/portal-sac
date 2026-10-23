@@ -26,7 +26,9 @@ URL_ASSINADA = "https://ref.supabase.co/storage/v1/s3/anexos-django/x.png?X-Amz-
 @pytest.fixture
 def bucket_remoto(settings):
     settings.ANEXOS_REMOTOS = True
-    with mock.patch("django.db.models.fields.files.FieldFile.url", new_callable=mock.PropertyMock, return_value=URL_ASSINADA):
+    with mock.patch(
+        "django.db.models.fields.files.FieldFile.url", new_callable=mock.PropertyMock, return_value=URL_ASSINADA
+    ):
         yield
 
 

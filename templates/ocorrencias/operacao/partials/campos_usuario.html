@@ -3,17 +3,25 @@ Campos de perfil (convite e edição). Parâmetros: v (valores atuais: dict ou
 Usuario), empresas, tipos_pessoa, pode_admin. Requer x-data com `papel`.
 {% endcomment %}
 <div class="campo">
-  <label for="papel">Papel</label>
+  <label for="papel">Papel <span class="obg" aria-hidden="true">*</span></label>
   <select id="papel" name="papel" x-model="papel" class="in">
     <option value="cliente">Cliente</option>
     <option value="operador">Operador</option>
     {% if pode_admin or v.papel == "admin" %}<option value="admin">Administrador</option>{% endif %}
   </select>
-  {% if not pode_admin %}<span class="ajuda">Só um administrador pode criar outro administrador.</span>{% endif %}
+  <span class="ajuda">Só um administrador pode criar outro administrador.</span>
 </div>
 
 <template x-if="papel === 'cliente'">
   <div class="contents">
+    <div class="campo">
+      <label for="empresa_id">Empresa</label>
+      <select id="empresa_id" name="empresa_id" class="in">
+        <option value="">Nenhuma</option>
+        {% for e in empresas %}<option value="{{ e.pk }}" {% if v.empresa_id|stringformat:'s' == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
+      </select>
+      <span class="ajuda">Define quais ocorrências o cliente enxerga.</span>
+    </div>
     <div class="campo">
       <label for="tipo_pessoa">Tipo de pessoa</label>
       <select id="tipo_pessoa" name="tipo_pessoa" class="in">
@@ -23,15 +31,7 @@ Usuario), empresas, tipos_pessoa, pode_admin. Requer x-data com `papel`.
     </div>
     <div class="campo">
       <label for="documento">Documento (CPF/CNPJ)</label>
-      <input id="documento" name="documento" value="{{ v.documento|default:'' }}" class="in mono">
-    </div>
-    <div class="campo">
-      <label for="empresa_id">Empresa</label>
-      <select id="empresa_id" name="empresa_id" class="in">
-        <option value="">Nenhuma</option>
-        {% for e in empresas %}<option value="{{ e.pk }}" {% if v.empresa_id|stringformat:'s' == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
-      </select>
-      <span class="ajuda">Define quais ocorrências o cliente enxerga.</span>
+      <input id="documento" name="documento" value="{{ v.documento|default:'' }}" placeholder="Ex.: 12.345.678/0001-90" class="in mono">
     </div>
   </div>
 </template>

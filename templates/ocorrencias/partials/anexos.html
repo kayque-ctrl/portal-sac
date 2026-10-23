@@ -1,8 +1,8 @@
 {% load ocorrencias_tags %}
 {% comment %}
-Anexos de um item da linha do tempo: foto vira miniatura (abre em tamanho
-real ao clicar), outros arquivos viram etiqueta com nome e tamanho.
-O link passa por /anexos/<id>, que confere a permissão antes de servir.
+Anexos da abertura: foto vira miniatura (abre em tamanho real ao clicar),
+outros arquivos viram etiqueta com nome e tamanho. O link passa por
+/anexos/<id>, que confere a permissão antes de servir.
 {% endcomment %}
 {% if anexos %}
 <ul class="fotos">
@@ -10,13 +10,13 @@ O link passa por /anexos/<id>, que confere a permissão antes de servir.
   <li>
     {% if a.tipo_mime|slice:":6" == "image/" %}
     <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer" data-anexo="foto" title="{{ a.nome_arquivo }}" class="foto">
-      <img src="{% url 'publico:anexo' a.pk %}" alt="Foto {{ a.nome_arquivo }}" loading="lazy" width="128" height="96">
+      <img src="{% url 'publico:anexo' a.pk %}" alt="Foto {{ a.nome_arquivo }}" loading="lazy" width="104" height="78">
     </a>
     {% else %}
     <a href="{% url 'publico:anexo' a.pk %}" target="_blank" rel="noopener noreferrer" data-anexo="arquivo" class="arq">
-      {% if a.tipo_mime == "application/pdf" %}{% icone "file-text" 16 %}{% else %}{% icone "paperclip" 16 %}{% endif %}
+      {% if a.tipo_mime == "application/pdf" %}<span style="color: var(--perigo)">{% icone "file-text" 16 %}</span>{% else %}{% icone "paperclip" 16 %}{% endif %}
       <span class="truncate">{{ a.nome_arquivo }}</span>
-      {% if a.tamanho_bytes %}<span class="shrink-0 text-xs suave">{{ a.tamanho_bytes|tamanho }}</span>{% endif %}
+      {% if a.tamanho_bytes %}<span class="shrink-0 text-xs fraco">{{ a.tamanho_bytes|tamanho }}</span>{% endif %}
     </a>
     {% endif %}
   </li>

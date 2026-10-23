@@ -1,146 +1,95 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Painel · Operação{% endblock %}
-{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>{% endblock %}
+{% block titulo_celular_op %}Painel{% endblock %}
 
 {% block conteudo %}
 <div class="topo">
-  <div class="titulo">
-    <h1>Painel</h1>
-    <p class="subtitulo">{{ total }} {{ total|plural:"ocorrência,ocorrências" }}</p>
+  <div>
+    <h1 class="titulo">Painel</h1>
+    <p class="suave">{{ total }} {{ total|plural:"ocorrência,ocorrências" }} no período</p>
   </div>
-  <a href="{{ export_href }}" class="btn btn-linha">{% icone "download" 16 %} Exportar Excel</a>
+  <div class="acoes"><a href="{{ export_href }}" class="btn btn-linha btn-peq">{% icone "download" 15 %} Exportar Excel</a></div>
 </div>
 
 {# Filtros #}
-<form method="get" class="card grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-end" style="padding: 14px 16px">
-  <div class="campo col-span-2 md:w-56">
-    <label for="empresa">Empresa</label>
-    <select id="empresa" name="empresa" class="in">
+<form method="get" class="grid grid-cols-2 gap-2.5 lg:flex lg:flex-wrap lg:items-end" x-data @change="$el.requestSubmit()">
+  <div class="campo col-span-2 lg:w-56">
+    <label for="empresa" class="text-[13px]">Empresa</label>
+    <select id="empresa" name="empresa" class="in in-peq">
       <option value="">Todas</option>
       {% for e in empresas %}<option value="{{ e.id }}" {% if e.id|stringformat:'s' == filtros.empresa %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}
     </select>
   </div>
-  <div class="campo md:w-48">
-    <label for="status">Status</label>
-    <select id="status" name="status" class="in">
-      <option value="">Todos</option>
+  <div class="campo lg:w-48">
+    <label for="status" class="text-[13px]">Situação</label>
+    <select id="status" name="status" class="in in-peq">
+      <option value="">Todas</option>
       {% for v, l in status_labels %}<option value="{{ v }}" {% if v == filtros.status %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
   </div>
-  <div class="campo md:w-52">
-    <label for="tipo">Categoria</label>
-    <select id="tipo" name="tipo" class="in">
-      <option value="">Todas</option>
+  <div class="campo lg:w-52">
+    <label for="tipo" class="text-[13px]">Tipo</label>
+    <select id="tipo" name="tipo" class="in in-peq">
+      <option value="">Todos</option>
       {% for v, l in tipo_labels %}<option value="{{ v }}" {% if v == filtros.tipo %}selected{% endif %}>{{ l }}</option>{% endfor %}
     </select>
   </div>
-  <div class="campo md:w-44"><label for="de">De</label><input id="de" name="de" type="date" value="{{ filtros.de }}" class="in"></div>
-  <div class="campo md:w-44"><label for="ate">Até</label><input id="ate" name="ate" type="date" value="{{ filtros.ate }}" class="in"></div>
-  <div class="col-span-2 flex items-center gap-2">
-    <button type="submit" class="btn btn-primario">Aplicar</button>
-    {% if tem_filtro %}<a href="{% url 'operacao:painel' %}" class="link px-2">Limpar</a>{% endif %}
-  </div>
+  <div class="campo lg:w-44"><label for="de" class="text-[13px]">De</label><input id="de" name="de" type="date" value="{{ filtros.de }}" class="in in-peq"></div>
+  <div class="campo lg:w-44"><label for="ate" class="text-[13px]">Até</label><input id="ate" name="ate" type="date" value="{{ filtros.ate }}" class="in in-peq"></div>
+  <noscript><button type="submit" class="btn btn-preto btn-peq">Aplicar</button></noscript>
+  {% if tem_filtro %}<a href="{% url 'operacao:painel' %}" class="link col-span-2 pb-3 text-sm">Limpar filtros</a>{% endif %}
 </form>
 
-{# KPIs #}
+{# Números #}
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
   {% for c in cartoes %}{% include "partials/stat_card.html" with label=c.label valor=c.valor destaque=c.destaque %}{% endfor %}
 </div>
 
 {% if not total %}
-<div class="card card-tracejado">Nenhuma ocorrência com os filtros atuais.</div>
+<div class="card-vazio">Nenhuma ocorrência com os filtros atuais.</div>
 {% else %}
-{# Gráficos #}
-<div class="grid gap-3 lg:grid-cols-2">
-  {% for id, titulo in graficos_titulos %}
-  <section class="card">
-    <h2>{{ titulo }}</h2>
-    <div class="relative mt-3 h-64"><canvas id="{{ id }}" role="img" aria-label="{{ titulo }}"></canvas></div>
+<div class="grid gap-3 lg:grid-cols-3">
+  <section class="card flex flex-col gap-3" aria-labelledby="g-status">
+    <h2 id="g-status" class="h2" style="font-size: 16px">Por situação</h2>
+    {% for p in graficos.porStatus %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% endfor %}
   </section>
-  {% endfor %}
+  <section class="card flex flex-col gap-3" aria-labelledby="g-tipo">
+    <h2 id="g-tipo" class="h2" style="font-size: 16px">Por tipo</h2>
+    {% for p in graficos.porTipo %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% endfor %}
+  </section>
+  <section class="card flex flex-col gap-3" aria-labelledby="g-emp">
+    <h2 id="g-emp" class="h2" style="font-size: 16px">Empresas com mais ocorrências</h2>
+    {% for p in graficos.porEmpresa %}<div class="hbar"><span class="truncate">{{ p.label }}</span><span class="tr"><span style="width: {{ p.pct }}%"></span></span><span class="mono text-right">{{ p.valor }}</span></div>{% empty %}<p class="text-sm suave">Sem dados de empresa.</p>{% endfor %}
+  </section>
 </div>
-{{ graficos|json_script:"dados-graficos" }}
 
-{# Tabela por empresa (também serve de "table view" acessível) #}
+<section class="card flex flex-col gap-3" aria-labelledby="g-tempo">
+  <h2 id="g-tempo" class="h2" style="font-size: 16px">Abertas por dia</h2>
+  <ol class="flex h-32 items-end gap-1" aria-label="Ocorrências abertas por dia">
+    {% for p in graficos.porTempo %}
+    <li class="flex h-full min-w-0 max-w-10 flex-1 flex-col justify-end" title="{{ p.label }}: {{ p.valor }}">
+      <span class="block w-full rounded-t-md" style="height: {{ p.pct }}%; min-height: 3px; background: var(--preto)"></span>
+      <span class="mt-1 truncate text-center text-[10.5px] fraco">{{ p.label }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+{# Tabela por empresa (também serve de visão acessível dos números) #}
 <section class="tbl-box" aria-labelledby="t-emp">
-  <h2 id="t-emp" class="card-titulo px-5 pb-2 pt-4">Por empresa</h2>
+  <h2 id="t-emp" class="h2 px-3.5 pb-2.5" style="font-size: 16px">Por empresa</h2>
   <div class="tbl-rola">
-    <table class="tbl">
-      <thead><tr><th scope="col">Empresa</th><th scope="col" class="text-right">Abertas</th><th scope="col" class="text-right">Total</th><th scope="col"><span class="sr">Ações</span></th></tr></thead>
+    <table class="tabela">
+      <thead><tr><th scope="col">Empresa</th><th scope="col" class="text-right">Em aberto</th><th scope="col" class="text-right">Total</th><th scope="col"><span class="sr">Ver</span></th></tr></thead>
       <tbody>
         {% for e in empresas_ordenadas %}
-        <tr>
-          <td>{{ e.nome }}</td>
-          <td class="text-right tabular-nums">{{ e.abertas }}</td>
-          <td class="text-right tabular-nums">{{ e.total }}</td>
-          <td class="text-right">{% if e.id %}<a href="{% url 'operacao:lista' %}?empresa={{ e.id }}" class="link text-sm">Ver</a>{% endif %}</td>
-        </tr>
+        <tr><td><strong>{{ e.nome }}</strong></td><td class="mono text-right">{{ e.abertas }}</td><td class="mono text-right">{{ e.total }}</td>
+          <td class="ir">{% if e.id %}<a href="{% url 'operacao:lista' %}?empresa={{ e.id }}" class="link text-sm">Ver ocorrências</a>{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </section>
-{% endif %}
-
-{% if total %}
-<script>
-  (function () {
-    const dados = JSON.parse(document.getElementById("dados-graficos").textContent);
-    const css = getComputedStyle(document.documentElement);
-    const v = (nome) => css.getPropertyValue(nome).trim();
-    // Cores dos tokens (spec 022): seguem a paleta do tema atual.
-    const cor = {
-      texto: v("--suave"),
-      grade: v("--linha-2"),
-      superficie: v("--sup"),
-      serie: v("--tinta"),
-      cat: [v("--tinta"), "#6b6b6b", "#a3a3a3", "#d4d4d4", "#404040", "#8a8a8a"],
-    };
-    Chart.defaults.color = cor.texto;
-    Chart.defaults.font.family = "'Bricolage Grotesque', Arial, sans-serif";
-    Chart.defaults.font.size = 12;
-    const eixos = (horizontal) => ({
-      x: { grid: { display: !!horizontal, color: cor.grade }, border: { display: false }, ticks: { precision: 0 }, beginAtZero: true },
-      y: { grid: { display: !horizontal, color: cor.grade }, border: { display: false }, ticks: { precision: 0 }, beginAtZero: true },
-    });
-    const semLegenda = { legend: { display: false } };
-
-    new Chart(document.getElementById("g-status"), {
-      type: "bar",
-      data: { labels: dados.porStatus.map((p) => p.label), datasets: [{ data: dados.porStatus.map((p) => p.valor), backgroundColor: cor.serie, borderRadius: 6 }] },
-      options: { maintainAspectRatio: false, plugins: semLegenda, scales: eixos(false) },
-    });
-
-    new Chart(document.getElementById("g-tipo"), {
-      type: "doughnut",
-      data: {
-        labels: dados.porTipo.map((p) => p.label),
-        datasets: [{ data: dados.porTipo.map((p) => p.valor), backgroundColor: dados.porTipo.map((_, i) => cor.cat[i % cor.cat.length]), borderColor: cor.superficie, borderWidth: 2 }],
-      },
-      options: { maintainAspectRatio: false, cutout: "62%", plugins: { legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } } } },
-    });
-
-    new Chart(document.getElementById("g-tempo"), {
-      type: "line",
-      data: {
-        labels: dados.porTempo.map((p) => p.label),
-        datasets: [{ data: dados.porTempo.map((p) => p.valor), borderColor: cor.serie, backgroundColor: "rgba(127,127,127,.12)", fill: true, tension: 0.35, pointBackgroundColor: cor.superficie, pointBorderColor: cor.serie, pointBorderWidth: 2, pointRadius: 3.5 }],
-      },
-      options: { maintainAspectRatio: false, plugins: semLegenda, scales: eixos(false) },
-    });
-
-    const elEmp = document.getElementById("g-empresa");
-    if (dados.porEmpresa.length === 0) {
-      elEmp.parentElement.innerHTML = '<p class="text-sm suave">Sem dados de empresa.</p>';
-    } else {
-      new Chart(elEmp, {
-        type: "bar",
-        data: { labels: dados.porEmpresa.map((p) => p.label), datasets: [{ data: dados.porEmpresa.map((p) => p.valor), backgroundColor: cor.serie, borderRadius: 5 }] },
-        options: { indexAxis: "y", maintainAspectRatio: false, plugins: semLegenda, scales: eixos(true) },
-      });
-    }
-  })();
-</script>
 {% endif %}
 {% endblock %}

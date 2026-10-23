@@ -1,33 +1,35 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Notificações · Portal de Ocorrências{% endblock %}
+{% block titulo_celular %}Notificações{% endblock %}
+{% block titulo_celular_op %}Notificações{% endblock %}
+{% block largura %}estreito{% endblock %}
 
 {% block conteudo %}
-<nav class="migalha" aria-label="Caminho"><a href="{{ voltar }}">{% icone "arrow-left" 15 %} Voltar</a></nav>
 <div class="topo">
-  <div class="titulo">
-    <h1>Notificações</h1>
-    <p class="subtitulo">As mais recentes primeiro. Abrir esta página marca todas como lidas.</p>
+  <div>
+    <h1 class="titulo">Notificações</h1>
+    <p class="suave">As mais recentes primeiro. Abrir esta página marca todas como lidas.</p>
   </div>
 </div>
 
 {% if not notificacoes %}
 <div class="card flex flex-col items-center gap-3 py-10 text-center">
-  <span class="flex h-12 w-12 items-center justify-center rounded-full" style="background: var(--sup-2)">{% icone "bell" 22 %}</span>
+  <span class="av grande" aria-hidden="true">{% icone "bell" 20 %}</span>
   <p class="suave">Nenhuma notificação.</p>
 </div>
 {% else %}
-<ul class="tbl-box max-w-3xl">
+<ul class="card max-w-3xl overflow-hidden" style="padding: 0">
   {% for n in notificacoes %}
-  <li class="border-b last:border-0" style="border-color: var(--linha-2){% if not n.lida %}; background: var(--sup-2){% endif %}">
-    {% if n.ocorrencia_id %}<a href="{{ area_base }}/{{ n.ocorrencia_id }}" class="block hover:bg-[var(--sup-2)]">{% endif %}
-    <div class="flex items-start gap-3 px-4 py-3.5 sm:px-5">
+  <li class="{% if not forloop.first %}border-t{% endif %}" style="border-color: var(--linha){% if not n.lida %}; background: var(--sup-3){% endif %}">
+    {% if n.ocorrencia_id %}<a href="{{ area_base }}/{{ n.ocorrencia_id }}" class="block" style="text-decoration: none">{% endif %}
+    <div class="flex items-start gap-3.5 px-4 py-3.5 sm:px-5">
       {% notif_icone n.mensagem %}
       <div class="min-w-0 flex-1">
-        <p class="text-[15px] {% if not n.lida %}font-bold{% endif %}">{{ n.mensagem }}</p>
-        <p class="mt-0.5 text-[13px] suave">{{ n.criado_em|relativo }}</p>
+        <p class="{% if not n.lida %}font-bold{% endif %}">{{ n.mensagem }}</p>
+        <p class="mt-0.5 text-[13px] fraco">{{ n.criado_em|relativo }}</p>
       </div>
-      {% if not n.lida %}<span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full" style="background: var(--tinta)" aria-label="Não lida"></span>{% endif %}
+      {% if not n.lida %}<span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full" style="background: var(--preto)" aria-label="Não lida"></span>{% endif %}
     </div>
     {% if n.ocorrencia_id %}</a>{% endif %}
   </li>

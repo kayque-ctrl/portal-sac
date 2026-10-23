@@ -13,14 +13,6 @@ def corpo(resposta) -> str:
     return resposta.content.decode()
 
 
-def qtd_atalho(resposta, chave) -> int:
-    """Contagem exibida no atalho `chave` da fila."""
-    html = corpo(resposta)
-    inicio = html.index(f'data-atalho="{chave}"')
-    trecho = html[inicio : html.index("</a>", inicio)]
-    return int(trecho.rsplit('opacity-80">', 1)[1].split("<", 1)[0])
-
-
 # ---------------------------------------------------------------- atalhos da fila
 
 
@@ -34,56 +26,24 @@ def fila(abrir, operador, admin):
     return minha, do_admin, solta
 
 
-def test_atalho_minhas_mostra_so_as_do_operador_logado(fila, operador, entrar):
-    minha, do_admin, solta = fila
-    html = corpo(entrar(operador).get("/operacao/?fila=minhas"))
-    assert minha.protocolo in html
-    assert do_admin.protocolo not in html and solta.protocolo not in html
+@pytest.mark.parametrize(
+    ("valor", "esperadas"),
+    [("eu", [0]), ("ninguem", [2])],
+)
+def test_filtro_de_responsavel_comigo_e_sem_responsavel(fila, operador, entrar, valor, esperadas):
+    """Spec 023: no lugar dos atalhos, o filtro de responsável (comigo / sem responsável)."""
+    html = corpo(entrar(operador).get(f"/operacao/?responsavel={valor}"))
+    for i, oc in enumerate(fila):
+        assert (oc.protocolo in html) == (i in esperadas)
 
 
-def test_atalho_sem_responsavel(fila, operador, entrar):
-    minha, do_admin, solta = fila
-    html = corpo(entrar(operador).get("/operacao/?fila=sem_responsavel"))
-    assert solta.protocolo in html
-    assert minha.protocolo not in html and do_admin.protocolo not in html
+def test_topo_avisa_quantas_ativas_estao_com_prazo_vencido(fila, operador, entrar):
+    assert "1 com prazo vencido" in corpo(entrar(operador).get("/operacao/"))
 
 
-def test_atalho_vencidas_ignora_no_prazo_e_quem_aguarda_o_cliente(fila, abrir, operador, entrar):
-    solta = fila[2]
-    pausada, no_prazo = abrir(), abrir()
-    Ocorrencia.objects.filter(pk=pausada.pk).update(status="resolvida", sla_prazo=timezone.now() - timedelta(hours=1))
-    Ocorrencia.objects.filter(pk=no_prazo.pk).update(sla_prazo=timezone.now() + timedelta(hours=3))
-
-    html = corpo(entrar(operador).get("/operacao/?fila=vencidas"))
-
-    assert solta.protocolo in html
-    assert no_prazo.protocolo not in html and pausada.protocolo not in html
-
-
-def test_atalhos_mostram_a_contagem_de_cada_um(fila, operador, entrar):
-    r = entrar(operador).get("/operacao/")
-    assert [qtd_atalho(r, c) for c in ("todas", "minhas", "sem_responsavel", "vencidas")] == [3, 1, 1, 1]
-
-
-def test_contagem_dos_atalhos_respeita_os_outros_filtros(fila, operador, entrar):
-    r = entrar(operador).get(f"/operacao/?q={fila[0].protocolo}")
-    assert (qtd_atalho(r, "todas"), qtd_atalho(r, "minhas"), qtd_atalho(r, "sem_responsavel")) == (1, 1, 0)
-
-
-def test_atalho_desconhecido_e_ignorado(fila, operador, entrar):
-    html = corpo(entrar(operador).get("/operacao/?fila=tudo-errado"))
-    assert all(oc.protocolo in html for oc in fila)
-
-
-def test_atalhos_so_aparecem_na_aba_ativas(fila, admin, entrar):
-    http = entrar(admin)
-    assert "Atalhos da fila" in corpo(http.get("/operacao/"))
-    assert "Atalhos da fila" not in corpo(http.get("/operacao/?situacao=concluidas&fila=minhas"))
-
-
-def test_atalho_e_preservado_na_busca(fila, operador, entrar):
-    html = corpo(entrar(operador).get("/operacao/?fila=minhas"))
-    assert '<input type="hidden" name="fila" value="minhas">' in html
+def test_filtros_mudados_mantem_a_aba_de_situacao(operador, entrar):
+    html = corpo(entrar(operador).get("/operacao/?situacao=concluidas"))
+    assert '<input type="hidden" name="situacao" value="concluidas">' in html
 
 
 # ---------------------------------------------------------------- filtros por pessoa
@@ -96,11 +56,11 @@ def test_fila_filtra_por_cliente_e_mostra_o_nome(abrir, cliente, estranho, opera
     assert "Aberta por:" in html and cliente.nome in html
 
 
-def test_fila_filtra_por_responsavel_e_mostra_o_nome(fila, operador, entrar):
+def test_fila_filtra_por_um_responsavel_e_deixa_ele_escolhido(fila, operador, entrar):
     minha, do_admin, _ = fila
     html = corpo(entrar(operador).get(f"/operacao/?responsavel={operador.pk}"))
     assert minha.protocolo in html and do_admin.protocolo not in html
-    assert "Responsável:" in html and operador.nome in html
+    assert f'<option value="{operador.pk}" selected>{operador.nome}</option>' in html
 
 
 def test_filtro_por_pessoa_inexistente_nao_quebra(operador, entrar):

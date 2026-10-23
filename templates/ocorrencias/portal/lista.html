@@ -1,0 +1,86 @@
+{% extends "area.html" %}
+{% load ocorrencias_tags %}
+{% block title %}Minhas ocorrências · Portal de Ocorrências{% endblock %}
+{% block titulo_celular %}Minhas ocorrências{% endblock %}
+
+{% block conteudo %}
+{{ meta|json_script:"ocorrencias-meta" }}
+{{ rotulos_tipo|json_script:"rotulos-tipo" }}
+{{ inicial|json_script:"lista-inicial" }}
+<div class="flex flex-col gap-4" x-data="portalLista(JSON.parse(document.getElementById('ocorrencias-meta').textContent), '{{ filtro_inicial }}', JSON.parse(document.getElementById('rotulos-tipo').textContent), JSON.parse(document.getElementById('lista-inicial').textContent))">
+  <div class="topo">
+    <div>
+      <h1 class="titulo">Minhas ocorrências</h1>
+      <p class="suave">{% if tem_colegas %}Suas e as da {{ user.empresa.nome|default:"sua empresa" }}{% else %}Todas as que você abriu{% endif %}</p>
+    </div>
+    {% if ocorrencias %}
+    <div class="acoes w-full md:w-auto">
+      <label class="busca w-full md:w-[400px]">
+        {% icone "search" 18 %}<span class="sr">Buscar</span>
+        <input type="search" x-model="q" aria-label="Buscar por protocolo ou descrição" placeholder="Buscar protocolo, NF, pedido ou picking">
+      </label>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if not ocorrencias %}
+  <div class="card flex flex-col items-center gap-3 py-10 text-center">
+    <span class="av grande" aria-hidden="true">{% icone "inbox" 20 %}</span>
+    <p class="text-lg font-extrabold">Nenhuma ocorrência por aqui ainda</p>
+    <p class="max-w-md suave">Abra uma ocorrência para registrar um problema de entrega e acompanhar a resposta da operação.</p>
+    <a href="{% url 'portal:nova' %}" class="btn btn-preto mt-2">{% icone "plus" 16 %} Abrir minha primeira ocorrência</a>
+  </div>
+  {% else %}
+  {% if pendentes %}
+  <button type="button" @click="verPendentes()" class="card card-destaque flex items-center gap-3 text-left" style="padding: 12px 16px">
+    <span class="av preto peq" aria-hidden="true">{% icone "check" 15 %}</span>
+    <span class="flex-1">Você tem <strong>{{ pendentes }}</strong> {{ pendentes|plural:"ocorrência,ocorrências" }} aguardando sua confirmação.</span>
+    <span class="link text-sm">Ver</span>
+  </button>
+  {% endif %}
+
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+    <nav aria-label="Filtrar por situação" class="pilulas">
+      {% for chave, label in chips %}
+      <button type="button" class="pilula" @click="status = '{{ chave }}'" :aria-pressed="status === '{{ chave }}'">{{ label }} <span class="tabular-nums opacity-70" x-text="'· ' + contagem('{{ chave }}')"></span></button>
+      {% endfor %}
+    </nav>
+    <div class="flex items-center gap-2 lg:ml-auto">
+      {% if tem_colegas %}
+      <div role="group" aria-label="Mostrar ocorrências" class="seg">
+        {% for chave, rotulo in escopos %}<button type="button" :aria-pressed="escopo === '{{ chave }}'" @click="escopo = '{{ chave }}'">{{ rotulo }}</button>{% endfor %}
+      </div>
+      {% endif %}
+      <button type="button" @click="filtrosAbertos = !filtrosAbertos" :aria-expanded="filtrosAbertos" class="pilula">
+        {% icone "filter" 14 %} Filtros <span x-show="nAvancados > 0" x-cloak x-text="'· ' + nAvancados"></span>
+      </button>
+    </div>
+  </div>
+
+  <div x-show="filtrosAbertos" x-cloak class="card grid gap-3 sm:grid-cols-3" style="padding: 16px">
+    <div class="campo">
+      <label for="f-cat">Tipo</label>
+      <select id="f-cat" x-model="cat" aria-label="Filtrar por tipo" class="in in-peq">
+        <option value="">Todos</option>
+        {% for v, l in tipos_form %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo"><label for="f-de">De</label><input id="f-de" type="date" x-model="de" aria-label="Data inicial" class="in in-peq"></div>
+    <div class="campo"><label for="f-ate">Até</label><input id="f-ate" type="date" x-model="ate" aria-label="Data final" class="in in-peq"></div>
+  </div>
+
+  <div x-show="temFiltro" x-cloak class="flex flex-wrap items-center gap-2 text-sm">
+    <span class="fraco">Filtros:</span>
+    <span x-show="cat" class="etq borda"><span x-text="'Tipo: ' + (rotulosTipo[cat] || '')"></span><button type="button" @click="cat = ''" aria-label="Remover filtro de tipo">{% icone "x" 13 %}</button></span>
+    <span x-show="de" class="etq borda"><span x-text="'De ' + (de ? diaBonito(de) : '')"></span><button type="button" @click="de = ''" aria-label="Remover filtro de data inicial">{% icone "x" 13 %}</button></span>
+    <span x-show="ate" class="etq borda"><span x-text="'Até ' + (ate ? diaBonito(ate) : '')"></span><button type="button" @click="ate = ''" aria-label="Remover filtro de data final">{% icone "x" 13 %}</button></span>
+    <button type="button" @click="limpar()" class="link">Limpar tudo</button>
+  </div>
+
+  <div x-show="exibidas.size === 0" x-cloak class="card-vazio">Nenhuma ocorrência para esse filtro.</div>
+  <div x-show="exibidas.size > 0">
+    {% include "ocorrencias/portal/partials/tabela.html" with filtravel=True %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

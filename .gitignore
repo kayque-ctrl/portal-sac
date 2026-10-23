@@ -12,3 +12,5 @@ specs/
 .pytest_cache/
 .coverage
 htmlcov/
+AGENTS.md
+CLAUDE.md

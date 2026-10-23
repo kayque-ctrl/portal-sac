@@ -1,102 +1,85 @@
 {% extends "area.html" %}
 {% load ocorrencias_tags %}
 {% block title %}Avisos · Operação{% endblock %}
+{% block titulo_celular_op %}Avisos{% endblock %}
 
 {% block conteudo %}
-<div x-data="avisoForm({ aberto: {{ erro|yesno:'true,false' }}, titulo: '{{ valores.titulo|default:''|escapejs }}', mensagem: '{{ valores.mensagem|default:''|escapejs }}', tipo: '{{ valores.tipo|default:'info'|escapejs }}', validade: '{{ valores.expira_em|default:''|escapejs }}' })" class="flex flex-col gap-4">
-  <div class="topo">
-    <div class="titulo">
-      <h1>Avisos</h1>
-      <p class="subtitulo">Mensagens exibidas para os clientes na tela inicial.</p>
-    </div>
-    <button x-show="!aberto" @click="aberto = true" class="btn btn-primario">{% icone "plus" 16 %} Novo aviso</button>
+<div class="topo">
+  <div>
+    <h1 class="titulo">Avisos</h1>
+    <p class="suave">Recados que aparecem no início do portal de todos os clientes.</p>
   </div>
+</div>
 
-  <form x-show="aberto" x-cloak method="post" class="card flex max-w-2xl flex-col gap-4">
-    {% csrf_token %}
-    <h2>Novo aviso</h2>
-    <div class="campo">
-      <div class="flex items-center justify-between">
-        <label for="titulo">Título <span class="obg" aria-hidden="true">*</span></label>
-        <span class="mono text-xs" :class="titulo.length >= {{ titulo_max }} ? 'text-amber-700 dark:text-amber-400' : 'suave'" x-text="titulo.length + '/{{ titulo_max }}'"></span>
+<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+  {% if not avisos %}
+  <div class="card-vazio">Nenhum aviso ainda. Use o formulário ao lado.</div>
+  {% else %}
+  <ul class="flex flex-col gap-3">
+    {% for a in avisos %}
+    <li class="card flex flex-col gap-2 {% if a.tipo == 'alerta' and a.ativo %}card-aviso{% endif %}" {% if not a.ativo %}style="opacity: .65"{% endif %}>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="etq {% if a.tipo == 'alerta' %}borda{% endif %}">{% if a.tipo == 'alerta' %}Alerta{% else %}Informação{% endif %}</span>
+        <strong class="min-w-0 flex-1">{{ a.titulo }}</strong>
+        {% if not a.ativo %}{% situacao "recusada" "Desativado" %}{% elif a.expirado %}{% situacao "recusada" "Expirado" %}{% else %}{% situacao "concluida" "No ar" %}{% endif %}
       </div>
+      <p class="whitespace-pre-wrap {% if a.tipo != 'alerta' or not a.ativo %}suave{% endif %}">{{ a.mensagem }}</p>
+      <div class="flex flex-wrap items-center gap-2 text-[13px]">
+        <span class="{% if a.tipo != 'alerta' or not a.ativo %}fraco{% endif %}">{% if a.expira_em %}Até {{ a.expira_em|dia }}{% else %}Sem validade{% endif %} · {% if a.tipo == 'alerta' %}fica visível até vencer{% else %}o cliente pode dispensar{% endif %}</span>
+        <div class="ml-auto flex gap-2">
+          <form method="post" action="{% url 'operacao:aviso_acao' a.pk 'alternar' %}">{% csrf_token %}
+            <button type="submit" class="btn btn-linha btn-peq">{% if a.ativo %}Desativar{% else %}Ativar{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'operacao:aviso_acao' a.pk 'excluir' %}" x-data="confirmar" @submit="interceptar">{% csrf_token %}
+            <button type="submit" class="btn btn-perigo btn-peq">Excluir</button>
+            {% include "partials/modal.html" with titulo="Excluir aviso?" mensagem="Ele deixa de aparecer para os clientes." rotulo="Excluir" perigo=True %}
+          </form>
+        </div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="post" class="card flex flex-col gap-3.5"
+    x-data="avisoForm({ aberto: true, titulo: '{{ valores.titulo|default:''|escapejs }}', mensagem: '{{ valores.mensagem|default:''|escapejs }}', tipo: '{{ valores.tipo|default:'info'|escapejs }}', validade: '{{ valores.expira_em|default:''|escapejs }}' })">
+    {% csrf_token %}
+    <h2 class="h2">Novo aviso</h2>
+    <div class="campo">
+      <div class="linha-rot"><label for="titulo">Título <span class="obg" aria-hidden="true">*</span></label><span class="mono ml-auto text-xs" :class="titulo.length >= {{ titulo_max }} ? 'obg' : 'fraco'" x-text="titulo.length + '/{{ titulo_max }}'"></span></div>
       <input id="titulo" name="titulo" required maxlength="{{ titulo_max }}" x-model="titulo" placeholder="Ex.: Feriado: sem coletas na sexta" class="in">
     </div>
     <div class="campo">
-      <div class="flex items-center justify-between">
-        <label for="mensagem">Mensagem <span class="obg" aria-hidden="true">*</span></label>
-        <span class="mono text-xs" :class="mensagem.length >= {{ mensagem_max }} ? 'text-amber-700 dark:text-amber-400' : 'suave'" x-text="mensagem.length + '/{{ mensagem_max }}'"></span>
-      </div>
+      <div class="linha-rot"><label for="mensagem">Mensagem <span class="obg" aria-hidden="true">*</span></label><span class="mono ml-auto text-xs" :class="mensagem.length >= {{ mensagem_max }} ? 'obg' : 'fraco'" x-text="mensagem.length + '/{{ mensagem_max }}'"></span></div>
       <textarea id="mensagem" name="mensagem" required rows="3" maxlength="{{ mensagem_max }}" x-model="mensagem" placeholder="O que o cliente precisa saber, em uma ou duas frases" class="in"></textarea>
     </div>
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div class="campo">
-        <label for="tipo">Tipo</label>
-        <select id="tipo" name="tipo" x-model="tipo" class="in">
-          <option value="info">Informação (cliente pode dispensar)</option>
-          <option value="alerta">Alerta (fica visível até vencer)</option>
-        </select>
+    <fieldset class="campo">
+      <legend class="rot mb-1.5">Tipo</legend>
+      <input type="hidden" name="tipo" :value="tipo">
+      <div class="escolhas">
+        <button type="button" class="escolha" :aria-pressed="tipo === 'info'" @click="tipo = 'info'">Informação</button>
+        <button type="button" class="escolha" :aria-pressed="tipo === 'alerta'" @click="tipo = 'alerta'">Alerta</button>
       </div>
-      <div class="campo">
-        <label for="expira_em">Válido até <span class="font-normal suave">(opcional)</span></label>
-        <input id="expira_em" name="expira_em" type="date" x-model="validade" class="in">
-      </div>
-    </div>
-
-    {# Prévia #}
+      <span class="ajuda">Informação: o cliente pode dispensar. Alerta: fica visível até vencer.</span>
+    </fieldset>
     <div class="campo">
-      <p class="rot">Como o cliente vai ver</p>
-      <div class="tbl-box">
-        <div class="flex items-start gap-3 px-4 py-3" :style="tipo === 'alerta' ? 'background: var(--interna-fundo); color: var(--interna-tinta)' : ''">
-          <span x-show="tipo === 'alerta'" class="mt-0.5">{% icone "triangle-alert" 20 %}</span>
-          <span x-show="tipo !== 'alerta'" class="mt-0.5">{% icone "info" 20 %}</span>
-          <div class="min-w-0 flex-1">
-            <p class="font-bold" x-text="titulo || 'Título do aviso'"></p>
-            <p class="mt-0.5 line-clamp-2 text-sm" :class="tipo === 'alerta' ? '' : 'suave'" x-text="mensagem || 'A mensagem aparece aqui, em até duas linhas.'"></p>
-            <p x-show="validade" class="mt-1 text-xs" :class="tipo === 'alerta' ? '' : 'suave'" x-text="'Válido até ' + validadeBonita"></p>
-          </div>
+      <label for="expira_em">Válido até <span class="font-medium suave">(opcional)</span></label>
+      <input id="expira_em" name="expira_em" type="date" x-model="validade" class="in">
+      <span class="ajuda">Em branco: fica no ar até você desativar.</span>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <span class="text-xs font-bold uppercase tracking-wide fraco">Prévia no portal</span>
+      <div class="card flex items-start gap-3" :class="tipo === 'alerta' && 'card-aviso'" style="padding: 12px 14px">
+        <span class="mt-0.5 shrink-0" x-show="tipo === 'alerta'">{% icone "megaphone" 18 %}</span>
+        <span class="mt-0.5 shrink-0" x-show="tipo !== 'alerta'">{% icone "info" 18 %}</span>
+        <div class="min-w-0 flex-1 text-sm">
+          <p><strong x-text="titulo || 'Título do aviso'"></strong> <span :class="tipo === 'alerta' ? '' : 'suave'" x-text="'· ' + (mensagem || 'A mensagem aparece aqui.')"></span></p>
+          <p x-show="validade" class="mt-0.5 text-xs" x-text="'Válido até ' + validadeBonita"></p>
         </div>
       </div>
     </div>
-
     {% if erro %}<p role="alert" class="caixa-erro">{{ erro }}</p>{% endif %}
-    <div class="flex gap-2">
-      <button type="submit" class="btn btn-primario">Publicar aviso</button>
-      <button type="button" @click="aberto = false" class="btn btn-linha">Cancelar</button>
-    </div>
+    <button type="submit" class="btn btn-preto">Publicar aviso</button>
   </form>
 </div>
-
-{% if not avisos %}
-<div class="card card-tracejado">Nenhum aviso ainda. Clique em <strong>Novo aviso</strong>.</div>
-{% else %}
-<ul class="flex flex-col gap-3">
-  {% for a in avisos %}
-  <li class="card flex flex-col gap-2" style="{% if a.tipo == 'alerta' %}box-shadow: inset 4px 0 0 var(--interna-borda);{% endif %}{% if not a.ativo %} opacity: .7;{% endif %}">
-    <div class="flex flex-wrap items-center gap-2">
-      <p class="font-bold">{{ a.titulo }}</p>
-      <span class="rounded-full px-2 py-0.5 text-xs font-medium {% if a.tipo == 'alerta' %}bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300{% else %}bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300{% endif %}">{% if a.tipo == 'alerta' %}Alerta{% else %}Info{% endif %}</span>
-      {% if not a.ativo %}<span class="st st-neutro" style="font-size: 12px; padding: 2px 8px">Inativo</span>{% endif %}
-      {% if a.expira_em %}
-        {% if a.expirado %}
-        <span class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">Expirado</span>
-        {% else %}
-        <span class="st st-neutro" style="font-size: 12px; padding: 2px 8px">Até {{ a.expira_em|dia }}</span>
-        {% endif %}
-      {% endif %}
-    </div>
-    <p class="whitespace-pre-wrap text-[15px] suave">{{ a.mensagem }}</p>
-    <div class="flex flex-wrap items-center justify-end gap-2">
-      <form method="post" action="{% url 'operacao:aviso_acao' a.pk 'alternar' %}">{% csrf_token %}
-        <button type="submit" class="btn btn-linha btn-peq">{% if a.ativo %}Desativar{% else %}Ativar{% endif %}</button>
-      </form>
-      <form method="post" action="{% url 'operacao:aviso_acao' a.pk 'excluir' %}" x-data="confirmar" @submit="interceptar">{% csrf_token %}
-        <button type="submit" class="btn btn-perigo btn-peq">Excluir</button>
-        {% include "partials/modal.html" with titulo="Excluir aviso?" mensagem="Ele deixa de aparecer para os clientes." rotulo="Excluir" perigo=True %}
-      </form>
-    </div>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
 {% endblock %}

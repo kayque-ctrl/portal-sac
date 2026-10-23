@@ -22,10 +22,15 @@ ROTAS = {
     "/operacao/empresas": {ANON: 302, CLIENTE: 302, COLEGA: 302, ESTRANHO: 302, OPERADOR: 200, ADMIN: 200},
     "/operacao/avisos": {ANON: 302, CLIENTE: 302, COLEGA: 302, ESTRANHO: 302, OPERADOR: 200, ADMIN: 200},
     "/operacao/contatos": {ANON: 302, CLIENTE: 302, COLEGA: 302, ESTRANHO: 302, OPERADOR: 200, ADMIN: 200},
+    "/operacao/transportadoras": {ANON: 302, CLIENTE: 302, COLEGA: 302, ESTRANHO: 302, OPERADOR: 200, ADMIN: 200},
     "/operacao/sla": {ANON: 302, CLIENTE: 302, COLEGA: 302, ESTRANHO: 302, OPERADOR: 302, ADMIN: 200},
 }
 
-CASOS = [pytest.param(rota, papel, status, id=f"{papel}-{rota}") for rota, por_papel in ROTAS.items() for papel, status in por_papel.items()]
+CASOS = [
+    pytest.param(rota, papel, status, id=f"{papel}-{rota}")
+    for rota, por_papel in ROTAS.items()
+    for papel, status in por_papel.items()
+]
 
 
 @pytest.mark.parametrize(("rota", "papel", "status"), CASOS)

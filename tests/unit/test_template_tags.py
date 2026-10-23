@@ -1,6 +1,6 @@
 """Filtros e tags de template (templatetags/ocorrencias_tags.py): sem banco."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from django.http import QueryDict
@@ -25,7 +25,7 @@ def test_filtros_de_cor_desconhecida_ficam_vazios_ou_neutros():
 
 
 def test_filtros_de_data():
-    dt = datetime(2026, 9, 21, 15, 0, tzinfo=timezone.utc)
+    dt = datetime(2026, 9, 21, 15, 0, tzinfo=UTC)
     assert tags.data(dt) == "21/09/2026 12:00"
     assert tags.dia(dt) == "21/09/2026"
 
@@ -53,11 +53,18 @@ def test_status_badge_escapa_status_desconhecido():
 
 
 def test_sla_badge_vazio_sem_sla():
-    assert tags.sla_badge({"status": "aberta", "sla_horas": None, "sla_prazo": None, "sla_restante_ms": None, "sla_cumprido": None}) == ""
+    assert (
+        tags.sla_badge(
+            {"status": "aberta", "sla_horas": None, "sla_prazo": None, "sla_restante_ms": None, "sla_cumprido": None}
+        )
+        == ""
+    )
 
 
 def test_sla_badge_com_sla():
-    html = tags.sla_badge({"status": "concluida", "sla_horas": 72, "sla_prazo": None, "sla_restante_ms": None, "sla_cumprido": True})
+    html = tags.sla_badge(
+        {"status": "concluida", "sla_horas": 72, "sla_prazo": None, "sla_restante_ms": None, "sla_cumprido": True}
+    )
     assert "SLA cumprido" in html
 
 

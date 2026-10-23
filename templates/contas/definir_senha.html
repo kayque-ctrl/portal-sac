@@ -5,7 +5,7 @@
 
 {% block conteudo %}
 <div>
-  <h1>Defina sua senha</h1>
+  <h1 class="titulo">Defina sua senha</h1>
   <p class="mt-1 suave">Bem-vindo(a)! Crie uma senha para acessar o portal.</p>
 </div>
 
@@ -21,6 +21,6 @@
 
   {% include "partials/erro.html" %}
 
-  <button type="submit" :disabled="naoConferem" class="btn btn-primario btn-grande btn-bloco">Definir senha e entrar</button>
+  <button type="submit" :disabled="naoConferem" class="btn btn-preto btn-grande btn-bloco">Definir senha e entrar</button>
 </form>
 {% endblock %}

@@ -90,11 +90,15 @@ def test_foto_vira_miniatura_e_pdf_vira_arquivo(cliente, entrar):
 
 
 def test_detalhe_nao_tem_mais_o_quadro_separado_da_abertura(ocorrencia, cliente, operador, entrar):
-    for url, user in ((f"/portal/{ocorrencia.pk}", cliente), (f"/operacao/{ocorrencia.pk}", operador)):
+    # Spec 025: para o cliente, a linha do tempo se chama "Conversa" (chat).
+    for url, user, titulo in (
+        (f"/portal/{ocorrencia.pk}", cliente, "Conversa"),
+        (f"/operacao/{ocorrencia.pk}", operador, "Linha do tempo"),
+    ):
         html = corpo(entrar(user).get(url))
         assert html.count(ocorrencia.descricao or "Camisa") >= 1
         assert html.count('data-item="abertura"') == 1
-        assert ">Linha do tempo</h2>" in html
+        assert f">{titulo}</h2>" in html
 
 
 # ---------------------------------------------------------------- formatação
@@ -135,7 +139,9 @@ def test_texto_de_cada_evento(e, texto):
 
 
 def test_evento_do_sistema_aparece_como_sistema(ocorrencia, operador, entrar):
-    Ocorrencia.objects.filter(pk=ocorrencia.pk).update(status="recusada", atualizado_em=timezone.now() - timedelta(days=40))
+    Ocorrencia.objects.filter(pk=ocorrencia.pk).update(
+        status="recusada", atualizado_em=timezone.now() - timedelta(days=40)
+    )
     servicos.arquivar_concluidas_antigas()
     html = corpo(entrar(operador).get(f"/operacao/{ocorrencia.pk}"))
     assert ">Sistema</strong> · Arquivada" in html

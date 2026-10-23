@@ -5,8 +5,8 @@
 
 {% block conteudo %}
 <div>
-  <a href="{% url 'contas:login' %}" class="migalha">{% icone "arrow-left" 15 %} Voltar para o login</a>
-  <h1 class="mt-3">Esqueceu sua senha?</h1>
+  <a href="{% url 'contas:login' %}" class="voltar">{% icone "arrow-left" 15 %} Voltar para o login</a>
+  <h1 class="titulo mt-3">Esqueceu sua senha?</h1>
   <p class="mt-1 suave">Informe seu e-mail e enviaremos um link para redefinir sua senha.</p>
 </div>
 
@@ -20,7 +20,7 @@
       <input id="email" name="email" type="email" autocomplete="email" required placeholder="Ex.: ana@suaempresa.com.br" class="in">
     </div>
     {% include "partials/erro.html" %}
-    <button type="submit" :disabled="enviando" class="btn btn-primario btn-grande btn-bloco">
+    <button type="submit" :disabled="enviando" class="btn btn-preto btn-grande btn-bloco">
       <span x-text="enviando ? 'Enviando…' : 'Enviar link de redefinição'">Enviar link de redefinição</span>
     </button>
   </form>

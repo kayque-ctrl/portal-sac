@@ -15,9 +15,7 @@ def _operacao():
 def _para_operacao(oc, texto: str):
     from .models import Notificacao
 
-    Notificacao.objects.bulk_create(
-        [Notificacao(destinatario=u, ocorrencia=oc, mensagem=texto) for u in _operacao()]
-    )
+    Notificacao.objects.bulk_create([Notificacao(destinatario=u, ocorrencia=oc, mensagem=texto) for u in _operacao()])
 
 
 def _para_cliente(oc, texto: str):

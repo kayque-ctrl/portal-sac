@@ -11,7 +11,9 @@ from ..builders import dados_produtos, foto
 
 def abrir_com(cliente, categoria):
     itens = [{"categoria": categoria, "codigo": "1", "descricao": "Produto X", "quantidade": 1}]
-    return servicos.criar_ocorrencia(cliente, dados_produtos(itens_json=json.dumps(itens)), [foto()]).dados["ocorrencia"]
+    return servicos.criar_ocorrencia(cliente, dados_produtos(itens_json=json.dumps(itens)), [foto()]).dados[
+        "ocorrencia"
+    ]
 
 
 @pytest.mark.parametrize("categoria", ["avaria", "pre_vencido", "vencido"])

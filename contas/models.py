@@ -81,9 +81,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     tipo_pessoa = models.CharField(max_length=12, choices=TipoPessoa.choices, blank=True, null=True)
     documento = models.CharField(max_length=30, blank=True, null=True)
     telefone = models.CharField(max_length=40, blank=True, null=True)
-    empresa = models.ForeignKey(
-        Empresa, on_delete=models.SET_NULL, null=True, blank=True, related_name="membros"
-    )
+    empresa = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, blank=True, related_name="membros")
     # Quando definiu a senha pela primeira vez (aceitou o convite). Nulo = pendente.
     ativado_em = models.DateTimeField(null=True, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)

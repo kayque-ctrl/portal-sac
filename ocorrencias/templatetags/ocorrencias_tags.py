@@ -171,6 +171,42 @@ def sla_badge(oc):
 
 
 @register.simple_tag
+def situacao(status, rotulo=None):
+    """Situação como ponto colorido + texto (spec 023)."""
+    nome = labels.STATUS_LABEL.get(status, status)
+    if rotulo == "":  # só o ponto (lista compacta); o nome vai no title
+        return format_html(
+            '<span class="sit {}" title="{}"><i aria-hidden="true"></i><span class="sr">{}</span></span>',
+            status,
+            nome,
+            nome,
+        )
+    return format_html('<span class="sit {}"><i aria-hidden="true"></i>{}</span>', status, rotulo or nome)
+
+
+@register.simple_tag
+def sla_info(oc) -> dict:
+    """Para o cartão de prazo do atendimento: rótulo, estado e % do prazo já usado."""
+    sla = calcular_sla(oc)
+    pct = None
+    total = (oc.sla_horas or 0) * 3600 * 1000
+    if total and sla.restante_ms is not None:
+        pct = max(0, min(100, round(100 - sla.restante_ms / total * 100)))
+    return {"label": sla.label, "estado": sla.estado, "pct": pct, "vencido": sla.estado in ("vencido", "estourado")}
+
+
+@register.simple_tag
+def prazo(oc):
+    """Prazo do SLA em texto curto; vencido em vermelho e negrito."""
+    sla = calcular_sla(oc)
+    if sla.estado == "sem_sla":
+        return format_html('<span class="fraco">{}</span>', "—" if sla.label == "—" else "sem prazo")
+    if sla.estado in ("vencido", "estourado"):
+        return format_html('<strong style="color: var(--perigo)">{}</strong>', sla.label)
+    return format_html('<span class="suave">{}</span>', sla.label)
+
+
+@register.simple_tag
 def notif_icone(mensagem, tamanho=16):
     nome, cor = notificacoes.icone(mensagem)
     return format_html(
@@ -184,8 +220,8 @@ FLUXO = ["aberta", "em_analise", "resolvida", "concluida"]
 
 
 @register.inclusion_tag("ocorrencias/partials/stepper.html")
-def andamento(status):
-    """Passos da trilha visual do status."""
+def andamento(status, horizontal=False):
+    """Passos da trilha visual do status (`horizontal`: barrinhas do celular)."""
     if status == "recusada":
         # Desfecho recusado: Aberta → Em tratativa → Recusada.
         passos = [
@@ -206,7 +242,7 @@ def andamento(status):
     for i, p in enumerate(passos):
         p["numero"] = i + 1
         p["ultimo"] = i == len(passos) - 1
-    return {"passos": passos}
+    return {"passos": passos, "horizontal": horizontal}
 
 
 @register.simple_tag(takes_context=True)

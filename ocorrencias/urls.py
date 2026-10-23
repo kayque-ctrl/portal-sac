@@ -15,6 +15,7 @@ publico_urls = [
 portal_urls = (
     [
         path("", portal.inicio, name="inicio"),
+        path("ocorrencias", portal.lista, name="lista"),
         path("dashboard", portal.dashboard, name="dashboard"),
         path("notificacoes", portal.notificacoes, name="notificacoes"),
         path("nova", portal.nova, name="nova"),
@@ -47,6 +48,9 @@ operacao_urls = (
         path("avisos/<uuid:pk>/<str:acao>", operacao.aviso_acao, name="aviso_acao"),
         path("contatos", operacao.contatos, name="contatos"),
         path("contatos/<uuid:pk>/<str:acao>", operacao.contato_acao, name="contato_acao"),
+        path("transportadoras", operacao.transportadoras, name="transportadoras"),
+        path("transportadoras/<uuid:pk>", operacao.transportadora_detalhe, name="transportadora_detalhe"),
+        path("transportadoras/<uuid:pk>/<str:acao>", operacao.transportadora_acao, name="transportadora_acao"),
         path("sla", operacao.sla, name="sla"),
         path("sla/<uuid:pk>/excluir", operacao.sla_excluir, name="sla_excluir"),
         path("<uuid:pk>", operacao.detalhe, name="detalhe"),

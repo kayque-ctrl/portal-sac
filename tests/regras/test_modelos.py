@@ -137,7 +137,9 @@ def test_reabrir_encerrada_reinicia_o_prazo(abrir, operador, cliente):
 
 def test_sem_regra_nao_ha_sla(db, cliente):
     SlaRegra.objects.all().delete()
-    oc = servicos.criar_ocorrencia(cliente, {"tipo": "reclamacao_sugestao", "descricao": "Algo bem longo aqui."}, []).dados["ocorrencia"]
+    oc = servicos.criar_ocorrencia(
+        cliente, {"tipo": "reclamacao_sugestao", "descricao": "Algo bem longo aqui."}, []
+    ).dados["ocorrencia"]
     assert oc.sla_horas is None and oc.sla_prazo is None
 
 

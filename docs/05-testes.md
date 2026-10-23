@@ -150,7 +150,7 @@ enviado).
 `.github/workflows/testes.yml` roda, em todo push para `main` e em todo PR:
 
 1. `ruff check` e `ruff format --check` (lint e formatação, config em
-   `pyproject.toml`; localmente, `ruff check --fix . && ruff format .` corrige);
+   `ruff.toml`; localmente, `ruff check --fix . && ruff format .` corrige);
 2. `makemigrations --check --dry-run` (modelo e migrations em dia);
 3. `pytest --cov` (suíte completa, incluindo a regressão).
 

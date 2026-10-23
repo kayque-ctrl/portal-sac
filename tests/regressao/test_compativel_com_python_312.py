@@ -29,5 +29,5 @@ def test_codigo_le_com_a_gramatica_do_python_312(arquivo):
 
 def test_ruff_mira_a_versao_da_producao():
     """Com alvo acima de 3.12, o ruff volta a usar sintaxe que a Vercel não roda."""
-    config = tomllib.loads((RAIZ / "pyproject.toml").read_text(encoding="utf-8"))
-    assert config["tool"]["ruff"]["target-version"] == "py312"
+    config = tomllib.loads((RAIZ / "ruff.toml").read_text(encoding="utf-8"))
+    assert config["target-version"] == "py312"

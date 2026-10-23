@@ -283,10 +283,11 @@ def test_ocorrencia_inexistente_na_consulta(client, db):
 # ---------------------------------------------------------------- spec 023: início e lista
 
 
-def test_inicio_tem_os_cartoes_de_tipo_que_levam_ao_formulario(cliente, entrar):
+def test_inicio_sem_os_cartoes_de_tipo_acima_dos_numeros(cliente, entrar):
+    # Spec 030: o painel "Abrir uma ocorrência" saiu do início; abre-se pelo menu e pelo topo.
     html = corpo(entrar(cliente).get("/portal/"))
-    for tipo in ("produtos", "atraso", "reclamacao_sugestao"):
-        assert f'href="/portal/nova?tipo={tipo}"' in html
+    assert "nova?tipo=" not in html and "Abrir uma ocorrência" not in html
+    assert html.count('href="/portal/nova"') >= 2  # menu lateral e botão do topo
 
 
 def test_inicio_mostra_so_o_que_esta_em_andamento(abrir, cliente, operador, entrar):

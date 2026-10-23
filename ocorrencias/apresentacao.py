@@ -129,4 +129,9 @@ def linha_do_tempo(oc, user, mensagens, anexos, rotulo_cliente: str | None = Non
 
     # sort é estável: no mesmo horário vale a ordem abertura → mensagem → evento.
     itens.sort(key=lambda i: (i["quando"], _ORDEM[i["tipo"]]))
+    # A solução mais recente é a que o cliente aprova ou recusa (spec 030).
+    for item in reversed(itens):
+        if item.get("solucao"):
+            item["atual"] = True
+            break
     return itens

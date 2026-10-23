@@ -6,8 +6,8 @@
 {% block conteudo %}
 {% comment %}
 Início do cliente (specs 025 e 030): como a página inicial da interface
-simplificada do GLPI, em painéis. Assuntos para abrir, contadores por
-situação e o que está em andamento.
+simplificada do GLPI, em painéis: avisos, contadores por
+situação e o que está em andamento. Abrir fica no botão do topo.
 {% endcomment %}
 <div class="topo">
   <div>
@@ -45,20 +45,6 @@ situação e o que está em andamento.
 </div>
 {% endif %}
 
-{# ---------- Abrir: catálogo de assuntos ---------- #}
-<section aria-labelledby="t-abrir" class="painel">
-  <h2 id="t-abrir" class="painel-h">Abrir uma ocorrência</h2>
-  <nav aria-label="Abrir ocorrência por tipo" class="tipos">
-    {% for valor, rotulo, ico, desc in tipos %}
-    <a href="{% url 'portal:nova' %}?tipo={{ valor }}" class="tipo" data-tipo="{{ valor }}">
-      <span class="circ">{% icone ico 18 %}</span>
-      <span class="txt"><strong>{{ rotulo }}</strong><span class="desc">{{ desc }}</span></span>
-      <span class="fraco">{% icone "chevron-right" 16 %}</span>
-    </a>
-    {% endfor %}
-  </nav>
-</section>
-
 {# ---------- Contadores por situação ---------- #}
 {% if total %}
 <section aria-labelledby="t-resumo" class="painel">
@@ -90,7 +76,7 @@ situação e o que está em andamento.
 <section aria-labelledby="t-and" class="painel">
   <h2 id="t-and" class="painel-h">Em andamento {% if andamento %}<span class="fraco" style="font-weight: 400">· {{ andamento|length }}</span>{% endif %}{% if total %}<span class="dir"><a href="{% url 'portal:lista' %}" class="link">Ver todas</a></span>{% endif %}</h2>
   {% if not andamento %}
-  <p class="p-4 text-center text-[13.5px] fraco">{% if total %}Nada em andamento agora. Tudo resolvido por aqui.{% else %}Você ainda não abriu nenhuma ocorrência. Escolha um assunto acima para começar.{% endif %}</p>
+  <p class="p-4 text-center text-[13.5px] fraco">{% if total %}Nada em andamento agora. Tudo resolvido por aqui.{% else %}Você ainda não abriu nenhuma ocorrência. Use o botão “Abrir ocorrência” para começar.{% endif %}</p>
   {% else %}
   {% include "ocorrencias/portal/partials/tabela.html" with ocorrencias=andamento %}
   {% endif %}

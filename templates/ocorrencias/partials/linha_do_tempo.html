@@ -55,12 +55,23 @@ filtrado para o cliente: aqui só se decide a aparência.
 
   {% elif item.solucao %}
   {# Solução proposta (spec 025, como no GLPI): do lado da operação. #}
-  <li data-item="solucao" class="flex flex-col gap-2">
+  <li data-item="solucao" class="flex flex-col gap-2" {% if item.atual and pode_aprovar %}data-aprovacao{% endif %}>
     <span class="ev"><span class="pt">{% icone "refresh-cw" 12 %}</span><span><strong>{{ item.autor_rotulo }}</strong> · {{ item.texto }} · {{ item.quando|hora }}</span></span>
     <div class="sol-item {% if item.meu_lado %}eu{% endif %}">
       <div class="solucao">
         <div class="topo-sol">{% icone "check-circle-2" 14 %} Solução proposta</div>
         <div class="txt-sol">{{ item.solucao }}</div>
+        {# Quem abriu aprova ou recusa aqui mesmo, como no protótipo (spec 030). #}
+        {% if item.atual and pode_aprovar %}
+        <div class="flex flex-wrap gap-2 px-2.5 pb-2.5">
+          <form method="post" action="{% url 'portal:aprovar' oc.pk %}" x-data="confirmar" @submit="interceptar">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-verde">{% icone "check" 15 %} Aprovar solução</button>
+            {% include "partials/modal.html" with titulo="Aprovar a solução?" mensagem="A ocorrência será encerrada como resolvida." rotulo="Aprovar" %}
+          </form>
+          {% include "ocorrencias/portal/partials/botao_reabrir.html" with rotulo="Recusar e reabrir" %}
+        </div>
+        {% endif %}
         <span class="hora">{{ item.quando|hora }}</span>
       </div>
     </div>

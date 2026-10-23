@@ -62,3 +62,58 @@ def test_cliente_tem_barra_de_topo_com_abrir_ocorrencia(cliente, entrar):
 def test_operacao_tem_busca_global_no_topo(operador, entrar):
     html = corpo(entrar(operador).get("/operacao/painel"))
     assert 'action="/operacao/" role="search"' in html and 'name="q"' in html
+
+
+def test_atendimento_tem_filtros_da_linha_do_tempo(ocorrencia, operador, entrar):
+    html = corpo(entrar(operador).get(f"/operacao/{ocorrencia.pk}"))
+
+    assert "data-filtros-tl" in html and ':data-filtro="filtro"' in html
+    for rotulo in ("Tudo", "Mensagens", "Notas internas", "Documentos"):
+        assert f">{rotulo}</button>" in html
+
+
+def test_resposta_da_operacao_tem_as_abas_do_prototipo(ocorrencia, operador, entrar):
+    html = corpo(entrar(operador).get(f"/operacao/{ocorrencia.pk}"))
+    abas = html[html.index('class="abas-resp"') :]
+    assert abas.index("Responder ao cliente") < abas.index("Comentário interno")
+
+
+def test_mensagem_enviada_nao_e_verde():
+    from pathlib import Path
+
+    css = (Path(__file__).resolve().parents[2] / "static" / "css" / "sac.css").read_text(encoding="utf-8")
+    assert "--bal-eu: #e8eef8;" in css  # azul claro do sistema, não verde
+
+
+def test_conteudo_ocupa_toda_a_largura():
+    from pathlib import Path
+
+    css = (Path(__file__).resolve().parents[2] / "static" / "css" / "sac.css").read_text(encoding="utf-8")
+    regra = re.search(r"\.area > \.limite \{([^}]*)\}", css).group(1)
+    assert "width: 100%" in regra
+    assert "max-width" not in regra
+    assert ".limite.estreito" not in css
+
+
+def test_abrir_mostra_um_bloco_por_vez(cliente, entrar):
+    html = corpo(entrar(cliente).get("/portal/nova"))
+
+    assert "x-show=\"categoriaComProduto && secaoVisivel('produtos')\"" in html
+    assert "x-show=\"secaoVisivel('anexos')\"" in html
+    assert "x-show=\"secaoVisivel('desc')\"" in html
+    assert ':disabled="enviando || !prontoParaEnviar"' in html  # só envia com o passo atual feito
+
+
+def test_abrir_tem_coluna_de_ajuda_na_direita(cliente, entrar):
+    html = corpo(entrar(cliente).get("/portal/nova"))
+
+    assert 'aria-label="Ajuda"' in html
+    assert "O que ter em mãos" in html
+    assert "O que acontece depois" in html
+
+
+def test_inicio_vazio_aponta_o_botao_do_topo(cliente, entrar):
+    html = corpo(entrar(cliente).get("/portal/"))
+
+    assert "Use o botão “Abrir ocorrência” para começar." in html
+    assert "Escolha um assunto acima" not in html

@@ -90,9 +90,9 @@ def test_foto_vira_miniatura_e_pdf_vira_arquivo(cliente, entrar):
 
 
 def test_detalhe_nao_tem_mais_o_quadro_separado_da_abertura(ocorrencia, cliente, operador, entrar):
-    # Spec 025: para o cliente, a linha do tempo se chama "Conversa" (chat).
+    # Spec 030: "Linha do tempo" nas duas áreas, como no protótipo.
     for url, user, titulo in (
-        (f"/portal/{ocorrencia.pk}", cliente, "Conversa"),
+        (f"/portal/{ocorrencia.pk}", cliente, "Linha do tempo"),
         (f"/operacao/{ocorrencia.pk}", operador, "Linha do tempo"),
     ):
         html = corpo(entrar(user).get(url))

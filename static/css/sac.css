@@ -63,8 +63,8 @@
 
   /* conversa (estilo WhatsApp) */
   --chat-fundo: #eef0f3;
-  --bal-eu: #d9fdd3;
-  --bal-eu-borda: #bfe8b7;
+  --bal-eu: #e8eef8;
+  --bal-eu-borda: #c9d6ec;
   --bal-outro: #ffffff;
 
   --raio: 2px;
@@ -122,8 +122,8 @@
   --s-recusada: #9ca3af;
 
   --chat-fundo: #151922;
-  --bal-eu: #1f3b2a;
-  --bal-eu-borda: #2e5a3f;
+  --bal-eu: #1d2a40;
+  --bal-eu-borda: #2b3d5c;
   --bal-outro: #232834;
 }
 
@@ -181,9 +181,8 @@ a { color: var(--preto); }
 .topbar .direita { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .area { flex: 1; padding: 14px 12px 104px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 @media (min-width: 768px) { .area { padding: 20px 24px 40px; } }
-.area > .limite { width: 100%; max-width: 1180px; display: flex; flex-direction: column; gap: 14px; }
-.limite.estreito { max-width: 860px; }
-.area > .limite.op { max-width: none; }
+/* O conteúdo ocupa toda a largura disponível (sem faixa vazia à direita). */
+.area > .limite { width: 100%; display: flex; flex-direction: column; gap: 14px; }
 
 /* cabeçalho e barra de baixo do celular */
 .mcab {
@@ -490,8 +489,10 @@ select.in { padding-right: 28px; }
   display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--laranja-tinta);
   background: transparent; border: 0; padding: 0;
 }
-/* eventos e documentos: no meio, discretos */
-.ev { align-self: center; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fraco); background: var(--sup); border: 1px solid var(--linha); border-radius: var(--raio); padding: 3px 10px; flex-wrap: wrap; justify-content: center; text-align: center; max-width: 92%; }
+/* eventos e documentos: no meio, discretos (linha de texto, sem caixa) */
+.ev { align-self: center; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fraco); padding: 2px 10px; flex-wrap: wrap; justify-content: center; text-align: center; max-width: 92%; }
+.ev::before { content: "—"; color: var(--fraco); }
+.ev .pt { display: none !important; }
 .ev .pt { display: inline-flex; color: var(--fraco); }
 .ev .pt svg { width: 12px !important; height: 12px !important; }
 .ev strong { color: var(--suave); font-weight: 600; }
@@ -645,3 +646,17 @@ form.card > div:first-of-type > h2.h2:first-child + .ajuda { margin-top: 8px; }
 /* gráficos de colunas */
 .colunas { display: flex; align-items: flex-end; gap: 4px; }
 .colunas .col { display: block; width: 100%; background: var(--preto); min-height: 2px; }
+
+/* Filtros da linha do tempo no atendimento (spec 030). */
+.filtro-tl { display: flex; gap: 4px; flex-wrap: wrap; }
+.filtro-tl button { height: 24px; padding: 0 8px; font: inherit; font-size: 12px; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--sup); color: var(--suave); cursor: pointer; }
+.filtro-tl button[aria-pressed="true"] { background: var(--marca); border-color: var(--marca); color: var(--marca-txt); }
+[data-filtro="mensagens"] .tl > li:not([data-item="mensagem"]):not([data-item="abertura"]):not([data-item="solucao"]) { display: none; }
+[data-filtro="internas"] .tl > li:not([data-item="interna"]) { display: none; }
+[data-filtro="documentos"] .tl > li:not([data-item="documento"]) { display: none; }
+
+/* Abas do campo de resposta (spec 030, como no protótipo). */
+.abas-resp { display: flex; border-bottom: 1px solid var(--linha); margin: -10px -14px 0; padding: 0 8px; }
+.abas-resp button { height: 38px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; font: inherit; font-size: 13px; font-weight: 500; color: var(--suave); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.abas-resp button[aria-selected="true"] { color: var(--preto); border-bottom-color: var(--preto); font-weight: 600; }
+.abas-resp button.modo-interno[aria-selected="true"] { color: var(--laranja-tinta); border-bottom-color: var(--laranja-forte); }

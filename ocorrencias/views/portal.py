@@ -57,14 +57,6 @@ def _ocorrencias_do_cliente(user) -> list:
     return ocorrencias
 
 
-# Tipos de ocorrência como cartões da tela inicial (spec 023): ícone e texto curto.
-CARTOES_TIPO = [
-    ("produtos", "package", "Avaria, falta, sobra, vencido ou troca de volume."),
-    ("atraso", "clock", "O pedido não chegou no prazo combinado."),
-    ("reclamacao_sugestao", "message-circle", "Conte o que podemos melhorar."),
-]
-
-
 @cliente_required
 def inicio(request):
     """Início do portal (spec 023): "O que aconteceu?", avisos e o que está em andamento."""
@@ -112,7 +104,6 @@ def inicio(request):
         "ocorrencias/portal/inicio.html",
         {
             "contadores": contadores,
-            "tipos": [(t, TIPO_LABEL[t], ico, desc) for t, ico, desc in CARTOES_TIPO],
             "andamento": andamento[:8],
             "pendentes": pendentes,
             "tem_colegas": any(not o.minha for o in ocorrencias),
@@ -292,6 +283,8 @@ def _render_detalhe(request, oc, **extra):
     contexto = {
         "oc": oc,
         "solucao": solucao,
+        # Os botões de aprovar/recusar ficam na solução proposta da linha do tempo (spec 030).
+        "pode_aprovar": not somente_leitura and oc.status == "resolvida",
         "somente_leitura": somente_leitura,
         "responsavel_nome": responsavel_nome,
         "mensagens": mensagens,

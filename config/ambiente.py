@@ -44,6 +44,29 @@ def lista(valor: str | None) -> list[str]:
     return [v.strip() for v in (valor or "").split(",") if v.strip()]
 
 
+# Endereços que a própria Vercel informa a cada deploy (variáveis de sistema).
+VARIAVEIS_URL_VERCEL = ("VERCEL_URL", "VERCEL_BRANCH_URL")
+
+
+def hosts(env: dict) -> tuple[list[str], list[str]]:
+    """
+    (ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS): os configurados e, na Vercel, o
+    endereço único do deploy e o da branch, para não dar DisallowedHost ao
+    abrir um deploy pelo link dele (fix 029). São endereços do próprio projeto.
+    """
+    permitidos = lista(env.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"))
+    origens = lista(env.get("DJANGO_CSRF_TRUSTED_ORIGINS"))
+    for variavel in VARIAVEIS_URL_VERCEL:
+        host = (env.get(variavel) or "").strip()
+        if not host:
+            continue
+        if host not in permitidos:
+            permitidos.append(host)
+        if f"https://{host}" not in origens:
+            origens.append(f"https://{host}")
+    return permitidos, origens
+
+
 # ---------------------------------------------------------------- banco
 
 
